@@ -1,0 +1,195 @@
+{
+  "common": {
+    "appName": "AXION",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "actions": "Acciones",
+    "status": "Estado",
+    "date": "Fecha",
+    "amount": "Monto",
+    "total": "Total",
+    "yes": "Sí",
+    "no": "No",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "seeAll": "Ver todo",
+    "noData": "No se encontraron datos"
+  },
+  "landing": {
+    "nav": {
+      "features": "Caracteristicas",
+      "benefits": "Beneficios",
+      "pricing": "Planes",
+      "contact": "Contacto",
+      "dashboard": "Acceder al Panel",
+      "getStarted": "Comenzar Ahora"
+    },
+    "hero": {
+      "badge": "#1 Plataforma de Credito para Pequenos Negocios",
+      "title": "Gestion de Credito Digital para Pequenos Negocios y Freelancers",
+      "description": "Simplifica la gestion de prestamos, controla la morosidad y construye confianza digital con tus clientes. Todo en una plataforma segura y facil de usar.",
+      "cta": "Comenzar Gratis",
+      "learnMore": "Saber Mas",
+      "trustedBy": "emprendedores confian en nosotros",
+      "stats": {
+        "customers": "Clientes",
+        "loans": "Prestamos",
+        "revenue": "Ingresos",
+        "rate": "Tasa de Recuperacion"
+      }
+    },
+    "features": {
+      "title": "Todo lo que necesitas para gestionar creditos",
+      "subtitle": "Herramientas completas para pequenas empresas y freelancers",
+      "customers": {
+        "title": "Gestion de Clientes",
+        "description": "Registra y gestiona todos tus clientes en un solo lugar con historial completo de prestamos y pagos."
+      },
+      "loans": {
+        "title": "Control de Prestamos",
+        "description": "Crea, rastrea y gestiona prestamos con cuotas, intereses y vencimientos de forma automatica."
+      },
+      "mobile": {
+        "title": "Acceso Movil",
+        "description": "Gestiona tu negocio desde cualquier lugar con nuestra aplicacion movil disponible para iOS y Android."
+      },
+      "analytics": {
+        "title": "Analisis e Informes",
+        "description": "Obtener datos valiosos sobre tu cartera de creditos con paneles e informes detallados."
+      },
+      "security": {
+        "title": "Seguridad Avanzada",
+        "description": "Tus datos protegidos con cifrado de nivel bancario y cumplimiento con GDPR."
+      },
+      "growth": {
+        "title": "Crecimiento del Negocio",
+        "description": "Aumenta tu base de clientes y reduce la morosidad con herramientas de scoring y monitoreo."
+      }
+    },
+    "benefits": {
+      "title": "Por que elegir AXION?",
+      "description": "Descubre como podemos ayudar a tu negocio a crecer de forma sostenible",
+      "1": "Reduce la morosidad hasta un 80% con monitoreo automatico",
+      "2": "Ahorra tiempo con tareas automatizadas de cobro",
+      "3": "Toma decisiones mas seguras con analisis de credito integrado",
+      "4": "Soporte especializado en espanol para toda Latinoamerica",
+      "card": {
+        "customers": {
+          "title": "Clientes Activos"
+        },
+        "loans": {
+          "title": "Prestamos Activos"
+        },
+        "recovery": {
+          "title": "Tasa de Recuperacion"
+        }
+      }
+    },
+    "cta": {
+      "title": "Listo para transformar tu negocio?",
+      "description": "Comienza gratis y prueba todas las funciones. Sin tarjeta de credito necesaria.",
+      "button": "Comenzar Ahora"
+    },
+    "footer": {
+      "description": "Plataforma de infraestructura de credito y confianza digital para pequenos negocios.",
+      "product": "Producto",
+      "features": "Caracteristicas",
+      "pricing": "Planes",
+      "integrations": "Integraciones",
+      "company": "Empresa",
+      "about": "Sobre Nosotros",
+      "blog": "Blog",
+      "careers": "Carreras",
+      "legal": "Legal",
+      "privacy": "Privacidad",
+      "terms": "Terminos de Servicio",
+      "security": "Seguridad",
+      "rights": "Todos los derechos reservados."
+    }
+  },
+  "navigation": {
+    "dashboard": "Panel",
+    "customers": "Clientes",
+    "loans": "Préstamos",
+    "collections": "Cobros",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "profile": "Perfil"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "subtitle": "Resumen de su operación de crédito",
+    "totalCustomers": "Total de Clientes",
+    "activeLoans": "Préstamos Activos",
+    "totalToReceive": "Total a Cobrar",
+    "receivedThisMonth": "Recibido Este Mes",
+    "overdueAmount": "Monto Atrasado",
+    "overdueInstallments": "Cuotas Atrasadas",
+    "recentLoans": "Préstamos Recientes",
+    "overdueCustomers": "Clientes Morosos",
+    "viewCustomers": "Ver Clientes",
+    "newLoan": "Nuevo Préstamo"
+  },
+  "customers": {
+    "title": "Clientes",
+    "subtitle": "Gestione sus clientes",
+    "newCustomer": "Nuevo Cliente",
+    "searchCustomers": "Buscar clientes...",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "address": "Dirección",
+    "document": "Documento",
+    "notes": "Observaciones",
+    "creditLimit": "Límite de Crédito",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "blocked": "Bloqueado",
+    "viewDetails": "Ver detalles",
+    "noCustomersFound": "No se encontraron clientes"
+  },
+  "loans": {
+    "title": "Préstamos",
+    "subtitle": "Gestione los préstamos",
+    "newLoan": "Nuevo Préstamo",
+    "searchLoans": "Buscar préstamos...",
+    "customer": "Cliente",
+    "principal": "Monto Principal",
+    "installments": "Cuotas",
+    "paid": "Pagado",
+    "remaining": "Restante",
+    "pending": "Pendiente",
+    "paidOut": "Pagado",
+    "active": "Activo",
+    "cancelled": "Cancelado",
+    "viewDetails": "Ver detalles",
+    "noLoansFound": "No se encontraron préstamos"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "forgotPassword": "¿Olvidó su contraseña?",
+    "welcomeBack": "Bienvenido de nuevo"
+  },
+  "settings": {
+    "title": "Configuración",
+    "general": "General",
+    "notifications": "Notificaciones",
+    "security": "Seguridad",
+    "language": "Idioma"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "noNotifications": "Sin notificaciones nuevas",
+    "markAsRead": "Marcar como leído"
+  }
+}

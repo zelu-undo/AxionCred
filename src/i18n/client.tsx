@@ -1,0 +1,276 @@
+"use client"
+
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { usePathname, useRouter } from "next/navigation"
+
+type Locale = "pt" | "en" | "es"
+
+interface I18nContextType {
+  locale: Locale
+  setLocale: (locale: Locale) => void
+  t: (key: string) => string
+}
+
+const translations: Record<Locale, Record<string, string>> = {
+  pt: {
+    "common.appName": "AXION",
+    "common.loading": "Carregando...",
+    "common.save": "Salvar",
+    "common.cancel": "Cancelar",
+    "common.delete": "Excluir",
+    "common.edit": "Editar",
+    "common.create": "Criar",
+    "common.search": "Buscar",
+    "common.actions": "Ações",
+    "common.status": "Status",
+    "common.date": "Data",
+    "common.amount": "Valor",
+    "common.total": "Total",
+    "common.yes": "Sim",
+    "common.no": "Não",
+    "common.confirm": "Confirmar",
+    "common.back": "Voltar",
+    "common.next": "Próximo",
+    "common.previous": "Anterior",
+    "common.seeAll": "Ver todos",
+    "common.noData": "Nenhum dado encontrado",
+    "navigation.dashboard": "Painel",
+    "navigation.customers": "Clientes",
+    "navigation.loans": "Empréstimos",
+    "navigation.collections": "Cobranças",
+    "navigation.settings": "Configurações",
+    "navigation.logout": "Sair",
+    "navigation.profile": "Perfil",
+    "dashboard.title": "Painel",
+    "dashboard.subtitle": "Visão geral da sua operação de crédito",
+    "dashboard.totalCustomers": "Total de Clientes",
+    "dashboard.activeLoans": "Empréstimos Ativos",
+    "dashboard.totalToReceive": "Total a Receber",
+    "dashboard.receivedThisMonth": "Recebido no Mês",
+    "dashboard.overdueAmount": "Valor Atrasado",
+    "dashboard.overdueInstallments": "Parcelas Atrasadas",
+    "dashboard.recentLoans": "Últimos Empréstimos",
+    "dashboard.overdueCustomers": "Clientes Inadimplentes",
+    "dashboard.viewCustomers": "Ver Clientes",
+    "dashboard.newLoan": "Novo Empréstimo",
+    "customers.title": "Clientes",
+    "customers.subtitle": "Gerencie seus clientes",
+    "customers.newCustomer": "Novo Cliente",
+    "customers.searchCustomers": "Buscar clientes...",
+    "customers.name": "Nome",
+    "customers.email": "E-mail",
+    "customers.phone": "Telefone",
+    "customers.address": "Endereço",
+    "customers.document": "Documento",
+    "customers.notes": "Observações",
+    "customers.creditLimit": "Limite de Crédito",
+    "customers.active": "Ativo",
+    "customers.inactive": "Inativo",
+    "customers.blocked": "Bloqueado",
+    "customers.viewDetails": "Ver detalhes",
+    "customers.noCustomersFound": "Nenhum cliente encontrado",
+    "loans.title": "Empréstimos",
+    "loans.subtitle": "Gerencie os empréstimos",
+    "loans.newLoan": "Novo Empréstimo",
+    "loans.searchLoans": "Buscar empréstimos...",
+    "loans.customer": "Cliente",
+    "loans.principal": "Valor Principal",
+    "loans.installments": "Parcelas",
+    "loans.paid": "Pago",
+    "loans.remaining": "Restante",
+    "loans.pending": "Pendente",
+    "loans.paidOut": "Quitado",
+    "loans.active": "Ativo",
+    "loans.cancelled": "Cancelado",
+    "loans.viewDetails": "Ver detalhes",
+    "loans.noLoansFound": "Nenhum empréstimo encontrado",
+    "settings.title": "Configurações",
+    "settings.language": "Idioma",
+  },
+  en: {
+    "common.appName": "AXION",
+    "common.loading": "Loading...",
+    "common.save": "Save",
+    "common.cancel": "Cancel",
+    "common.delete": "Delete",
+    "common.edit": "Edit",
+    "common.create": "Create",
+    "common.search": "Search",
+    "common.actions": "Actions",
+    "common.status": "Status",
+    "common.date": "Date",
+    "common.amount": "Amount",
+    "common.total": "Total",
+    "common.yes": "Yes",
+    "common.no": "No",
+    "common.confirm": "Confirm",
+    "common.back": "Back",
+    "common.next": "Next",
+    "common.previous": "Previous",
+    "common.seeAll": "See all",
+    "common.noData": "No data found",
+    "navigation.dashboard": "Dashboard",
+    "navigation.customers": "Customers",
+    "navigation.loans": "Loans",
+    "navigation.collections": "Collections",
+    "navigation.settings": "Settings",
+    "navigation.logout": "Logout",
+    "navigation.profile": "Profile",
+    "dashboard.title": "Dashboard",
+    "dashboard.subtitle": "Overview of your credit operation",
+    "dashboard.totalCustomers": "Total Customers",
+    "dashboard.activeLoans": "Active Loans",
+    "dashboard.totalToReceive": "Total to Receive",
+    "dashboard.receivedThisMonth": "Received This Month",
+    "dashboard.overdueAmount": "Overdue Amount",
+    "dashboard.overdueInstallments": "Overdue Installments",
+    "dashboard.recentLoans": "Recent Loans",
+    "dashboard.overdueCustomers": "Overdue Customers",
+    "dashboard.viewCustomers": "View Customers",
+    "dashboard.newLoan": "New Loan",
+    "customers.title": "Customers",
+    "customers.subtitle": "Manage your customers",
+    "customers.newCustomer": "New Customer",
+    "customers.searchCustomers": "Search customers...",
+    "customers.name": "Name",
+    "customers.email": "Email",
+    "customers.phone": "Phone",
+    "customers.address": "Address",
+    "customers.document": "Document",
+    "customers.notes": "Notes",
+    "customers.creditLimit": "Credit Limit",
+    "customers.active": "Active",
+    "customers.inactive": "Inactive",
+    "customers.blocked": "Blocked",
+    "customers.viewDetails": "View details",
+    "customers.noCustomersFound": "No customers found",
+    "loans.title": "Loans",
+    "loans.subtitle": "Manage loans",
+    "loans.newLoan": "New Loan",
+    "loans.searchLoans": "Search loans...",
+    "loans.customer": "Customer",
+    "loans.principal": "Principal Amount",
+    "loans.installments": "Installments",
+    "loans.paid": "Paid",
+    "loans.remaining": "Remaining",
+    "loans.pending": "Pending",
+    "loans.paidOut": "Paid Out",
+    "loans.active": "Active",
+    "loans.cancelled": "Cancelled",
+    "loans.viewDetails": "View details",
+    "loans.noLoansFound": "No loans found",
+    "settings.title": "Settings",
+    "settings.language": "Language",
+  },
+  es: {
+    "common.appName": "AXION",
+    "common.loading": "Cargando...",
+    "common.save": "Guardar",
+    "common.cancel": "Cancelar",
+    "common.delete": "Eliminar",
+    "common.edit": "Editar",
+    "common.create": "Crear",
+    "common.search": "Buscar",
+    "common.actions": "Acciones",
+    "common.status": "Estado",
+    "common.date": "Fecha",
+    "common.amount": "Monto",
+    "common.total": "Total",
+    "common.yes": "Sí",
+    "common.no": "No",
+    "common.confirm": "Confirmar",
+    "common.back": "Volver",
+    "common.next": "Siguiente",
+    "common.previous": "Anterior",
+    "common.seeAll": "Ver todo",
+    "common.noData": "No se encontraron datos",
+    "navigation.dashboard": "Panel",
+    "navigation.customers": "Clientes",
+    "navigation.loans": "Préstamos",
+    "navigation.collections": "Cobros",
+    "navigation.settings": "Configuración",
+    "navigation.logout": "Cerrar sesión",
+    "navigation.profile": "Perfil",
+    "dashboard.title": "Panel",
+    "dashboard.subtitle": "Resumen de su operación de crédito",
+    "dashboard.totalCustomers": "Total de Clientes",
+    "dashboard.activeLoans": "Préstamos Activos",
+    "dashboard.totalToReceive": "Total a Cobrar",
+    "dashboard.receivedThisMonth": "Recibido Este Mes",
+    "dashboard.overdueAmount": "Monto Atrasado",
+    "dashboard.overdueInstallments": "Cuotas Atrasadas",
+    "dashboard.recentLoans": "Préstamos Recientes",
+    "dashboard.overdueCustomers": "Clientes Morosos",
+    "dashboard.viewCustomers": "Ver Clientes",
+    "dashboard.newLoan": "Nuevo Préstamo",
+    "customers.title": "Clientes",
+    "customers.subtitle": "Gestione sus clientes",
+    "customers.newCustomer": "Nuevo Cliente",
+    "customers.searchCustomers": "Buscar clientes...",
+    "customers.name": "Nombre",
+    "customers.email": "Correo electrónico",
+    "customers.phone": "Teléfono",
+    "customers.address": "Dirección",
+    "customers.document": "Documento",
+    "customers.notes": "Observaciones",
+    "customers.creditLimit": "Límite de Crédito",
+    "customers.active": "Activo",
+    "customers.inactive": "Inactivo",
+    "customers.blocked": "Bloqueado",
+    "customers.viewDetails": "Ver detalles",
+    "customers.noCustomersFound": "No se encontraron clientes",
+    "loans.title": "Préstamos",
+    "loans.subtitle": "Gestione los préstamos",
+    "loans.newLoan": "Nuevo Préstamo",
+    "loans.searchLoans": "Buscar préstamos...",
+    "loans.customer": "Cliente",
+    "loans.principal": "Monto Principal",
+    "loans.installments": "Cuotas",
+    "loans.paid": "Pagado",
+    "loans.remaining": "Restante",
+    "loans.pending": "Pendiente",
+    "loans.paidOut": "Pagado",
+    "loans.active": "Activo",
+    "loans.cancelled": "Cancelado",
+    "loans.viewDetails": "Ver detalles",
+    "loans.noLoansFound": "No se encontraron préstamos",
+    "settings.title": "Configuración",
+    "settings.language": "Idioma",
+  },
+}
+
+const I18nContext = createContext<I18nContextType | undefined>(undefined)
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>("pt")
+
+  useEffect(() => {
+    const saved = localStorage.getItem("axion-locale") as Locale
+    if (saved && ["pt", "en", "es"].includes(saved)) {
+      setLocaleState(saved)
+    }
+  }, [])
+
+  const setLocale = (newLocale: Locale) => {
+    setLocaleState(newLocale)
+    localStorage.setItem("axion-locale", newLocale)
+  }
+
+  const t = (key: string): string => {
+    return translations[locale][key] || key
+  }
+
+  return (
+    <I18nContext.Provider value={{ locale, setLocale, t }}>
+      {children}
+    </I18nContext.Provider>
+  )
+}
+
+export function useI18n() {
+  const context = useContext(I18nContext)
+  if (!context) {
+    throw new Error("useI18n must be used within I18nProvider")
+  }
+  return context
+}
