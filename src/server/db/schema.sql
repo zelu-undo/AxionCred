@@ -215,7 +215,7 @@ CREATE TABLE credit_score_history (
 
 CREATE TABLE reminder_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE UNIQUE,
     enabled BOOLEAN DEFAULT true,
     days_before INTEGER[] DEFAULT ARRAY[3, 1],
     hours INTEGER[] DEFAULT ARRAY[9, 14, 18],
@@ -405,7 +405,7 @@ CREATE TABLE user_roles (
 -- Permission templates (predefined permission sets)
 CREATE TABLE permission_templates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     permissions JSONB NOT NULL DEFAULT '[]',
     is_system BOOLEAN DEFAULT false,
@@ -428,7 +428,8 @@ CREATE TABLE message_templates (
     min_score INTEGER, -- minimum customer score to use this template
     max_score INTEGER, -- maximum customer score to use this template
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
 );
 
 -- ============================================
