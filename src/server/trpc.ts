@@ -82,6 +82,18 @@ export const publicProcedure = t.procedure
 export const middleware = t.middleware
 
 const isAuthed = middleware(async ({ ctx, next }) => {
+  // Allow access in demo mode
+  if (ctx.isDemoMode) {
+    return next({
+      ctx: {
+        userId: ctx.userId,
+        tenantId: ctx.tenantId,
+        userRole: ctx.userRole,
+        isDemoMode: ctx.isDemoMode,
+      },
+    })
+  }
+  
   if (!ctx.userId || !ctx.tenantId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
@@ -90,6 +102,7 @@ const isAuthed = middleware(async ({ ctx, next }) => {
       userId: ctx.userId,
       tenantId: ctx.tenantId,
       userRole: ctx.userRole,
+      isDemoMode: ctx.isDemoMode,
     },
   })
 })

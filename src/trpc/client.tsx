@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { httpBatchLink } from "@trpc/client"
 import { createTRPCReact } from "@trpc/react-query"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import type { AppRouter } from "@/server/routers"
 
 export const trpc = createTRPCReact<AppRouter>()
@@ -12,6 +12,12 @@ function getBaseUrl() {
   if (typeof window !== "undefined") return ""
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   return `http://localhost:${process.env.PORT ?? 3000}`
+}
+
+// Check if user is logged in (demo mode)
+function checkIsDemoMode(): boolean {
+  if (typeof window === "undefined") return false
+  return !!localStorage.getItem("axion_user")
 }
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
@@ -27,41 +33,47 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       })
   )
 
-  // Check if we're in demo mode - needs to be reactive
-  const [isDemoMode, setIsDemoMode] = useState(false)
+  // Use state but initialize with synchronous check
+  const [isDemoMode, setIsDemoMode] = useState(() => checkIsDemoMode())
 
   useEffect(() => {
-    // Check localStorage after mount
-    const storedUser = localStorage.getItem("axion_user")
-    setIsDemoMode(!!storedUser)
+    // Listen for changes in localStorage
+    const handleStorage = () => {
+      setIsDemoMode(checkIsDemoMode())
+    }
+    
+    // Also check on mount in case localStorage changed
+    setIsDemoMode(checkIsDemoMode())
+    
+    // Poll every second for localStorage changes (for demo login/logout)
+    const interval = setInterval(() => {
+      setIsDemoMode(checkIsDemoMode())
+    }, 1000)
+    
+    window.addEventListener("storage", handleStorage)
+    return () => {
+      window.removeEventListener("storage", handleStorage)
+      clearInterval(interval)
+    }
   }, [])
 
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
+  // Create client with current isDemoMode value
+  const trpcClient = useMemo(() => {
+    return trpc.createClient({
       links: [
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
-          headers() {
-            // Send demo mode header if user is in demo mode
-            if (isDemoMode) {
-              return { "x-demo-mode": "true" }
-            }
-            return {}
+          headers: {
+            // Always send demo mode header - server will handle both cases
+            "x-demo-mode": isDemoMode ? "true" : "false",
           },
         }),
       ],
     })
-  )
-
-  // Recreate client when demo mode changes
-  const [clientKey, setClientKey] = useState(0)
-  useEffect(() => {
-    setClientKey(prev => prev + 1)
   }, [isDemoMode])
 
   return (
     <trpc.Provider 
-      key={clientKey}
       client={trpcClient} 
       queryClient={queryClient}
     >
