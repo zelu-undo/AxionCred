@@ -264,6 +264,53 @@ CREATE TABLE credit_decisions (
 );
 
 -- ============================================
+-- INTEREST AND BUSINESS RULES (Phase 1)
+-- ============================================
+
+CREATE TABLE loan_interest_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    installments_min INTEGER NOT NULL,
+    installments_max INTEGER NOT NULL,
+    interest_rate DECIMAL(5,2) NOT NULL,
+    interest_type VARCHAR(20) DEFAULT 'monthly', -- 'weekly' or 'monthly'
+    late_fee_percentage DECIMAL(5,2) DEFAULT 0,
+    late_interest_type VARCHAR(20) DEFAULT 'daily', -- 'daily' or 'monthly'
+    late_interest_percentage DECIMAL(5,2) DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    priority INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT install_min_max CHECK (installments_min <= installments_max),
+    CONSTRAINT positive_rate CHECK (interest_rate >= 0),
+    CONSTRAINT positive_late_fee CHECK (late_fee_percentage >= 0),
+    CONSTRAINT positive_late_interest CHECK (late_interest_percentage >= 0)
+);
+
+CREATE TABLE loan_rule_snapshots (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    loan_id UUID REFERENCES loans(id) ON DELETE CASCADE,
+    rule_id UUID REFERENCES loan_interest_rules(id) ON DELETE SET NULL,
+    principal_amount DECIMAL(15,2) NOT NULL,
+    interest_rate DECIMAL(5,2) NOT NULL,
+    interest_type VARCHAR(20) NOT NULL,
+    installments_count INTEGER NOT NULL,
+    total_amount DECIMAL(15,2) NOT NULL,
+    late_fee_percentage DECIMAL(5,2),
+    late_interest_type VARCHAR(20),
+    late_interest_percentage DECIMAL(5,2),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for interest rules
+CREATE INDEX idx_loan_interest_rules_tenant ON loan_interest_rules(tenant_id);
+CREATE INDEX idx_loan_interest_rules_active ON loan_interest_rules(tenant_id, is_active);
+CREATE INDEX idx_loan_interest_rules_installments ON loan_interest_rules(tenant_id, installments_min, installments_max);
+CREATE INDEX idx_loan_rule_snapshots_loan ON loan_rule_snapshots(loan_id);
+
+-- ============================================
 -- AUDIT AND NOTIFICATIONS
 -- ============================================
 
@@ -304,6 +351,8 @@ ALTER TABLE loan_installments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loan_interest_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loan_rule_snapshots ENABLE ROW LEVEL SECURITY;
 
 -- Tenants can only see their own data
 CREATE POLICY " tenants_select" ON tenants
@@ -317,6 +366,16 @@ CREATE POLICY "customers_tenant_isolation" ON customers
 
 CREATE POLICY "loans_tenant_isolation" ON loans
     FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE POLICY "loan_interest_rules_tenant_isolation" ON loan_interest_rules
+    FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE POLICY "loan_rule_snapshots_tenant_isolation" ON loan_rule_snapshots
+    FOR ALL USING (
+        loan_id IN (
+            SELECT id FROM loans WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+        )
+    );
 
 -- ============================================
 -- INDEXES
@@ -486,7 +545,147 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to calculate credit score
+-- Function to validate interest rules overlap
+CREATE OR REPLACE FUNCTION validate_interest_rules_overlap(
+    p_tenant_id UUID,
+    p_installments_min INTEGER,
+    p_installments_max INTEGER,
+    p_rule_id UUID DEFAULT NULL
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_overlap INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO v_overlap
+    FROM loan_interest_rules
+    WHERE tenant_id = p_tenant_id
+      AND is_active = true
+      AND id <> COALESCE(p_rule_id, '00000000-0000-0000-0000-000000000000')
+      AND (
+          (installments_min <= p_installments_max AND installments_max >= p_installments_min)
+      );
+    
+    RETURN v_overlap = 0;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get applicable interest rule
+CREATE OR REPLACE FUNCTION get_applicable_interest_rule(
+    p_tenant_id UUID,
+    p_installments INTEGER
+)
+RETURNS TABLE (
+    id UUID,
+    name VARCHAR,
+    interest_rate DECIMAL,
+    interest_type VARCHAR,
+    late_fee_percentage DECIMAL,
+    late_interest_type VARCHAR,
+    late_interest_percentage DECIMAL,
+    priority INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.id,
+        r.name,
+        r.interest_rate,
+        r.interest_type,
+        r.late_fee_percentage,
+        r.late_interest_type,
+        r.late_interest_percentage,
+        r.priority
+    FROM loan_interest_rules r
+    WHERE r.tenant_id = p_tenant_id
+      AND r.is_active = true
+      AND p_installments >= r.installments_min 
+      AND p_installments <= r.installments_max
+    ORDER BY r.priority DESC
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to create loan rule snapshot (immutability)
+CREATE OR REPLACE FUNCTION create_loan_rule_snapshot(
+    p_loan_id UUID,
+    p_rule_id UUID,
+    p_principal_amount DECIMAL,
+    p_interest_rate DECIMAL,
+    p_interest_type VARCHAR,
+    p_installments_count INTEGER,
+    p_total_amount DECIMAL,
+    p_late_fee_percentage DECIMAL,
+    p_late_interest_type VARCHAR,
+    p_late_interest_percentage DECIMAL
+)
+RETURNS UUID AS $$
+DECLARE
+    v_snapshot_id UUID;
+BEGIN
+    INSERT INTO loan_rule_snapshots (
+        loan_id,
+        rule_id,
+        principal_amount,
+        interest_rate,
+        interest_type,
+        installments_count,
+        total_amount,
+        late_fee_percentage,
+        late_interest_type,
+        late_interest_percentage
+    ) VALUES (
+        p_loan_id,
+        p_rule_id,
+        p_principal_amount,
+        p_interest_rate,
+        p_interest_type,
+        p_installments_count,
+        p_total_amount,
+        p_late_fee_percentage,
+        p_late_interest_type,
+        p_late_interest_percentage
+    )
+    RETURNING id INTO v_snapshot_id;
+    
+    RETURN v_snapshot_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate late fee
+CREATE OR REPLACE FUNCTION calculate_late_fee(
+    p_installment_amount DECIMAL,
+    p_late_fee_percentage DECIMAL
+)
+RETURNS DECIMAL AS $$
+BEGIN
+    RETURN p_installment_amount * (p_late_fee_percentage / 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate late interest
+CREATE OR REPLACE FUNCTION calculate_late_interest(
+    p_installment_amount DECIMAL,
+    p_late_interest_percentage DECIMAL,
+    p_late_interest_type VARCHAR,
+    p_days_late INTEGER
+)
+RETURNS DECIMAL AS $$
+DECLARE
+    v_daily_rate DECIMAL;
+    v_monthly_rate DECIMAL;
+BEGIN
+    IF p_late_interest_type = 'daily' THEN
+        v_daily_rate := p_late_interest_percentage / 100 / 30;
+        RETURN p_installment_amount * v_daily_rate * p_days_late;
+    ELSE
+        -- Monthly
+        v_monthly_rate := p_late_interest_percentage / 100;
+        RETURN p_installment_amount * v_monthly_rate * CEIL(p_days_late / 30.0);
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate customer score
 CREATE OR REPLACE FUNCTION calculate_customer_score(p_customer_id UUID)
 RETURNS INTEGER AS $$
 DECLARE
