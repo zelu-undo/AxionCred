@@ -47,70 +47,79 @@
 
 ---
 
-## 🎯 MVP - Funcionalidades Planejadas
+## ✅ Funcionalidades Concluídas (v1.1 - Fases 1-5)
 
 ### Fase 1: Regras de Negócio (Juros e Parcelamento)
-- [ ] **Juros por faixa de parcelas**
+- [x] **Juros por faixa de parcelas**
   - Configurar percentual por número de parcelas
   - Ex: 1-5x = 50%, 6-10x = 80%
-- [ ] **Tipo de juros**
-  - Mensal ou semanal
-- [ ] **Multa por atraso**
-  - Percentual fixo configurável
-- [ ] **Juros por atraso**
-  - Percentual diário ou mensal
-- [ ] **CRUD completo** de configurações
-- [ ] **Validação**: não permitir sobreposição de faixas
-- [ ] **Aplicação automática** ao criar empréstimo
-- [ ] **Imutabilidade**: alterações não afetam contratos existentes
+- [x] **Tipo de juros** (mensal ou semanal)
+- [x] **Multa por atraso** (percentual fixo configurável)
+- [x] **Juros por atraso** (percentual diário ou mensal)
+- [x] **CRUD completo** de configurações
+- [x] **Validação**: não permitir sobreposição de faixas
+- [x] **Aplicação automática** ao criar empréstimo
+- [x] **Imutabilidade**: alterações não afetam contratos existentes
+- **Tabelas**: `interest_rules`, `late_fee_config`, `loan_config`
+- **Router**: `businessRules.ts`
 
 ### Fase 2: Gestão de Funcionários (Permissões)
-- [ ] **Perfis de acesso**
+- [x] **Perfis de acesso**
   - Administrador
   - Gerente
   - Operador
   - Visualizador
-- [ ] **Permissões por módulo**
+- [x] **Permissões por módulo**
   - Dashboard: visualizar/editar
   - Clientes: visualizar/editar/excluir
   - Empréstimos: visualizar/editar/excluir
   - Cobranças: visualizar/editar
   - Configurações: editar
-- [ ] **Interface de gestão**
+- [x] **Interface de gestão**
   - Checkbox por aba
   - Associa usuário ao perfil
-- [ ] **Aplicação em tempo real**
+- [x] **Templates de permissões**
+- **Tabelas**: `roles`, `user_roles`, `permission_templates`
+- **Router**: `users.ts`
 
 ### Fase 3: Painel Adminstrativo (Super Admin)
-- [ ] **Gestão de empresas (tenants)**
+- [x] **Gestão de empresas (tenants)**
   - Criar/editar/desativar empresas
   - Controle de planos
   - Funcionalidades liberadas por empresa
-- [ ] **Métricas globais**
+- [x] **Métricas globais**
   - Taxa de inadimplência por empresa
-  - Onde mais perdem dinheiro
-  - Padrões de atraso
-- [ ] **Análise operacional**
+  - Total de clientes e empréstimos
+- [x] **Análise operacional**
   - Uso por funcionários
-  - Gargalos no uso
+- [x] **Feature flags** por tenant
+- **Router**: `superAdmin.ts`
 
 ### Fase 4: Notificações Avançadas
-- [ ] **Sistema de notificações**
+- [x] **Sistema de notificações**
   - Visual (no sistema)
-  - Sonora
   - E-mail
-- [ ] **Configurações por usuário**
+  - Ambos
+- [x] **Configurações por usuário**
   - Escolher tipos de notificação
   - Escolher eventos
-  - Horários de modo descanso
-- [ ] **Notificações por tipo de usuário**
-  - Definir alertas por perfil
+  - Horários de modo descanso (quiet hours)
+- [x] **Feature flags** por empresa
+- **Tabelas**: `user_notification_settings`, `tenant_features`
+- **Router**: `notifications.ts`
 
 ### Fase 5: Templates de Mensagem
-- [ ] **Templates do sistema**
-- [ ] **Templates personalizados**
-- [ ] **Regras por score do cliente**
-- [ ] **Fallback para padrão do sistema**
+- [x] **Templates do sistema**
+- [x] **Templates personalizados**
+- [x] **Regras por score do cliente**
+- [x] **Fallback para padrão do sistema**
+- [x] **Preview de variáveis**
+- **Tabela**: `message_templates`
+- **Router**: `templates.ts`
+
+---
+
+## 🎯 MVP - Funcionalidades Pendentes (Fases 6-13)
 
 ### Fase 6: Mensagens por Cliente
 - [ ] **Mensagem sugerida** baseada na situação
@@ -201,26 +210,12 @@
 
 ---
 
-## 🎯 Priorização Sugerida
+## 🎯 Próximas Prioridades
 
-### Alta Prioridade (MVP Core)
-1. Fase 1 - Regras de Negócio
-2. Fase 7 - Status e Prioridade  
-3. Fase 8 - Limite de Crédito
-4. Fase 11 - Geração de PDF
-
-### Média Prioridade
-5. Fase 4 - Notificações
-6. Fase 5 - Templates
-7. Fase 6 - Mensagens
-8. Fase 10 - Logs
-
-### Baixa Prioridade (Enterprise)
-9. Fase 2 - Funcionários
-10. Fase 3 - Super Admin
-11. Fase 9 - Numeração
-12. Fase 12 - Venda Rápida
-13. Fase 13 - Alertas
+1. **Fase 6 - Mensagens por Cliente**: Interface para envio direto de mensagens via WhatsApp
+2. **Fase 7 - Status e Prioridade**: Status automático e cálculo de prioridade
+3. **Fase 8 - Limite de Crédito**: Regras automáticas de limite
+4. **Fase 11 - Geração de PDF**: Extratos e contratos
 
 ---
 
