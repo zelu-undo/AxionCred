@@ -15,7 +15,6 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
   const { signUp } = useAuth()
   const router = useRouter()
 
@@ -41,29 +40,8 @@ export default function RegisterPage() {
     if (error) {
       setError(error.message)
       setIsLoading(false)
-    } else {
-      setSuccess(true)
     }
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-green-600">Conta criada!</CardTitle>
-            <CardDescription>
-              Verifique seu e-mail para confirmar sua conta.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Link href="/login">
-              <Button>Voltar para Login</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    // On success, signUp already redirects to dashboard
   }
 
   return (

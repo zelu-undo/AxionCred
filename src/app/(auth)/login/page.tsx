@@ -27,9 +27,8 @@ export default function LoginPage() {
     if (error) {
       setError(error.message)
       setIsLoading(false)
-    } else {
-      router.push("/dashboard")
     }
+    // On success, signIn already redirects
   }
 
   return (
