@@ -41,6 +41,9 @@ function NavigationItems() {
     { name: t("navigation.customers"), href: "/customers", icon: Users },
     { name: t("navigation.loans"), href: "/loans", icon: CreditCard },
     { name: t("navigation.collections"), href: "/collections", icon: Receipt },
+    { name: "⚡ Venda Rápida", href: "/loans/quick", icon: TrendingUp },
+    { name: "🔔 Alertas", href: "/alerts", icon: Bell },
+    { name: "📄 Relatórios", href: "/reports", icon: Receipt },
     { name: t("navigation.settings"), href: "/settings", icon: Settings },
   ]
 
