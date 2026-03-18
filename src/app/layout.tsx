@@ -3,6 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { TRPCProvider } from "@/trpc/client"
 import { I18nProvider } from "@/i18n/client"
+import { AuthProvider } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -21,7 +22,11 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={cn(inter.className, "min-h-screen bg-gray-50")}>
         <TRPCProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </I18nProvider>
         </TRPCProvider>
       </body>
     </html>
