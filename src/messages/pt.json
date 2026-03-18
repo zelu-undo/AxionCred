@@ -1,0 +1,195 @@
+{
+  "common": {
+    "appName": "AXION",
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Buscar",
+    "actions": "Ações",
+    "status": "Status",
+    "date": "Data",
+    "amount": "Valor",
+    "total": "Total",
+    "yes": "Sim",
+    "no": "Não",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "seeAll": "Ver todos",
+    "noData": "Nenhum dado encontrado"
+  },
+  "landing": {
+    "nav": {
+      "features": "Recursos",
+      "benefits": "Benefícios",
+      "pricing": "Planos",
+      "contact": "Contato",
+      "dashboard": "Acessar Dashboard",
+      "getStarted": "Começar Agora"
+    },
+    "hero": {
+      "badge": "Plataforma de Crédito #1 para Pequenos Negocios",
+      "title": "Gestao de Credito Digital para Pequenos Negocios e Freelancers",
+      "description": "Simplifique a gestao de emprestimos, controle inadimplencia e construa confianca digital com seus clientes. Tudo em uma plataforma segura e facil de usar.",
+      "cta": "Comecar Gratuitamente",
+      "learnMore": "Saiba Mais",
+      "trustedBy": "empreendedores confiam",
+      "stats": {
+        "customers": "Clientes",
+        "loans": "Emprestimos",
+        "receita": "Receita",
+        "taxa": "Taxa de Recuperacao"
+      }
+    },
+    "features": {
+      "title": "Tudo que voce precisa para gerenciar creditos",
+      "subtitle": "Ferramentas completas para pequenas empresas e freelancers",
+      "customers": {
+        "title": "Gestao de Clientes",
+        "description": "Cadastre e gerencie todos os seus clientes em um unico lugar com historico completo de emprestimos e pagamentos."
+      },
+      "loans": {
+        "title": "Controle de Emprestimos",
+        "description": "Crie, acompanhe e gerencie emprestimos com parcelas, juros e vencimentos de forma automatica."
+      },
+      "mobile": {
+        "title": "Acesso Mobile",
+        "description": "Gerencie seu negocio de qualquer lugar com nosso aplicativo movel disponivel para iOS e Android."
+      },
+      "analytics": {
+        "title": "Analises e Relatorios",
+        "description": "Tenha insights valiosos sobre sua carteira de creditos com dashboards e relatorios detalhados."
+      },
+      "security": {
+        "title": "Seguranca Avancada",
+        "description": "Seus dados protegidos com criptografia de nivel bancario e conformidade com a LGPD."
+      },
+      "growth": {
+        "title": "Crescimento do Negocio",
+        "description": "Aumente sua base de clientes e reduza inadimplencia com ferramentas de scoring e monitoramento."
+      }
+    },
+    "benefits": {
+      "title": "Por que escolher o AXION?",
+      "description": "Descubra como podemos ajudar seu negocio a crescer de forma sustentavel",
+      "1": "Reducao de ate 80% na inadimplencia com monitoramento automatico",
+      "2": "Economia de tempo com tarefas automatizadas de cobranca",
+      "3": "Decisoes mais seguras com analise de credito integrada",
+      "4": "Suporte especializado em portugues para toda a America Latina",
+      "card": {
+        "customers": {
+          "title": "Clientes Ativos"
+        },
+        "loans": {
+          "title": "Emprestimos Ativos"
+        },
+        "recovery": {
+          "title": "Taxa de Recuperacao"
+        }
+      }
+    },
+    "cta": {
+      "title": "Pronto para transformar seu negocio?",
+      "description": "Comece gratuitamente e experimente todas as funcionalidades. Sem cartao de credito necessario.",
+      "button": "Comecar Agora"
+    },
+    "footer": {
+      "description": "Plataforma de infraestrutura de credito e confianca digital para pequenos negocios.",
+      "product": "Produto",
+      "features": "Recursos",
+      "pricing": "Planos",
+      "integrations": "Integracoes",
+      "company": "Empresa",
+      "about": "Sobre nos",
+      "blog": "Blog",
+      "careers": "Carreiras",
+      "legal": "Legal",
+      "privacy": "Privacidade",
+      "terms": "Termos de Uso",
+      "security": "Seguranca",
+      "rights": "Todos os direitos reservados."
+    }
+  },
+  "navigation": {
+    "dashboard": "Painel",
+    "customers": "Clientes",
+    "loans": "Emprestimos",
+    "collections": "Cobrancas",
+    "settings": "Configuracoes",
+    "logout": "Sair",
+    "profile": "Perfil"
+  },
+  "dashboard": {
+    "title": "Painel",
+    "subtitle": "Visão geral da sua operação de crédito",
+    "totalCustomers": "Total de Clientes",
+    "activeLoans": "Empréstimos Ativos",
+    "totalToReceive": "Total a Receber",
+    "receivedThisMonth": "Recebido no Mês",
+    "overdueAmount": "Valor Atrasado",
+    "overdueInstallments": "Parcelas Atrasadas",
+    "recentLoans": "Últimos Empréstimos",
+    "overdueCustomers": "Clientes Inadimplentes",
+    "viewCustomers": "Ver Clientes",
+    "newLoan": "Novo Empréstimo"
+  },
+  "customers": {
+    "title": "Clientes",
+    "subtitle": "Gerencie seus clientes",
+    "newCustomer": "Novo Cliente",
+    "searchCustomers": "Buscar clientes...",
+    "name": "Nome",
+    "email": "E-mail",
+    "phone": "Telefone",
+    "address": "Endereço",
+    "document": "Documento",
+    "notes": "Observações",
+    "creditLimit": "Limite de Crédito",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "blocked": "Bloqueado",
+    "viewDetails": "Ver detalhes",
+    "noCustomersFound": "Nenhum cliente encontrado"
+  },
+  "loans": {
+    "title": "Empréstimos",
+    "subtitle": "Gerencie os empréstimos",
+    "newLoan": "Novo Empréstimo",
+    "searchLoans": "Buscar empréstimos...",
+    "customer": "Cliente",
+    "principal": "Valor Principal",
+    "installments": "Parcelas",
+    "paid": "Pago",
+    "remaining": "Restante",
+    "pending": "Pendente",
+    "paidOut": "Quitado",
+    "active": "Ativo",
+    "cancelled": "Cancelado",
+    "viewDetails": "Ver detalhes",
+    "noLoansFound": "Nenhum empréstimo encontrado"
+  },
+  "auth": {
+    "login": "Entrar",
+    "logout": "Sair",
+    "email": "E-mail",
+    "password": "Senha",
+    "forgotPassword": "Esqueceu a senha?",
+    "welcomeBack": "Bem-vindo de volta"
+  },
+  "settings": {
+    "title": "Configurações",
+    "general": "Geral",
+    "notifications": "Notificações",
+    "security": "Segurança",
+    "language": "Idioma"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "noNotifications": "Nenhuma notificação nova",
+    "markAsRead": "Marcar como lida"
+  }
+}

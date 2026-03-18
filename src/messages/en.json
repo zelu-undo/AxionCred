@@ -1,0 +1,195 @@
+{
+  "common": {
+    "appName": "AXION",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "amount": "Amount",
+    "total": "Total",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "seeAll": "See all",
+    "noData": "No data found"
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "benefits": "Benefits",
+      "pricing": "Plans",
+      "contact": "Contact",
+      "dashboard": "Access Dashboard",
+      "getStarted": "Get Started"
+    },
+    "hero": {
+      "badge": "#1 Credit Platform for Small Businesses",
+      "title": "Digital Credit Management for Small Businesses and Freelancers",
+      "description": "Simplify loan management, control defaults, and build digital trust with your customers. Everything in a secure and easy-to-use platform.",
+      "cta": "Start Free",
+      "learnMore": "Learn More",
+      "trustedBy": "entrepreneurs trust us",
+      "stats": {
+        "customers": "Customers",
+        "loans": "Loans",
+        "revenue": "Revenue",
+        "rate": "Recovery Rate"
+      }
+    },
+    "features": {
+      "title": "Everything you need to manage credits",
+      "subtitle": "Complete tools for small businesses and freelancers",
+      "customers": {
+        "title": "Customer Management",
+        "description": "Register and manage all your customers in one place with complete loan and payment history."
+      },
+      "loans": {
+        "title": "Loan Control",
+        "description": "Create, track, and manage loans with installments, interest, and due dates automatically."
+      },
+      "mobile": {
+        "title": "Mobile Access",
+        "description": "Manage your business from anywhere with our mobile app available for iOS and Android."
+      },
+      "analytics": {
+        "title": "Analytics and Reports",
+        "description": "Get valuable insights about your credit portfolio with detailed dashboards and reports."
+      },
+      "security": {
+        "title": "Advanced Security",
+        "description": "Your data protected with bank-level encryption and GDPR compliance."
+      },
+      "growth": {
+        "title": "Business Growth",
+        "description": "Increase your customer base and reduce defaults with scoring and monitoring tools."
+      }
+    },
+    "benefits": {
+      "title": "Why choose AXION?",
+      "description": "Discover how we can help your business grow sustainably",
+      "1": "Reduce defaults by up to 80% with automatic monitoring",
+      "2": "Save time with automated collection tasks",
+      "3": "Make safer decisions with integrated credit analysis",
+      "4": "Specialized support in English for all of Latin America",
+      "card": {
+        "customers": {
+          "title": "Active Customers"
+        },
+        "loans": {
+          "title": "Active Loans"
+        },
+        "recovery": {
+          "title": "Recovery Rate"
+        }
+      }
+    },
+    "cta": {
+      "title": "Ready to transform your business?",
+      "description": "Start for free and try all features. No credit card required.",
+      "button": "Get Started Now"
+    },
+    "footer": {
+      "description": "Credit and digital trust infrastructure platform for small businesses.",
+      "product": "Product",
+      "features": "Features",
+      "pricing": "Plans",
+      "integrations": "Integrations",
+      "company": "Company",
+      "about": "About Us",
+      "blog": "Blog",
+      "careers": "Careers",
+      "legal": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms of Service",
+      "security": "Security",
+      "rights": "All rights reserved."
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "loans": "Loans",
+    "collections": "Collections",
+    "settings": "Settings",
+    "logout": "Logout",
+    "profile": "Profile"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of your credit operation",
+    "totalCustomers": "Total Customers",
+    "activeLoans": "Active Loans",
+    "totalToReceive": "Total to Receive",
+    "receivedThisMonth": "Received This Month",
+    "overdueAmount": "Overdue Amount",
+    "overdueInstallments": "Overdue Installments",
+    "recentLoans": "Recent Loans",
+    "overdueCustomers": "Overdue Customers",
+    "viewCustomers": "View Customers",
+    "newLoan": "New Loan"
+  },
+  "customers": {
+    "title": "Customers",
+    "subtitle": "Manage your customers",
+    "newCustomer": "New Customer",
+    "searchCustomers": "Search customers...",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "document": "Document",
+    "notes": "Notes",
+    "creditLimit": "Credit Limit",
+    "active": "Active",
+    "inactive": "Inactive",
+    "blocked": "Blocked",
+    "viewDetails": "View details",
+    "noCustomersFound": "No customers found"
+  },
+  "loans": {
+    "title": "Loans",
+    "subtitle": "Manage loans",
+    "newLoan": "New Loan",
+    "searchLoans": "Search loans...",
+    "customer": "Customer",
+    "principal": "Principal Amount",
+    "installments": "Installments",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "pending": "Pending",
+    "paidOut": "Paid Out",
+    "active": "Active",
+    "cancelled": "Cancelled",
+    "viewDetails": "View details",
+    "noLoansFound": "No loans found"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "welcomeBack": "Welcome back"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "notifications": "Notifications",
+    "security": "Security",
+    "language": "Language"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No new notifications",
+    "markAsRead": "Mark as read"
+  }
+}
