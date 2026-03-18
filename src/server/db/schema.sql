@@ -340,6 +340,130 @@ CREATE TABLE notifications (
 );
 
 -- ============================================
+-- BUSINESS RULES - INTEREST AND INSTALLMENTS
+-- ============================================
+
+-- Interest rules by installment range
+CREATE TABLE interest_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    min_installments INTEGER NOT NULL,
+    max_installments INTEGER NOT NULL,
+    interest_rate DECIMAL(5,2) NOT NULL,
+    interest_type VARCHAR(20) DEFAULT 'monthly', -- monthly, weekly
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, min_installments, max_installments)
+);
+
+-- Late payment configuration
+CREATE TABLE late_fee_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    fixed_fee DECIMAL(15,2) DEFAULT 0,
+    percentage DECIMAL(5,2) DEFAULT 0,
+    daily_interest DECIMAL(5,4) DEFAULT 0, -- daily rate for compound interest
+    monthly_interest DECIMAL(5,2) DEFAULT 0, -- monthly rate
+    grace_days INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id)
+);
+
+-- Loan configuration (applies to new loans)
+CREATE TABLE loan_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    default_interest_rate DECIMAL(5,2),
+    min_amount DECIMAL(15,2) DEFAULT 100,
+    max_amount DECIMAL(15,2) DEFAULT 100000,
+    min_installments INTEGER DEFAULT 1,
+    max_installments INTEGER DEFAULT 60,
+    allow_renewal BOOLEAN DEFAULT true,
+    max_active_loans_per_customer INTEGER DEFAULT 5,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id)
+);
+
+-- ============================================
+-- USER PERMISSIONS AND ROLES
+-- ============================================
+
+-- User role assignments (links users to roles)
+CREATE TABLE user_roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    assigned_by UUID REFERENCES users(id),
+    UNIQUE(user_id, role_id)
+);
+
+-- Permission templates (predefined permission sets)
+CREATE TABLE permission_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    permissions JSONB NOT NULL DEFAULT '[]',
+    is_system BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
+-- MESSAGE TEMPLATES
+-- ============================================
+
+CREATE TABLE message_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL, -- reminder, welcome, payment_received, overdue, custom
+    content TEXT NOT NULL,
+    variables JSONB DEFAULT '[]', -- available variables like {{customer_name}}, {{loan_amount}}
+    is_system BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    min_score INTEGER, -- minimum customer score to use this template
+    max_score INTEGER, -- maximum customer score to use this template
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
+-- USER NOTIFICATION SETTINGS
+-- ============================================
+
+CREATE TABLE user_notification_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    notification_type VARCHAR(50) NOT NULL, -- payment_received, overdue, loan_created, etc.
+    enabled BOOLEAN DEFAULT true,
+    method VARCHAR(20) DEFAULT 'both', -- visual, email, both
+    quiet_hours_start TIME,
+    quiet_hours_end TIME,
+    UNIQUE(user_id, notification_type)
+);
+
+-- ============================================
+-- TENANT FEATURE FLAGS
+-- ============================================
+
+CREATE TABLE tenant_features (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    feature_name VARCHAR(100) NOT NULL,
+    enabled BOOLEAN DEFAULT true,
+    limit_value INTEGER, -- for features with limits
+    used_value INTEGER DEFAULT 0,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, feature_name)
+);
+
+-- ============================================
 -- ROW LEVEL SECURITY POLICIES
 -- ============================================
 
@@ -351,8 +475,19 @@ ALTER TABLE loan_installments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE loan_interest_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loan_rule_snapshots ENABLE ROW LEVEL SECURITY;
+=======
+ALTER TABLE interest_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE late_fee_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loan_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permission_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE message_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_notification_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_features ENABLE ROW LEVEL SECURITY;
 
 -- Tenants can only see their own data
 CREATE POLICY " tenants_select" ON tenants
@@ -710,6 +845,152 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to get interest rate by installments
+CREATE OR REPLACE FUNCTION get_interest_rate(p_tenant_id UUID, p_installments INTEGER)
+RETURNS DECIMAL(5,2) AS $$
+DECLARE
+    v_rate DECIMAL(5,2);
+BEGIN
+    SELECT ir.interest_rate INTO v_rate
+    FROM interest_rules ir
+    WHERE ir.tenant_id = p_tenant_id
+    AND ir.is_active = true
+    AND p_installments >= ir.min_installments
+    AND p_installments <= ir.max_installments
+    ORDER BY ir.max_installments - ir.min_installments ASC
+    LIMIT 1;
+    
+    RETURN COALESCE(v_rate, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to validate interest rule overlap
+CREATE OR REPLACE FUNCTION validate_interest_rule_overlap(
+    p_tenant_id UUID,
+    p_min_installments INTEGER,
+    p_max_installments INTEGER,
+    p_exclude_id UUID DEFAULT NULL
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_conflict BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1 FROM interest_rules
+        WHERE tenant_id = p_tenant_id
+        AND id != COALESCE(p_exclude_id, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND is_active = true
+        AND (
+            (min_installments <= p_max_installments AND max_installments >= p_min_installments)
+        )
+    ) INTO v_conflict;
+    
+    RETURN v_conflict;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate late fee
+CREATE OR REPLACE FUNCTION calculate_late_fee(
+    p_tenant_id UUID,
+    p_amount DECIMAL(15,2),
+    p_days_late INTEGER
+)
+RETURNS DECIMAL(15,2) AS $$
+DECLARE
+    v_config RECORD;
+    v_fee DECIMAL(15,2) := 0;
+BEGIN
+    SELECT * INTO v_config
+    FROM late_fee_config
+    WHERE tenant_id = p_tenant_id
+    LIMIT 1;
+    
+    IF v_config IS NULL THEN
+        RETURN 0;
+    END IF;
+    
+    -- Fixed fee
+    v_fee := v_fee + COALESCE(v_config.fixed_fee, 0);
+    
+    -- Percentage fee
+    v_fee := v_fee + (p_amount * COALESCE(v_config.percentage, 0) / 100);
+    
+    -- Daily interest (if days_late > grace_days)
+    IF p_days_late > COALESCE(v_config.grace_days, 0) THEN
+        DECLARE
+            v_days_chargeable INTEGER := p_days_late - COALESCE(v_config.grace_days, 0);
+        BEGIN
+            v_fee := v_fee + (p_amount * v_config.daily_interest * v_days_chargeable);
+        END;
+    END IF;
+    
+    RETURN v_fee;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get loan config
+CREATE OR REPLACE FUNCTION get_loan_config(p_tenant_id UUID)
+RETURNS RECORD AS $$
+DECLARE
+    v_config RECORD;
+BEGIN
+    SELECT * INTO v_config
+    FROM loan_config
+    WHERE tenant_id = p_tenant_id
+    LIMIT 1;
+    
+    RETURN v_config;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get template by customer score
+CREATE OR REPLACE FUNCTION get_template_by_score(
+    p_tenant_id UUID,
+    p_category VARCHAR,
+    p_score INTEGER
+)
+RETURNS RECORD AS $$
+DECLARE
+    v_template RECORD;
+BEGIN
+    -- First try to find template with score range
+    SELECT * INTO v_template
+    FROM message_templates
+    WHERE tenant_id = p_tenant_id
+    AND category = p_category
+    AND is_active = true
+    AND min_score IS NOT NULL
+    AND max_score IS NOT NULL
+    AND p_score >= min_score
+    AND p_score <= max_score
+    ORDER BY max_score - min_score ASC
+    LIMIT 1;
+    
+    -- If no score-specific template, try system default
+    IF v_template IS NULL THEN
+        SELECT * INTO v_template
+        FROM message_templates
+        WHERE tenant_id = p_tenant_id
+        AND category = p_category
+        AND is_active = true
+        AND is_system = true
+        LIMIT 1;
+    END IF;
+    
+    -- Last resort: any active template
+    IF v_template IS NULL THEN
+        SELECT * INTO v_template
+        FROM message_templates
+        WHERE tenant_id = p_tenant_id
+        AND category = p_category
+        AND is_active = true
+        LIMIT 1;
+    END IF;
+    
+    RETURN v_template;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ============================================
 -- SEEDS
 -- ============================================
@@ -731,3 +1012,75 @@ INSERT INTO reminder_settings (tenant_id, enabled, days_before, hours, methods)
 VALUES 
     ('00000000-0000-0000-0000-000000000001', true, ARRAY[3, 1], ARRAY[9, 14, 18], ARRAY['whatsapp'])
 ON CONFLICT (tenant_id) DO NOTHING;
+
+-- Insert default interest rules for demo tenant
+INSERT INTO interest_rules (tenant_id, name, min_installments, max_installments, interest_rate, interest_type)
+VALUES 
+    ('00000000-0000-0000-0000-000000000001', 'Curto prazo', 1, 5, 50.00, 'monthly'),
+    ('00000000-0000-0000-0000-000000000001', 'Médio prazo', 6, 12, 80.00, 'monthly'),
+    ('00000000-0000-0000-0000-000000000001', 'Longo prazo', 13, 24, 120.00, 'monthly'),
+    ('00000000-0000-0000-0000-000000000001', 'Extendido', 25, 60, 150.00, 'monthly')
+ON CONFLICT (tenant_id, min_installments, max_installments) DO NOTHING;
+
+-- Insert default late fee config for demo tenant
+INSERT INTO late_fee_config (tenant_id, fixed_fee, percentage, daily_interest, monthly_interest, grace_days)
+VALUES 
+    ('00000000-0000-0000-0000-000000000001', 10.00, 2.00, 0.001, 5.00, 5)
+ON CONFLICT (tenant_id) DO NOTHING;
+
+-- Insert default loan config for demo tenant
+INSERT INTO loan_config (tenant_id, default_interest_rate, min_amount, max_amount, min_installments, max_installments)
+VALUES 
+    ('00000000-0000-0000-0000-000000000001', 50.00, 100.00, 100000.00, 1, 60)
+ON CONFLICT (tenant_id) DO NOTHING;
+
+-- Insert default roles for demo tenant
+INSERT INTO roles (tenant_id, name, permissions)
+VALUES 
+    ('00000000-0000-0000-0000-000000000001', 'Administrador', '["*"]'::jsonb),
+    ('00000000-0000-0000-0000-000000000001', 'Gerente', '["dashboard.view", "dashboard.edit", "customers.view", "customers.edit", "loans.view", "loans.edit", "collections.view", "collections.edit"]'::jsonb),
+    ('00000000-0000-0000-0000-000000000001', 'Operador', '["dashboard.view", "customers.view", "customers.edit", "loans.view", "loans.create", "collections.view", "collections.edit"]'::jsonb),
+    ('00000000-0000-0000-0000-000000000001', 'Visualizador', '["dashboard.view", "customers.view", "loans.view", "collections.view"]'::jsonb)
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- Insert system permission templates
+INSERT INTO permission_templates (name, description, permissions, is_system)
+VALUES 
+    ('Admin', 'Acesso total ao sistema', '["*"]'::jsonb, true),
+    ('Gerente', 'Gestão com permissões de edição', '["dashboard.view", "dashboard.edit", "customers.view", "customers.edit", "customers.delete", "loans.view", "loans.edit", "loans.create", "collections.view", "collections.edit", "settings.view", "settings.edit"]'::jsonb, true),
+    ('Operador', 'Operações do dia a dia', '["dashboard.view", "customers.view", "customers.edit", "loans.view", "loans.create", "collections.view", "collections.edit"]'::jsonb, true),
+    ('Visualizador', 'Apenas visualização', '["dashboard.view", "customers.view", "loans.view", "collections.view"]'::jsonb, true)
+ON CONFLICT (name) DO NOTHING;
+
+-- Insert default message templates
+INSERT INTO message_templates (tenant_id, name, category, content, is_system, min_score, max_score)
+VALUES 
+    -- Welcome templates
+    ('00000000-0000-0000-0000-000000000001', 'Boas-vindas - Score Alto', 'welcome', 'Olá {{customer_name}}! Bem-vindo à {{company_name}}. Seu crédito aprovado é de R$ {{credit_limit}}. Emitimos seu cartão em breve.', true, 700, 1000),
+    ('00000000-0000-0000-0000-000000000001', 'Boas-vindas - Score Médio', 'welcome', 'Olá {{customer_name}}! Bem-vindo à {{company_name}}. Seu crédito aprovado é de R$ {{credit_limit}}.', true, 500, 699),
+    ('00000000-0000-0000-0000-000000000001', 'Boas-vindas - Score Baixo', 'welcome', 'Olá {{customer_name}}! Bem-vindo à {{company_name}}. Seu crédito aprovado é de R$ {{credit_limit}}. Estamos很高兴为您提供服务。', true, 300, 499),
+    
+    -- Payment reminder templates
+    ('00000000-0000-0000-0000-000000000001', 'Lembrete de pagamento - 3 dias', 'reminder', 'Olá {{customer_name}}! Lembrete: Sua parcela de R$ {{installment_amount}} vence em {{days_until}} dias ({{due_date}}).', true, NULL, NULL),
+    ('00000000-0000-0000-0000-000000000001', 'Lembrete de pagamento - 1 dia', 'reminder', 'Olá {{customer_name}}! Amanhã vence sua parcela de R$ {{installment_amount}}. Não esqueça!', true, NULL, NULL),
+    
+    -- Overdue templates
+    ('00000000-0000-0000-0000-000000000001', 'Parcela atrasada - Inicio', 'overdue', 'Olá {{customer_name}}, sua parcela de R$ {{installment_amount}} está atrasada há {{days_late}} dias. Por favor,regularize para evitar multas.', true, NULL, NULL),
+    ('00000000-0000-0000-0000-000000000001', 'Parcela atrasada - Grave', 'overdue', 'Olá {{customer_name}}, sua parcela está atrasada há {{days_late}} dias.Valor: R$ {{installment_amount}}. Juros: R$ {{late_fee}}.Entre em contato urgente!', true, NULL, NULL),
+    
+    -- Payment received templates
+    ('00000000-0000-0000-0000-000000000001', 'Pagamento recebido', 'payment_received', 'Olá {{customer_name}}! Recebemos seu pagamento de R$ {{amount}}.Obrigado!', true, NULL, NULL),
+    
+    -- Custom templates can be added by users
+    ('00000000-0000-0000-0000-000000000001', 'Promoção Especial', 'custom', 'Olá {{customer_name}}! Temos uma oferta especial para você: {{promo_details}}', false, NULL, NULL)
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- Insert default tenant features for demo tenant
+INSERT INTO tenant_features (tenant_id, feature_name, enabled, limit_value)
+VALUES 
+    ('00000000-0000-0000-0000-000000000001', 'advanced_notifications', true, 1000),
+    ('00000000-0000-0000-0000-000000000001', 'message_templates', true, 50),
+    ('00000000-0000-0000-0000-000000000001', 'custom_roles', true, 10),
+    ('00000000-0000-0000-0000-000000000001', 'api_access', false, 0),
+    ('00000000-0000-0000-0000-000000000001', 'white_label', false, 0)
+ON CONFLICT (tenant_id, feature_name) DO NOTHING;

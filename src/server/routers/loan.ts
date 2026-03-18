@@ -74,14 +74,68 @@ export const loanRouter = router({
       z.object({
         customer_id: z.string(),
         principal_amount: z.number().positive(),
-        interest_rate: z.number().min(0).max(100).default(0),
+        interest_rate: z.number().min(0).max(100).optional(), // If not provided, will use business rules
         installments_count: z.number().positive().max(48),
         first_due_date: z.string(),
         notes: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { customer_id, principal_amount, interest_rate, installments_count, first_due_date, notes } = input
+      const { customer_id, principal_amount, installments_count, first_due_date, notes } = input
+
+      // Get interest rate from business rules if not provided
+      let interest_rate = input.interest_rate ?? 0
+      if (!input.interest_rate) {
+        const { data: rule } = await ctx.supabase
+          .from("interest_rules")
+          .select("interest_rate")
+          .eq("tenant_id", ctx.tenantId!)
+          .eq("is_active", true)
+          .lte("min_installments", installments_count)
+          .gte("max_installments", installments_count)
+          .order("max_installments - min_installments", { ascending: true })
+          .limit(1)
+          .single()
+
+        if (rule) {
+          interest_rate = rule.interest_rate
+        }
+      }
+
+      // Get loan config for validation
+      const { data: loanConfig } = await ctx.supabase
+        .from("loan_config")
+        .select("*")
+        .eq("tenant_id", ctx.tenantId!)
+        .single()
+
+      // Validate amounts
+      if (loanConfig) {
+        if (principal_amount < loanConfig.min_amount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Valor mínimo do empréstimo é R$ ${loanConfig.min_amount}`,
+          })
+        }
+        if (principal_amount > loanConfig.max_amount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Valor máximo do empréstimo é R$ ${loanConfig.max_amount}`,
+          })
+        }
+        if (installments_count < loanConfig.min_installments) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Mínimo de ${loanConfig.min_installments} parcelas`,
+          })
+        }
+        if (installments_count > loanConfig.max_installments) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Máximo de ${loanConfig.max_installments} parcelas`,
+          })
+        }
+      }
 
       // Calculate total amount with interest
       let total_amount: number
@@ -153,8 +207,8 @@ export const loanRouter = router({
       await ctx.supabase.from("customer_events").insert({
         customer_id,
         type: "loan_created",
-        description: `Empréstimo de R$ ${total_amount.toFixed(2)} criado`,
-        metadata: { loan_id: loan.id, amount: total_amount },
+        description: `Empréstimo de R$ ${total_amount.toFixed(2)} criado com ${installments_count}x de R$ ${installment_amount.toFixed(2)}`,
+        metadata: { loan_id: loan.id, amount: total_amount, interest_rate },
       })
 
       return loan
