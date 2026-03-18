@@ -1008,6 +1008,17 @@ VALUES
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'demo@axioncred.com.br', 'Demo User', 'owner', crypt('demo123', gen_salt('bf')))
 ON CONFLICT (email) DO NOTHING;
 
+-- Insert demo customers
+INSERT INTO customers (id, tenant_id, name, email, phone, document, address, status, credit_limit)
+VALUES 
+    ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'João Silva', 'joao.silva@email.com', '(11) 99999-9999', '123.456.789-00', 'Rua das Flores, 123 - São Paulo, SP', 'active', 5000.00),
+    ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Maria Santos', 'maria.santos@email.com', '(11) 88888-8888', '987.654.321-00', 'Av. Paulista, 456 - São Paulo, SP', 'active', 10000.00),
+    ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'Pedro Costa', 'pedro.costa@email.com', '(11) 77777-7777', '456.789.123-00', 'Rua Brasil, 789 - Rio de Janeiro, RJ', 'active', 3000.00),
+    ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'Ana Pereira', 'ana.pereira@email.com', '(11) 66666-6666', '321.654.987-00', 'Av. Nazaré, 101 - São Paulo, SP', 'inactive', 0),
+    ('10000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001', 'Roberto Lima', 'roberto.lima@email.com', '(11) 55555-5555', '654.321.789-00', 'Rua das Acácias, 202 - Belo Horizonte, MG', 'active', 8000.00),
+    ('10000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000001', 'Juliana Oliveira', 'juliana.oliveira@email.com', '(11) 44444-4444', '789.123.456-00', 'Av. Oceania, 303 - Curitiba, PR', 'active', 6000.00)
+ON CONFLICT DO NOTHING;
+
 -- Insert default reminder settings for demo tenant
 INSERT INTO reminder_settings (tenant_id, enabled, days_before, hours, methods)
 VALUES 
