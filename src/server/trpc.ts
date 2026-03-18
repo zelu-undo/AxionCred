@@ -7,12 +7,33 @@ export interface Context {
   userId?: string
   tenantId?: string
   userRole?: string
+  isDemoMode?: boolean
 }
+
+// Demo tenant and user IDs for testing without Supabase Auth
+const DEMO_TENANT_ID = "00000000-0000-0000-0000-000000000001"
+const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 export const createContext = async (opts: {
   headers: Headers
 }): Promise<Context> => {
-  const supabase = supabaseServer(opts.headers.get("authorization") || "")
+  const authHeader = opts.headers.get("authorization") || ""
+  
+  // Check for demo mode header
+  const isDemoMode = opts.headers.get("x-demo-mode") === "true" || authHeader === "demo"
+  
+  const supabase = supabaseServer(authHeader)
+  
+  // If in demo mode, return demo credentials
+  if (isDemoMode) {
+    return {
+      supabase,
+      userId: DEMO_USER_ID,
+      tenantId: DEMO_TENANT_ID,
+      userRole: "owner",
+      isDemoMode: true,
+    }
+  }
   
   const {
     data: { user },
@@ -39,6 +60,7 @@ export const createContext = async (opts: {
     userId: user?.id,
     tenantId,
     userRole,
+    isDemoMode: false,
   }
 }
 
