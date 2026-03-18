@@ -6,6 +6,7 @@ import { I18nProvider } from "@/i18n/client"
 import { AuthProvider } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,6 +31,7 @@ export default function RootLayout({
           </I18nProvider>
         </TRPCProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   )
