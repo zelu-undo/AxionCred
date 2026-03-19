@@ -325,35 +325,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userName = name || email.split("@")[0]
         
         try {
-          // Create tenant for new user
-          const { data: tenantData, error: tenantError } = await supabase
-            .from("tenants")
-            .insert({
-              name: userName,
-              slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-            })
-            .select()
-            .single()
+          // Try to create tenant for new user (may fail if table doesn't exist)
+          let tenantId = ""
+          try {
+            const { data: tenantData, error: tenantError } = await supabase
+              .from("tenants")
+              .insert({
+                name: userName,
+                slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
+              })
+              .select()
+              .single()
 
-          if (tenantError) {
-            console.error("Tenant creation error:", tenantError)
-            // Continue anyway - user can be created without tenant initially
+            if (!tenantError && tenantData) {
+              tenantId = tenantData.id
+            }
+          } catch (tenantErr) {
+            console.warn("Tenant table may not exist:", tenantErr)
           }
 
-          const tenantId = tenantData?.id || ""
-
-          // Create user in our users table
-          const { error: userError } = await supabase.from("users").insert({
-            id: data.user.id,
-            email: data.user.email,
-            name: userName,
-            role: "owner",
-            tenant_id: tenantId,
-            email_confirmed: !data.session
-          })
-
-          if (userError) {
-            console.error("User creation error:", userError)
+          // Try to create user in our users table (may fail if table doesn't exist)
+          try {
+            await supabase.from("users").insert({
+              id: data.user.id,
+              email: data.user.email,
+              name: userName,
+              role: "owner",
+              tenant_id: tenantId,
+              email_confirmed: !data.session
+            })
+          } catch (userErr) {
+            console.warn("Users table may not exist:", userErr)
           }
 
           // If no session (email confirmation required), return success message
