@@ -60,3 +60,119 @@ Add the following environment variables in Vercel Dashboard → Settings → Env
 3. Run the SQL schema in `src/server/db/schema.sql` via the Supabase SQL Editor
 4. Add the environment variables to Vercel
 5. Redeploy your project
+
+---
+
+## 📘 Manual de Identidade Visual – AXION
+
+### 1. Propósito da marca
+- **Missão visual:** Transmitir confiança, firmeza, simplicidade e modernidade.
+- **Tom:** Direto, humano, sem rodeios. "Feito para quem vive do dia a dia."
+
+---
+
+### 2. Paleta de cores (versão simplificada)
+
+| Cor | Hexadecimal | Uso principal | Onde aplicar |
+|------|-------------|---------------|--------------|
+| **Azul principal** | `#1E3A8A` (ou similar) | Base de confiança | Fundos, cards, elementos estruturais |
+| **Verde principal** | `#22C55E` | Ação positiva, dinheiro recebido | Botões primários, ícones de sucesso, destaque do "X" na logo |
+| **Verde neon (detalhe)** | `#4ADE80` (mais claro) | Hover, brilho, microinterações | Efeitos de hover, loading, detalhes sutis |
+| **Vermelho (alerta)** | `#EF4444` | Status de atraso, erros | Badges de "atrasado", mensagens de erro |
+| **Amarelo (atenção)** | `#F59E0B` | Alertas moderados, avisos | Badges de "vence hoje", mensagens de atenção |
+| **Cinza escuro** | `#374151` | Textos secundários | Labels, descrições |
+| **Branco** | `#FFFFFF` | Texto principal em fundos escuros | Texto sobre azul/verde |
+| **Preto** | `#111827` | Fundo alternativo | Pode ser usado em modais ou contrastes |
+
+**Regras de ouro:**
+- Use o **verde neon** com moderação – apenas para dar vida a elementos interativos.
+- Nunca misture mais de 3 cores na mesma tela (além de tons neutros).
+- Mantenha alto contraste entre texto e fundo (acessibilidade).
+
+---
+
+### 3. Tipografia
+
+**Fonte única:** **Poppins** (ou **Montserrat**, se preferir) – ambas são geométricas, legíveis e passam modernidade.
+
+| Elemento | Peso | Tamanho (referência) | Uso |
+|----------|------|----------------------|-----|
+| Títulos | Bold (700) | 32px+ | Headlines, seções importantes |
+| Subtítulos | SemiBold (600) | 20-24px | Seções secundárias |
+| Corpo de texto | Regular (400) | 16px | Descrições, parágrafos |
+| Labels e botões | Medium (500) | 14-16px | Textos de ação, badges |
+
+**Regras:**
+- Sempre use **caixa alta** apenas em badges ou CTAs específicos (ex.: "PROMOÇÃO").
+- Evite itálico e versalete – mantenha a simplicidade.
+
+---
+
+### 4. Ícones
+
+**Estilo único:** **Outline (traço)**, com espessura consistente (1.5px ou 2px).
+
+- Use ícones da mesma família (ex.: Lucide, Feather Icons ou Font Awesome Outline).
+- Ícones preenchidos só em situações de estado ativo (ex.: menu selecionado) ou em botões de CTA muito específicos.
+- Tamanhos padrão: 20px (interface), 24px (botões grandes), 32px (ilustrações).
+
+---
+
+### 5. Gradientes
+
+- **Permitido apenas em:** botões primários (hover) ou elementos de destaque muito pontuais.
+- **Direção:** sempre de cima para baixo ou da esquerda para a direita, suave.
+- **Cores:** use o azul principal como base e o verde principal como luz (ex.: `linear-gradient(135deg, #1E3A8A, #22C55E)`).
+
+**Proibido:** usar gradiente em fundos de página, cards ou textos.
+
+---
+
+### 6. Logotipo
+
+- **Versão principal:** "AXION" em fonte grossa (bold), letras brancas sobre fundo azul escuro ou preto. O "X" em verde principal (`#22C55E`).
+- **Versão reduzida (favicon/avatar):** apenas o "X" verde sobre fundo escuro, ou as letras "AX" (X verde).
+- **Espaço de segurança:** mantenha um espaçamento equivalente à altura do "X" ao redor do logo.
+- **Não permitido:** distorcer, mudar cores, adicionar sombras exageradas ou efeitos 3D.
+
+---
+
+### 7. Aplicação em interfaces (UI)
+
+| Componente | Cor de fundo | Texto | Detalhes |
+|------------|--------------|-------|----------|
+| Botão primário | Verde principal (`#22C55E`) | Branco (bold) | Hover: verde neon (`#4ADE80`) |
+| Botão secundário | Transparente, borda branca | Branco | Hover: fundo branco com texto azul |
+| Card | Azul escuro (`#1E3A8A`) com 10% de opacidade? Na verdade, melhor usar um tom mais claro de azul (#2A4A9F) para contraste | Branco/cinza claro | Borda sutil (1px, branca com 10%) |
+| Badge "Pago" | Verde principal | Branco | Ícone de check outline |
+| Badge "Atrasado" | Vermelho | Branco | Ícone de alerta |
+| Badge "Vence hoje" | Amarelo | Preto (para contraste) | Ícone de relógio |
+| Tabelas | Linhas intercaladas: azul escuro (#1E3A8A) e um tom mais claro (#2D4BA0) | Branco | |
+
+---
+
+### 8. Estilo de imagens e ilustrações
+
+- Prefira **fotos reais de comerciantes** (com autorização) em vez de ilustrações genéricas.
+- Se usar ilustrações, que sejam simples, traço limpo, com as cores da marca.
+- Evite fotos muito produzidas ou de banco de imagens óbvias.
+
+---
+
+### 9. Tom de voz (reflexo visual)
+
+- Frases curtas, diretas, imperativas ("Começar a cobrar agora").
+- Uso de interjeições e linguagem coloquial controlada ("Pare de perder dinheiro").
+- Nada de termos técnicos ("gestão de crédito", "SaaS", "dashboard").
+
+---
+
+### 10. O que NÃO fazer
+
+- ❌ Usar mais de 3 cores principais na mesma tela.
+- ❌ Aplicar gradientes em fundos ou cards.
+- ❌ Misturar estilos de ícones (outline com filled sem critério).
+- ❌ Usar fontes serifadas ou manuscritas.
+- ❌ Deixar o design muito "clean" ou "luxuoso" – lembre-se: o público é simples.
+- ❌ Colocar o "X" da logo em outra cor que não o verde definido.
+- ❌ Exagerar no verde neon – ele é um tempero, não o prato principal.
