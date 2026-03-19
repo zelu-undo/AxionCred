@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { TrendingUp, Users, CreditCard, DollarSign, AlertTriangle, CheckCircle, ArrowRight, Lock } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,21 +30,6 @@ const overdueCustomers = [
 
 export default function DemoDashboardPage() {
   const router = useRouter()
-  const [isDemo, setIsDemo] = useState(false)
-
-  useEffect(() => {
-    // Check if demo is enabled
-    const demoEnabled = localStorage.getItem("axion_demo_enabled")
-    if (!demoEnabled) {
-      router.push("/login")
-      return
-    }
-    setIsDemo(true)
-  }, [router])
-
-  if (!isDemo) {
-    return null
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
