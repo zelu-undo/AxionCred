@@ -17,7 +17,7 @@ interface InterestRule {
 }
 
 interface SystemConfig {
-  lateFeeType: 'percentage' | 'fixed';
+  lateFeeType: 'percentage' | 'fixed' | null;
   lateFeeValue: number;
   lateInterestType: 'daily' | 'monthly';
   lateInterestValue: number;
@@ -84,9 +84,11 @@ export default function BusinessRulesPage() {
           .single()
         
         if (lateFeeData) {
+          // Handle optional late fee (can be none)
+          const hasLateFee = lateFeeData.percentage !== null || lateFeeData.fixed_fee !== null
           setConfig(prev => ({
             ...prev,
-            lateFeeType: lateFeeData.percentage ? 'percentage' : 'fixed',
+            lateFeeType: hasLateFee ? (lateFeeData.percentage ? 'percentage' : 'fixed') : null,
             lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
             lateInterestType: lateFeeData.monthly_interest ? 'monthly' : 'daily',
             lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || 0
@@ -253,12 +255,15 @@ export default function BusinessRulesPage() {
         .eq("tenant_id", user?.tenantId)
         .single()
       
+      // Handle optional late fee
+      const lateFeeEnabled = config.lateFeeType && config.lateFeeType !== 'none'
+      
       if (existing) {
         const { error: updateError } = await supabase
           .from("late_fee_config")
           .update({
-            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
-            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
+            percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
+            fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
             monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
             daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
           })
@@ -270,8 +275,8 @@ export default function BusinessRulesPage() {
           .from("late_fee_config")
           .insert({
             tenant_id: user?.tenantId,
-            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
-            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
+            percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
+            fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
             monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
             daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
           })
@@ -423,20 +428,30 @@ export default function BusinessRulesPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Configuração de Juros por Atraso</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Multa de Atraso - Opcional */}
           <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Cobrança</label>
-            <Select value={config.lateFeeType} onValueChange={(v: any) => setConfig({...config, lateFeeType: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <label className="block text-sm font-medium mb-2">Multa de Atraso</label>
+            <Select value={config.lateFeeType || 'none'} onValueChange={(v: any) => setConfig({...config, lateFeeType: v === 'none' ? null : v, lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
+              <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentage">Percentual</SelectItem>
-                <SelectItem value="fixed">Valor Fixo</SelectItem>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                <SelectItem value="percentage">Percentual (%)</SelectItem>
+                <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">{config.lateFeeType === 'percentage' ? 'Percentual (%)' : 'Valor Fixo (R$)'}</label>
-            <input type="number" className="border p-2 rounded w-full" value={config.lateFeeValue} onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})} />
+            <label className="block text-sm font-medium mb-2">Valor da Multa de Atraso</label>
+            <input 
+              type="number" 
+              className="border p-2 rounded w-full" 
+              value={config.lateFeeValue || ''} 
+              onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})}
+              placeholder={config.lateFeeType === 'percentage' ? "Ex: 10" : "Ex: 50,00"}
+              disabled={!config.lateFeeType || config.lateFeeType === 'none'}
+            />
           </div>
+          {/* Juros por Atraso */}
           <div>
             <label className="block text-sm font-medium mb-2">Tipo de Juros por Atraso</label>
             <Select value={config.lateInterestType} onValueChange={(v: any) => setConfig({...config, lateInterestType: v})}>
