@@ -141,10 +141,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check current session
     const checkSession = async () => {
+      console.log("[Auth] Starting session check...")
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        console.log("[Auth] getSession result:", sessionError ? sessionError.message : "success", session ? "has session" : "no session")
         
         if (session?.user) {
+          console.log("[Auth] User found in session:", session.user.id)
           let appUser: AppUser | null = null
           
           // Try to get user data from our users table
@@ -154,6 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .select("id, email, name, role, tenant_id")
               .eq("id", session.user.id)
               .single()
+
+            console.log("[Auth] Users table query:", userError ? userError.message : "success", userData)
 
             // Only use DB data if query succeeded
             if (!userError && userData) {
@@ -166,13 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
           } catch (err) {
-            console.log("Users table not accessible, using Supabase Auth data")
+            console.log("[Auth] Users table exception:", err)
           }
 
           // Fallback to Supabase Auth data if no user in DB
           if (!appUser) {
             // Try to get tenant_id from user_metadata in JWT token
             const metadataTenantId = session.user.user_metadata?.tenant_id
+            console.log("[Auth] Using fallback with tenant_id from metadata:", metadataTenantId)
             appUser = {
               id: session.user.id,
               email: session.user.email || "",
@@ -182,13 +188,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
           
+          console.log("[Auth] Setting user:", appUser)
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
+        } else {
+          console.log("[Auth] No session, setting loading to false")
         }
       } catch (error) {
-        console.error("Session check error:", error)
+        console.error("[Auth] Session check error:", error)
       } finally {
         // Always set loading to false - critical to avoid infinite loading
+        console.log("[Auth] Setting loading to false")
         setLoading(false)
       }
     }
