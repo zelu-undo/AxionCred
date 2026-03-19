@@ -74,7 +74,6 @@ export const loanRouter = router({
       z.object({
         customer_id: z.string(),
         principal_amount: z.number().positive(),
-        interest_rate: z.number().min(0).max(100).optional(), // If not provided, will use business rules
         installments_count: z.number().positive().max(48),
         first_due_date: z.string(),
         notes: z.string().optional(),
@@ -83,24 +82,23 @@ export const loanRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { customer_id, principal_amount, installments_count, first_due_date, notes } = input
 
-      // Get interest rate from business rules if not provided
-      let interest_rate = input.interest_rate ?? 0
-      if (!input.interest_rate) {
-        const { data: rule } = await ctx.supabase
-          .from("interest_rules")
-          .select("interest_rate")
-          .eq("tenant_id", ctx.tenantId!)
-          .eq("is_active", true)
-          .lte("min_installments", installments_count)
-          .gte("max_installments", installments_count)
-          .order("max_installments - min_installments", { ascending: true })
-          .limit(1)
-          .single()
+      // Get interest rule automatically from business rules (mandatory)
+      const { data: rule, error: ruleError } = await ctx.supabase
+        .rpc("get_applicable_interest_rule", {
+          p_tenant_id: ctx.tenantId,
+          p_installments: installments_count,
+        })
 
-        if (rule) {
-          interest_rate = rule.interest_rate
-        }
+      if (ruleError || !rule || rule.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nenhuma regra de juros configurada para esta quantidade de parcelas. Configure as regras de juros primeiro.",
+        })
       }
+
+      const appliedRule = rule[0]
+      const interest_rate = appliedRule.interest_rate
+      const interest_type = appliedRule.interest_type
 
       // Get loan config for validation
       const { data: loanConfig } = await ctx.supabase
@@ -137,16 +135,34 @@ export const loanRouter = router({
         }
       }
 
-      // Calculate total amount with interest
+      // Calculate total amount with interest based on interest_type
       let total_amount: number
-      if (interest_rate === 0) {
-        total_amount = principal_amount
+      let total_interest: number
+
+      if (interest_rate === 0 || interest_type === "fixed") {
+        // Fixed: taxa fixa aplicada sobre o valor total no ato
+        // Para fixed, a taxa é aplicada uma única vez sobre o principal
+        if (interest_type === "fixed") {
+          total_interest = principal_amount * (interest_rate / 100)
+          total_amount = principal_amount + total_interest
+        } else {
+          // Sem juros
+          total_amount = principal_amount
+        }
+      } else if (interest_type === "weekly") {
+        // Juros semanal (sistema Price com taxa semanal)
+        const weeklyRate = interest_rate / 100 / 4.33 // ~52 semanas/ano
+        const totalWeeks = installments_count * 4
+        const factor = Math.pow(1 + weeklyRate, totalWeeks)
+        total_amount = (principal_amount * weeklyRate * factor) / (factor - 1)
       } else {
+        // monthly: sistema Price com taxa mensal
         const monthlyRate = interest_rate / 100
         const factor = Math.pow(1 + monthlyRate, installments_count)
         total_amount = (principal_amount * monthlyRate * factor) / (factor - 1)
       }
 
+      total_interest = total_amount - principal_amount
       const installment_amount = total_amount / installments_count
 
       // Create loan
@@ -208,7 +224,22 @@ export const loanRouter = router({
         customer_id,
         type: "loan_created",
         description: `Empréstimo de R$ ${total_amount.toFixed(2)} criado com ${installments_count}x de R$ ${installment_amount.toFixed(2)}`,
-        metadata: { loan_id: loan.id, amount: total_amount, interest_rate },
+        metadata: { loan_id: loan.id, amount: total_amount, interest_rate, interest_type },
+      })
+
+      // Create loan rule snapshot for contract immutability
+      // This ensures the original rules remain unchanged even if business rules are updated
+      await ctx.supabase.from("loan_rule_snapshots").insert({
+        loan_id: loan.id,
+        rule_id: appliedRule.id,
+        principal_amount,
+        interest_rate,
+        interest_type,
+        installments_count,
+        total_amount,
+        late_fee_percentage: appliedRule.late_fee_percentage,
+        late_interest_type: appliedRule.late_interest_type,
+        late_interest_percentage: appliedRule.late_interest_percentage,
       })
 
       return loan

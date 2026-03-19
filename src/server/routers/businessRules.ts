@@ -57,7 +57,11 @@ export const businessRulesRouter = router({
         min_installments: z.number().positive(),
         max_installments: z.number().positive(),
         interest_rate: z.number().min(0),
-        interest_type: z.enum(["monthly", "weekly"]).default("monthly"),
+        // interest_type:
+        // - fixed: taxa fixa aplicada sobre o valor total no ato
+        // - weekly: taxa aplicada semanalmente
+        // - monthly: taxa aplicada mensalmente
+        interest_type: z.enum(["fixed", "weekly", "monthly"]).default("monthly"),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -100,7 +104,7 @@ export const businessRulesRouter = router({
         min_installments: z.number().positive().optional(),
         max_installments: z.number().positive().optional(),
         interest_rate: z.number().min(0).optional(),
-        interest_type: z.enum(["monthly", "weekly"]).optional(),
+        interest_type: z.enum(["fixed", "weekly", "monthly"]).optional(),
         is_active: z.boolean().optional(),
       })
     )

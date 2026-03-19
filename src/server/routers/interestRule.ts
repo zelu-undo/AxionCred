@@ -9,9 +9,17 @@ const interestRuleSchema = z.object({
   installments_min: z.number().int().positive().min(1),
   installments_max: z.number().int().positive().min(1),
   interest_rate: z.number().min(0).max(100),
-  interest_type: z.enum(["weekly", "monthly"]).default("monthly"),
+  // interest_type: 
+  // - fixed: taxa fixa aplicada sobre o valor total no ato do empréstimo
+  // - weekly: taxa aplicada semanalmente (sistema Price)
+  // - monthly: taxa aplicada mensalmente (sistema Price)
+  interest_type: z.enum(["fixed", "weekly", "monthly"]).default("monthly"),
   late_fee_percentage: z.number().min(0).max(100).default(0),
-  late_interest_type: z.enum(["daily", "monthly"]).default("daily"),
+  // late_interest_type:
+  // - daily: juros aplicados diariamente sobre o valor atrasado
+  // - weekly: juros aplicados semanalmente
+  // - monthly: juros aplicados mensalmente
+  late_interest_type: z.enum(["daily", "weekly", "monthly"]).default("daily"),
   late_interest_percentage: z.number().min(0).max(100).default(0),
   is_active: z.boolean().default(true),
   priority: z.number().int().default(0),
@@ -311,19 +319,39 @@ export const interestRuleRouter = router({
 
       const appliedRule = rule[0]
 
-      // Calcular parcela usando sistema Price
+      // Calcular parcela baseado no tipo de juros
       let installmentAmount: number
-      const monthlyRate = appliedRule.interest_rate / 100 / 12
+      let totalAmount: number
+      let totalInterest: number
 
-      if (monthlyRate === 0) {
-        installmentAmount = principal_amount / installments
+      if (appliedRule.interest_rate === 0 || appliedRule.interest_type === "fixed") {
+        // Sem juros ou juros fixos
+        if (appliedRule.interest_type === "fixed") {
+          // Juros fixos: taxa aplicada uma única vez sobre o principal
+          totalInterest = principal_amount * (appliedRule.interest_rate / 100)
+          totalAmount = principal_amount + totalInterest
+        } else {
+          // Sem juros
+          totalAmount = principal_amount
+          totalInterest = 0
+        }
+        installmentAmount = totalAmount / installments
+      } else if (appliedRule.interest_type === "weekly") {
+        // Juros semanal (sistema Price)
+        const weeklyRate = appliedRule.interest_rate / 100 / 4.33 // ~52 semanas/ano
+        const totalWeeks = installments * 4
+        const factor = Math.pow(1 + weeklyRate, totalWeeks)
+        totalAmount = (principal_amount * weeklyRate * factor) / (factor - 1)
+        installmentAmount = totalAmount / installments
+        totalInterest = totalAmount - principal_amount
       } else {
+        // monthly: sistema Price com taxa mensal
+        const monthlyRate = appliedRule.interest_rate / 100
         const factor = Math.pow(1 + monthlyRate, installments)
-        installmentAmount = (principal_amount * monthlyRate * factor) / (factor - 1)
+        totalAmount = (principal_amount * monthlyRate * factor) / (factor - 1)
+        installmentAmount = totalAmount / installments
+        totalInterest = totalAmount - principal_amount
       }
-
-      const totalAmount = installmentAmount * installments
-      const totalInterest = totalAmount - principal_amount
 
       return {
         principal_amount,

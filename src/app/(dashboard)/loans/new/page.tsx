@@ -67,28 +67,46 @@ export default function NewLoanPage() {
     
     if (!principal || !numInstallments) return
 
-    // Get interest rate from business rules (or default to 0)
-    const interestRate = businessRulesData?.interestRules?.find(
+    // Get interest rate and type from business rules
+    const rule = businessRulesData?.interestRules?.find(
       rule => numInstallments >= rule.minInstallments && numInstallments <= rule.maxInstallments
-    )?.interestRate || 0
+    )
     
-    const rate = interestRate / 100
-
+    const interestRate = rule?.interestRate || 0
+    const interestType = rule?.interestType || 'monthly'
+    
     let monthlyPayment: number
     let totalAmount: number
+    let totalInterest: number
     
-    if (rate === 0) {
-      // Sem juros - divisão simples
-      monthlyPayment = principal / numInstallments
-      totalAmount = principal
+    if (interestRate === 0 || interestType === 'fixed') {
+      // Sem juros ou juros fixos
+      if (interestType === 'fixed') {
+        // Juros fixos: taxa aplicada uma única vez sobre o principal
+        totalInterest = principal * (interestRate / 100)
+        totalAmount = principal + totalInterest
+      } else {
+        // Sem juros
+        totalAmount = principal
+        totalInterest = 0
+      }
+      monthlyPayment = totalAmount / numInstallments
+    } else if (interestType === 'weekly') {
+      // Juros semanal (sistema Price)
+      const weeklyRate = interestRate / 100 / 4.33 // ~52 semanas/ano
+      const totalWeeks = numInstallments * 4
+      const factor = Math.pow(1 + weeklyRate, totalWeeks)
+      totalAmount = (principal * weeklyRate * factor) / (factor - 1)
+      monthlyPayment = totalAmount / numInstallments
+      totalInterest = totalAmount - principal
     } else {
-      // Sistema Price (parcelas fixas)
-      monthlyPayment = (principal * rate * Math.pow(1 + rate, numInstallments)) / 
-                      (Math.pow(1 + rate, numInstallments) - 1)
-      totalAmount = monthlyPayment * numInstallments
+      // monthly: sistema Price com taxa mensal
+      const monthlyRate = interestRate / 100
+      const factor = Math.pow(1 + monthlyRate, numInstallments)
+      totalAmount = (principal * monthlyRate * factor) / (factor - 1)
+      monthlyPayment = totalAmount / numInstallments
+      totalInterest = totalAmount - principal
     }
-    
-    const totalInterest = totalAmount - principal
     
     // Generate installment dates
     const firstDate = new Date(formData.firstPaymentDate)
@@ -143,14 +161,17 @@ export default function NewLoanPage() {
     return new Date(dateStr).toLocaleDateString("pt-BR")
   }
 
-  // Get current interest rate for display
+  // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments)
-    if (!businessRulesData?.interestRules) return 0
+    if (!businessRulesData?.interestRules) return { rate: 0, type: 'monthly' }
     const rule = businessRulesData.interestRules.find(
-      r => numInstallments >= r.minInstallments && numInstallments <= r.maxInstallments
+      r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
     )
-    return rule?.interestRate || 0
+    return { 
+      rate: rule?.interest_rate || 0, 
+      type: rule?.interest_type || 'monthly' 
+    }
   }, [formData.installments, businessRulesData])
 
   if (isSuccess) {
@@ -267,9 +288,9 @@ export default function NewLoanPage() {
                       </option>
                     ))}
                   </select>
-                  {currentInterestRate > 0 && (
+                  {currentInterestRate.rate > 0 && (
                     <p className="text-xs text-gray-500">
-                      Taxa: {currentInterestRate}% ao mês
+                      Taxa: {currentInterestRate.rate}% {currentInterestRate.type === 'fixed' ? '(fixo)' : currentInterestRate.type === 'weekly' ? 'semanal' : 'ao mês'}
                     </p>
                   )}
                 </div>

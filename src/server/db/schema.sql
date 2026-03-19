@@ -275,9 +275,12 @@ CREATE TABLE loan_interest_rules (
     installments_min INTEGER NOT NULL,
     installments_max INTEGER NOT NULL,
     interest_rate DECIMAL(5,2) NOT NULL,
-    interest_type VARCHAR(20) DEFAULT 'monthly', -- 'weekly' or 'monthly'
+    interest_type VARCHAR(20) DEFAULT 'monthly', -- 'fixed', 'weekly' or 'monthly'
+    -- fixed: taxa fixa aplicada sobre o valor total no ato do empréstimo
+    -- weekly: taxa aplicada semanalmente
+    -- monthly: taxa aplicada mensalmente
     late_fee_percentage DECIMAL(5,2) DEFAULT 0,
-    late_interest_type VARCHAR(20) DEFAULT 'daily', -- 'daily' or 'monthly'
+    late_interest_type VARCHAR(20) DEFAULT 'daily', -- 'daily', 'weekly' or 'monthly'
     late_interest_percentage DECIMAL(5,2) DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     priority INTEGER DEFAULT 0,
@@ -286,7 +289,9 @@ CREATE TABLE loan_interest_rules (
     CONSTRAINT install_min_max CHECK (installments_min <= installments_max),
     CONSTRAINT positive_rate CHECK (interest_rate >= 0),
     CONSTRAINT positive_late_fee CHECK (late_fee_percentage >= 0),
-    CONSTRAINT positive_late_interest CHECK (late_interest_percentage >= 0)
+    CONSTRAINT positive_late_interest CHECK (late_interest_percentage >= 0),
+    CONSTRAINT valid_interest_type CHECK (interest_type IN ('fixed', 'weekly', 'monthly')),
+    CONSTRAINT valid_late_interest_type CHECK (late_interest_type IN ('daily', 'weekly', 'monthly'))
 );
 
 CREATE TABLE loan_rule_snapshots (
@@ -351,10 +356,12 @@ CREATE TABLE interest_rules (
     min_installments INTEGER NOT NULL,
     max_installments INTEGER NOT NULL,
     interest_rate DECIMAL(5,2) NOT NULL,
-    interest_type VARCHAR(20) DEFAULT 'monthly', -- monthly, weekly
+    -- interest_type: fixed (taxa fixa no ato), weekly (semanal), monthly (mensal)
+    interest_type VARCHAR(20) DEFAULT 'monthly', 
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT valid_interest_type CHECK (interest_type IN ('fixed', 'weekly', 'monthly')),
     UNIQUE(tenant_id, min_installments, max_installments)
 );
 
