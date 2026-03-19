@@ -1,0 +1,83 @@
+
+> axioncred@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.7 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.2.42.138:3000
+- Environments: .env.local
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 3.1s
+⨯ ./src/contexts/auth-context.tsx:427:7
+Parsing ecmascript source code failed
+[0m [90m 425 |[39m       router[33m.[39mpush([32m"/dashboard"[39m)
+ [90m 426 |[39m       [36mreturn[39m { error[33m:[39m [36mnull[39m }
+[31m[1m>[22m[39m[90m 427 |[39m     } [36mcatch[39m (error) {
+ [90m     |[39m       [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 428 |[39m       [36mreturn[39m { error[33m:[39m mapAuthError(error [36mas[39m { message[33m:[39m string[33m;[39m name[33m?[39m[33m:[39m string }[33m,[39m locale) }
+ [90m 429 |[39m     }
+ [90m 430 |[39m   }[0m
+
+Expected a semicolon
+
+Import traces:
+  Server Component:
+    ./src/contexts/auth-context.tsx
+    ./src/app/layout.tsx
+
+  Client Component Browser:
+    ./src/contexts/auth-context.tsx [Client Component Browser]
+    ./src/app/(auth)/register/page.tsx [Client Component Browser]
+    ./src/app/(auth)/register/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/contexts/auth-context.tsx [Client Component SSR]
+    ./src/app/(auth)/register/page.tsx [Client Component SSR]
+    ./src/app/(auth)/register/page.tsx [Server Component]
+
+
+
+./src/contexts/auth-context.tsx:432:3
+Parsing ecmascript source code failed
+[0m [90m 430 |[39m   }
+ [90m 431 |[39m
+[31m[1m>[22m[39m[90m 432 |[39m   [36mconst[39m signOut [33m=[39m [36masync[39m () [33m=>[39m {
+ [90m     |[39m   [31m[1m^[22m[39m
+ [90m 433 |[39m     [36mtry[39m {
+ [90m 434 |[39m       [36mawait[39m supabase[33m.[39mauth[33m.[39msignOut()
+ [90m 435 |[39m       localStorage[33m.[39mremoveItem([32m"axion_user"[39m)[0m
+
+Expected a semicolon
+
+Import traces:
+  Server Component:
+    ./src/contexts/auth-context.tsx
+    ./src/app/layout.tsx
+
+  Client Component Browser:
+    ./src/contexts/auth-context.tsx [Client Component Browser]
+    ./src/app/(auth)/register/page.tsx [Client Component Browser]
+    ./src/app/(auth)/register/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/contexts/auth-context.tsx [Client Component SSR]
+    ./src/app/(auth)/register/page.tsx [Client Component SSR]
+    ./src/app/(auth)/register/page.tsx [Server Component]
+
+
+ GET /register 500 in 2.5s (compile: 2.3s, render: 124ms)
+✓ Compiled in 155ms
+ GET /register 200 in 711ms (compile: 359ms, render: 351ms)
+ GET /register 200 in 52ms (compile: 3ms, render: 48ms)
+✓ Compiled in 39ms
+ GET /register 200 in 230ms (compile: 91ms, render: 139ms)
+✓ Compiled in 48ms
+⚠ Fast Refresh had to perform a full reload when ./src/contexts/auth-context.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /register 200 in 317ms (compile: 130ms, render: 187ms)
+ GET /register 200 in 145ms (compile: 5ms, render: 140ms)

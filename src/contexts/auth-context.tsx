@@ -343,9 +343,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Now create the user in Supabase Auth
-=======
-      // Attempt Supabase Auth signup
->>>>>>> c8fa688 (fix(auth): corrige fluxo de cadastro com tratamento adequado de erros)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
