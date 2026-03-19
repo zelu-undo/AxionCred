@@ -139,10 +139,10 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center gap-4">
               <LanguageSelector />
               <Button asChild variant="outline">
-                <Link href="/dashboard">{t("landing.nav.dashboard")}</Link>
+                <Link href="/demo">{t("landing.nav.dashboard")}</Link>
               </Button>
               <Button asChild>
-                <Link href="/dashboard">{t("landing.nav.getStarted")}</Link>
+                <Link href="/login">{t("landing.nav.getStarted")}</Link>
               </Button>
             </div>
 
@@ -167,7 +167,7 @@ export default function LandingPage() {
                 <LanguageSelector />
               </div>
               <Button asChild className="w-full">
-                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>{t("landing.nav.getStarted")}</Link>
+                <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>{t("landing.nav.getStarted")}</Link>
               </Button>
             </nav>
           </div>
@@ -191,7 +191,7 @@ export default function LandingPage() {
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button size="lg" asChild className="bg-purple-600 hover:bg-purple-700">
-                  <Link href="/dashboard">
+                  <Link href="/demo">
                     {t("landing.hero.cta")}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
@@ -332,7 +332,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild>
-              <Link href="/dashboard">
+              <Link href="/demo">
                 {t("landing.cta.button")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
