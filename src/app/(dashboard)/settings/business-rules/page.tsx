@@ -118,6 +118,7 @@ export default function BusinessRulesPage() {
 
   // Update local state when data is loaded from database
   useEffect(() => {
+    console.log("Interest rules data:", interestRulesData)
     if (interestRulesData && interestRulesData.length > 0) {
       setInterestRules(interestRulesData.map((r: any) => ({
         id: r.id,
@@ -241,6 +242,10 @@ export default function BusinessRulesPage() {
       </div>
     )
   }
+
+  // Show debug info - remove in production
+  console.log("User:", user)
+  console.log("TenantId:", user?.tenantId)
 
   // Show error if no tenantId
   if (!user?.tenantId && !authLoading) {
