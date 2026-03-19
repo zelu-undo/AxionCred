@@ -106,15 +106,21 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   const { t } = useI18n()
   const { user, signOut } = useAuth()
   const router = useRouter()
+  const [mounted, setMounted] = React.useState(false)
+
+  // Avoid hydration mismatch
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogout = async () => {
     await signOut()
     router.push("/login")
   }
 
-  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "?")
-  const userEmail = user?.email || "Não identificado"
-  const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Usuário")
+  const userInitial = mounted && user?.name ? user.name[0].toUpperCase() : (mounted && user?.email ? user.email[0].toUpperCase() : "?")
+  const userEmail = mounted && user?.email || "Carregando..."
+  const userName = mounted && user?.name || (mounted && user?.email ? user.email.split("@")[0] : "Usuário")
 
   return (
     <div className={cn("flex h-full w-64 flex-col bg-slate-900", className)} {...props}>
@@ -156,13 +162,19 @@ export function Header() {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [mounted, setMounted] = React.useState(false)
+
+  // Avoid hydration mismatch
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogout = async () => {
     await signOut()
     router.push("/login")
   }
 
-  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "D")
+  const userInitial = mounted && user?.name ? user.name[0].toUpperCase() : (mounted && user?.email ? user.email[0].toUpperCase() : "?")
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6">

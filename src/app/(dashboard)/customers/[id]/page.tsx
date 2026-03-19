@@ -108,7 +108,6 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     if (customer) {
       // Parse address from full address string
-      // Format: "Rua, Número, Complemento, Bairro, Cidade, Estado" OR fewer fields
       let street = ""
       let number = ""
       let complement = ""
@@ -117,43 +116,63 @@ export default function CustomerDetailPage() {
       let state = ""
       let cep = ""
       
+      // Brazilian states abbreviation check
+      const isStateAbbrev = (str: string) => {
+        const states = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+        return states.includes(str.toUpperCase())
+      }
+      
       if (customer.address) {
         const parts = customer.address.split(",").map((p: string) => p.trim()).filter(Boolean)
         
-        // Smart parsing based on number of parts
-        if (parts.length === 1) {
-          // Just street name
-          street = parts[0]
-        } else if (parts.length === 2) {
-          // Two options: "Street, Number" or "City, State"
-          // Try to detect - if second part is 2 chars, likely state
-          if (parts[1].length === 2 && /^[A-Z]{2}$/i.test(parts[1])) {
+        // If last part is 2-char state abbreviation, likely "City, State" or "Street, City, State"
+        if (parts.length >= 2 && isStateAbbrev(parts[parts.length - 1])) {
+          // Last part is a state - determine format
+          if (parts.length === 2) {
+            // "City, State" format
             city = parts[0]
             state = parts[1]
-          } else {
+          } else if (parts.length === 3) {
+            // Could be "Street, City, State" or "Number, City, State" - try to detect
+            if (parts[1].length === 2 && isStateAbbrev(parts[1])) {
+              // "State, StateAbbrev, Something" - unlikely, use default
+              street = parts[0]
+              number = parts[1]
+              complement = parts[2]
+            } else {
+              // Assume "Street, City, State"
+              street = parts[0]
+              city = parts[1]
+              state = parts[2]
+            }
+          } else if (parts.length >= 4) {
+            // Full format "Street, Number, Complement, Neighborhood, City, State"
             street = parts[0]
             number = parts[1]
+            complement = parts[2] || ""
+            neighborhood = parts[3] || ""
+            city = parts[4] || ""
+            state = parts[5] || ""
           }
-        } else if (parts.length === 3) {
-          // "Street, Number, Complement" or "Street, City, State"
-          // If last part is 2 chars, likely state
-          if (parts[2].length === 2 && /^[A-Z]{2}$/i.test(parts[2])) {
+        } else {
+          // No state abbreviation at end - use default parsing
+          if (parts.length === 1) {
             street = parts[0]
-            city = parts[1]
-            state = parts[2]
-          } else {
+          } else if (parts.length === 2) {
+            street = parts[0]
+            number = parts[1]
+          } else if (parts.length === 3) {
             street = parts[0]
             number = parts[1]
             complement = parts[2]
+          } else if (parts.length >= 4) {
+            street = parts[0]
+            number = parts[1]
+            complement = parts[2] || ""
+            neighborhood = parts[3] || ""
+            city = parts[4] || ""
+            state = parts[5] || ""
           }
-        } else if (parts.length >= 4) {
-          // Full address format
-          street = parts[0]
-          number = parts[1]
-          complement = parts[2] || ""
-          neighborhood = parts[3] || ""
-          city = parts[4] || ""
-          state = parts[5] || ""
         }
       }
       
