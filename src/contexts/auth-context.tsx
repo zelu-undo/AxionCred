@@ -253,78 +253,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Use user data from Supabase Auth directly
-        // Then sync with database to get role and tenant info
+        // Default role is owner - DB sync is optional
         const supabase = createClient()
         
         let appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
-          role: "pending", // Default until synced with DB
+          role: "owner",
           tenantId: "",
           plan: "starter"
         }
 
-        // Try to sync with database users table
+        // Try to sync with database (optional - won't block login if it fails)
         try {
-          const { data: dbUser, error: dbError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("email", data.user.email!)
-            .single()
+          // Check if tables exist by trying to list tenants
+          const { error: tenantError } = await supabase
+            .from("tenants")
+            .select("id")
+            .limit(1)
 
-          if (!dbError && dbUser) {
-            // User exists in database - use their role and tenant
-            appUser = {
-              id: dbUser.id,
-              email: dbUser.email,
-              name: dbUser.name,
-              role: dbUser.role || "pending",
-              tenantId: dbUser.tenant_id || "",
-              plan: "starter"
-            }
-          } else if (!dbUser) {
-            // User doesn't exist - create them in database
-            // First create a tenant for them
-            let tenantId = ""
-            try {
-              const { data: tenantData, error: tenantError } = await supabase
-                .from("tenants")
-                .insert({
-                  name: appUser.name,
-                  slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-                })
-                .select()
-                .single()
-
-              if (!tenantError && tenantData) {
-                tenantId = tenantData.id
-              }
-            } catch (tenantErr) {
-              console.warn("Could not create tenant:", tenantErr)
-            }
-
-            // Create user record with default role
-            const { data: newUser, error: createError } = await supabase
+          if (tenantError) {
+            // Tables don't exist or no access - skip sync
+            console.log("Skipping DB sync - tables not available")
+          } else {
+            // Tables exist - try to sync user
+            const { data: dbUser } = await supabase
               .from("users")
-              .insert({
-                id: data.user.id,
-                email: data.user.email!,
-                name: appUser.name,
-                role: "owner", // First user becomes owner
-                tenant_id: tenantId
-              })
-              .select()
+              .select("id, email, name, role, tenant_id")
+              .eq("email", data.user.email!)
               .single()
 
-            if (!createError && newUser) {
-              appUser.role = "owner"
-              appUser.tenantId = tenantId
+            if (dbUser) {
+              appUser = {
+                id: dbUser.id,
+                email: dbUser.email,
+                name: dbUser.name,
+                role: dbUser.role || "owner",
+                tenantId: dbUser.tenant_id || "",
+                plan: "starter"
+              }
+            } else {
+              // Check if any tenants exist
+              const { data: tenants } = await supabase
+                .from("tenants")
+                .select("id")
+                .limit(1)
+
+              if (!tenants?.length) {
+                // First time - create tenant and user
+                const { data: tenantData } = await supabase
+                  .from("tenants")
+                  .insert({
+                    name: appUser.name,
+                    slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
+                  })
+                  .select("id")
+                  .single()
+
+                if (tenantData?.id) {
+                  appUser.tenantId = tenantData.id
+                  await supabase.from("users").insert({
+                    id: data.user.id,
+                    email: data.user.email!,
+                    name: appUser.name,
+                    role: "owner",
+                    tenant_id: tenantData.id
+                  })
+                }
+              }
             }
           }
-        } catch (syncErr) {
-          console.warn("Could not sync with users table:", syncErr)
-          // Continue with default user data
+        } catch (err) {
+          console.log("DB sync skipped:", err)
         }
         
         setUser(appUser)

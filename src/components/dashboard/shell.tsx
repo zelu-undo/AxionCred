@@ -43,7 +43,6 @@ function NavigationItems() {
     admin: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "settings"],
     manager: ["dashboard", "customers", "loans", "collections"],
     operator: ["dashboard", "customers", "loans"],
-    pending: [], // No permissions - waiting for approval
   }
   
   // Starter plan limitations
@@ -59,7 +58,8 @@ function NavigationItems() {
     // Check role permission
     if (!userPermissions.includes(feature)) return false
     // Check plan limitations for starter plan
-    if (user?.plan === "starter" && starterLimits[feature as keyof typeof starterLimits] === false) return false
+    const limit = starterLimits[feature as keyof typeof starterLimits]
+    if (limit === false) return false
     return true
   }
   
