@@ -69,6 +69,16 @@ function mapAuthError(error: { message: string; name?: string }, locale: string 
     }
   }
   
+  // Email not confirmed
+  if (errorLower.includes("email not confirmed") || errorLower.includes("confirm your email")) {
+    return { 
+      message: locale === "en" ? "Please confirm your email. Check your inbox for the confirmation link." : 
+              locale === "es" ? "Por favor confirma tu correo. Revisa tu bandeja de entrada." : 
+              "Por favor, confirme seu e-mail. Verifique sua caixa de entrada.",
+      code: "EMAIL_NOT_CONFIRMED"
+    }
+  }
+  
   // Password too short
   if (errorLower.includes("password should be at least") || errorLower.includes("minimum length of 6")) {
     return { 
