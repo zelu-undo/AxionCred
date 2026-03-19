@@ -37,7 +37,7 @@ export default function DemoDashboardPage() {
       <header className="bg-slate-900 text-white px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-purple-500" />
+            <TrendingUp className="h-6 w-6 text-#22C55E" />
             <span className="text-xl font-bold">AXION - Demo</span>
           </div>
           <div className="flex items-center gap-4">
@@ -56,7 +56,7 @@ export default function DemoDashboardPage() {
       </header>
 
       {/* Demo Notice */}
-      <div className="bg-purple-600 text-white px-6 py-2 text-center text-sm">
+      <div className="bg-#22C55E text-white px-6 py-2 text-center text-sm">
         Esta é uma demonstração. Navegação desabilitada. •{" "}
         <Button variant="link" className="text-white h-auto p-0 text-sm underline" onClick={() => router.push("/login")}>
           Clique aqui para fazer login e acessar o sistema completo
@@ -189,15 +189,15 @@ export default function DemoDashboardPage() {
 
         {/* CTA to Login */}
         <div className="mt-8 text-center">
-          <Card className="bg-purple-50 border-purple-200">
+          <Card className="bg-#22C55E/10 border-#22C55E/20">
             <CardContent className="py-8">
-              <h3 className="text-xl font-bold text-purple-900 mb-2">
+              <h3 className="text-xl font-bold text-#1E3A8A mb-2">
                 Gostou do que viu?
               </h3>
-              <p className="text-purple-700 mb-4">
+              <p className="text-#16A34A mb-4">
                 Crie sua conta agora e tenha acesso completo ao sistema AXION Cred
               </p>
-              <Button size="lg" className="bg-purple-600 hover:bg-purple-700" onClick={() => router.push("/login")}>
+              <Button size="lg" className="bg-#22C55E hover:bg-#16A34A" onClick={() => router.push("/login")}>
                 Começar Agora
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>

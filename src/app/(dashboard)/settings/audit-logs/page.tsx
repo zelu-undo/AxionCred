@@ -46,7 +46,7 @@ export default function AuditLogsPage() {
                     log.action === 'create' ? 'bg-green-100 text-green-700' :
                     log.action === 'update' ? 'bg-blue-100 text-blue-700' :
                     log.action === 'delete' ? 'bg-red-100 text-red-700' :
-                    'bg-purple-100 text-purple-700'
+                    'bg-#22C55E/10 text-#16A34A'
                   }`}>
                     {log.action}
                   </span>

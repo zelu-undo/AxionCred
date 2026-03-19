@@ -118,7 +118,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => setNotificationSettings({...notificationSettings, emailNotifications: !notificationSettings.emailNotifications})}
-                  className={`w-12 h-6 rounded-full transition-colors ${notificationSettings.emailNotifications ? 'bg-purple-600' : 'bg-gray-300'}`}
+                  className={`w-12 h-6 rounded-full transition-colors ${notificationSettings.emailNotifications ? 'bg-#22C55E' : 'bg-gray-300'}`}
                 >
                   <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notificationSettings.emailNotifications ? 'translate-x-6' : 'translate-x-0.5'}`} />
                 </button>
@@ -131,7 +131,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => setNotificationSettings({...notificationSettings, overdueAlerts: !notificationSettings.overdueAlerts})}
-                  className={`w-12 h-6 rounded-full transition-colors ${notificationSettings.overdueAlerts ? 'bg-purple-600' : 'bg-gray-300'}`}
+                  className={`w-12 h-6 rounded-full transition-colors ${notificationSettings.overdueAlerts ? 'bg-#22C55E' : 'bg-gray-300'}`}
                 >
                   <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notificationSettings.overdueAlerts ? 'translate-x-6' : 'translate-x-0.5'}`} />
                 </button>
@@ -144,7 +144,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => setNotificationSettings({...notificationSettings, paymentReminders: !notificationSettings.paymentReminders})}
-                  className={`w-12 h-6 rounded-full transition-colors ${notificationSettings.paymentReminders ? 'bg-purple-600' : 'bg-gray-300'}`}
+                  className={`w-12 h-6 rounded-full transition-colors ${notificationSettings.paymentReminders ? 'bg-#22C55E' : 'bg-gray-300'}`}
                 >
                   <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notificationSettings.paymentReminders ? 'translate-x-6' : 'translate-x-0.5'}`} />
                 </button>
@@ -190,10 +190,10 @@ export default function SettingsPage() {
               <CardTitle>Resumo da Conta</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <p className="text-sm text-purple-600">Plano</p>
-                <p className="text-xl font-bold text-purple-700">Profissional</p>
-                <p className="text-xs text-purple-500">R$ 97/mês</p>
+              <div className="p-4 bg-#22C55E/10 rounded-lg">
+                <p className="text-sm text-#22C55E">Plano</p>
+                <p className="text-xl font-bold text-#16A34A">Profissional</p>
+                <p className="text-xs text-#22C55E">R$ 97/mês</p>
               </div>
               
               <div className="space-y-3">

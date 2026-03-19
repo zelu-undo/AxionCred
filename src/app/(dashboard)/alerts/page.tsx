@@ -24,7 +24,7 @@ export default function AlertsPage() {
     switch (type) {
       case 'credit': return 'bg-red-100 text-red-700 border-red-200';
       case 'operational': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'strategic': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'strategic': return 'bg-#22C55E/10 text-#16A34A border-#22C55E/20';
       default: return 'bg-gray-100 text-gray-700';
     }
   };

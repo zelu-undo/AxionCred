@@ -289,7 +289,7 @@ export default function BusinessRulesPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-#22C55E"></div>
       </div>
     )
   }
@@ -327,7 +327,7 @@ export default function BusinessRulesPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Faixas de Parcelas</h2>
-          <button onClick={() => setIsAddingNew(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+          <button onClick={() => setIsAddingNew(true)} className="flex items-center gap-2 px-4 py-2 bg-#22C55E text-white rounded hover:bg-#16A34A">
             <Plus size={16} /> Nova Faixa
           </button>
         </div>
@@ -452,7 +452,7 @@ export default function BusinessRulesPage() {
             <input type="number" className="border p-2 rounded w-full" value={config.lateInterestValue} onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})} />
           </div>
         </div>
-        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
+        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-#22C55E text-white rounded hover:bg-#16A34A">Salvar Configurações</button>
       </div>
     </div>
   );

@@ -1,28 +1,53 @@
 @import "tailwindcss";
 
+/* AXION Cred - Paleta de Cores (Manual de Identidade Visual) */
 :root {
+  /* Cores principais */
+  --primary-blue: #1E3A8A;
+  --primary-green: #22C55E;
+  --primary-green-neon: #4ADE80;
+  --primary-red: #EF4444;
+  --primary-yellow: #F59E0B;
+  --gray-dark: #374151;
+  --white: #FFFFFF;
+  --black: #111827;
+  
+  /* Tailwind CSS variables */
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
+  
+  /* Primary - Azul principal (#1E3A8A) */
+  --primary: 222.2 73.2% 29.8%;
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary - Verde principal (#22C55E) */
+  --secondary: 142.1 76.2% 36.3%;
+  --secondary-foreground: 0 0% 100%;
+  
   --muted: 210 40% 96.1%;
   --muted-foreground: 215.4 16.3% 46.9%;
   --accent: 210 40% 96.1%;
   --accent-foreground: 222.2 47.4% 11.2%;
+  
+  /* destructive - Vermelho (#EF4444) */
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
+  
+  /* warning - Amarelo (#F59E0B) */
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 0%;
+  
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 262.1 83.3% 57.8%;
+  --ring: 142.1 76.2% 36.3%;
   --radius: 0.5rem;
 }
 
+/* Dark mode */
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
@@ -30,10 +55,10 @@
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 4.9%;
   --popover-foreground: 210 40% 98%;
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
+  --primary: 222.2 73.2% 29.8%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142.1 76.2% 36.3%;
+  --secondary-foreground: 0 0% 100%;
   --muted: 217.2 32.6% 17.5%;
   --muted-foreground: 215 20.2% 65.1%;
   --accent: 217.2 32.6% 17.5%;
@@ -42,7 +67,7 @@
   --destructive-foreground: 210 40% 98%;
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
-  --ring: 262.1 83.3% 57.8%;
+  --ring: 142.1 76.2% 36.3%;
 }
 
 body {
@@ -51,7 +76,7 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
-/* Custom Scrollbar - Purple Theme */
+/* Custom Scrollbar - AXION Theme (Green) */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -63,18 +88,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #9333ea 0%, #7c3aed 100%);
+  background: linear-gradient(180deg, #22C55E 0%, #16A34A 100%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #a855f7 0%, #8b5cf6 100%);
+  background: linear-gradient(180deg, #4ADE80 0%, #22C55E 100%);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #9333ea #f1f5f9;
+  scrollbar-color: #22C55E #f1f5f9;
 }
 
 /* Animations for Landing Page */

@@ -31,8 +31,8 @@ export function DashboardStats({ data }: DashboardStatsProps) {
       title: t("dashboard.activeLoans"),
       value: data.active_loans,
       icon: CreditCard,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
+      color: "text-#22C55E",
+      bgColor: "bg-#22C55E/10",
     },
     {
       title: t("dashboard.totalToReceive"),

@@ -87,8 +87,8 @@ function NavigationItems() {
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-purple-600 text-white"
-                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                ? "bg-[#22C55E] text-white"
+                : "text-blue-200 hover:bg-[#1E3A8A] hover:text-white"
             )}
           >
             <item.icon className="h-5 w-5" />
@@ -124,30 +124,30 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Usuário")
 
   return (
-    <div className={cn("flex h-full w-64 flex-col bg-slate-900", className)} {...props}>
-      <div className="flex h-16 items-center gap-2 border-b border-slate-800 px-6">
-        <TrendingUp className="h-8 w-8 text-purple-500" />
-        <span className="text-xl font-bold text-white">AXION</span>
+    <div className={cn("flex h-full w-64 flex-col bg-[#1E3A8A]", className)} {...props}>
+      <div className="flex h-16 items-center gap-2 border-b border-blue-800 px-6">
+        <span className="text-2xl font-bold text-white">AXI</span>
+        <span className="text-2xl font-bold text-[#22C55E]">ON</span>
       </div>
       
       <nav className="flex-1 space-y-1 px-3 py-4">
         <NavigationItems />
       </nav>
       
-      <div className="border-t border-slate-800 p-4">
+      <div className="border-t border-blue-800 p-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium">
+          <div className="h-10 w-10 rounded-full bg-[#22C55E] flex items-center justify-center text-white font-medium">
             {userInitial}
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-white">{userName}</p>
-            <p className="text-xs text-slate-400">{userEmail}</p>
+            <p className="text-xs text-blue-200">{userEmail}</p>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="w-full mt-2 text-slate-400 hover:text-white hover:bg-slate-800"
+          className="w-full mt-2 text-blue-200 hover:text-white hover:bg-[#1E3A8A]"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4 mr-2" />
@@ -191,7 +191,7 @@ export function Header() {
             <Sidebar className="border-r" />
           </SheetContent>
         </Sheet>
-        <span className="text-xl font-bold text-slate-900">AXION</span>
+        <span className="text-xl font-bold text-[#1E3A8A]">AXION</span>
       </div>
       
       <div className="flex items-center gap-4">
@@ -216,7 +216,7 @@ export function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
-              <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-medium">
+              <div className="h-8 w-8 rounded-full bg-[#22C55E] flex items-center justify-center text-white text-sm font-medium">
                 {userInitial}
               </div>
             </Button>

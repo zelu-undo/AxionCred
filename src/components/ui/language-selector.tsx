@@ -42,7 +42,7 @@ export function LanguageSelector() {
                   setIsOpen(false)
                 }}
                 className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-100 ${
-                  locale === lang.code ? "bg-purple-50 text-purple-700" : "text-gray-700"
+                  locale === lang.code ? "bg-#22C55E/10 text-#16A34A" : "text-gray-700"
                 }`}
               >
                 <span>{lang.flag}</span>
