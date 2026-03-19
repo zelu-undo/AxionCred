@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Plus, Users, CreditCard, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { useI18n } from "@/i18n/client"
+import { useAuth } from "@/contexts/auth-context"
+import { redirect } from "next/navigation"
+import { useEffect } from "react"
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 // Demo data for visualization
 const demoData = {
@@ -19,6 +25,21 @@ const demoData = {
 
 export default function DashboardPage() {
   const { t } = useI18n()
+  const { user, loading } = useAuth()
+  
+  useEffect(() => {
+    if (!loading && !user) {
+      redirect("/login")
+    }
+  }, [user, loading])
+  
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    )
+  }
   
   return (
     <div className="space-y-6">
