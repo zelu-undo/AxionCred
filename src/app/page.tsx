@@ -1,6 +1,9 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useI18n } from "@/i18n/client"
+import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import { 
   TrendingUp, 
@@ -61,7 +64,16 @@ function LanguageSelector() {
 
 export default function LandingPage() {
   const { t } = useI18n()
+  const { user } = useAuth()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard")
+    }
+  }, [user, router])
 
   const features = [
     {

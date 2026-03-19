@@ -22,7 +22,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Routes that don't require authentication
-const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin"]
+const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
