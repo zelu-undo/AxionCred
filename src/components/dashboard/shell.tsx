@@ -78,10 +78,24 @@ function NavigationItems() {
 
   const pathname = usePathname()
 
+  // More precise active check - only highlight exact match OR direct children
+  const isActiveRoute = (href: string, currentPath: string): boolean => {
+    // Exact match
+    if (currentPath === href) return true
+    // For parent routes like /settings, don't highlight if there's a subpath
+    if (href === "/settings" && currentPath.startsWith("/settings/")) return false
+    // For other parent routes, check if it's a direct child (one level deep)
+    if (currentPath.startsWith(href + "/")) {
+      const remainder = currentPath.slice(href.length + 1)
+      if (!remainder.includes("/")) return true
+    }
+    return false
+  }
+
   return (
     <>
       {navigation.filter(item => hasPermission(item.permission)).map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+        const isActive = isActiveRoute(item.href, pathname)
         return (
           <Link
             key={item.name}
