@@ -38,23 +38,29 @@ export default function BusinessRulesPage() {
   const { user, loading: authLoading } = useAuth()
   const utils = trpc.useUtils()
   
-  // Fetch interest rules from database - with error handling
-  const { data: interestRulesData, isLoading: rulesLoading, error: rulesError } = trpc.businessRules.listInterestRules.useQuery(undefined, {
-    enabled: !!user,
+  // Fetch interest rules from database - pass tenantId
+  const { data: interestRulesData, isLoading: rulesLoading, error: rulesError } = trpc.businessRules.listInterestRules.useQuery({ 
+    tenantId: user?.tenantId 
+  }, {
+    enabled: !!user?.tenantId,
     retry: 1,
     staleTime: 30000,
   })
   
-  // Fetch late fee config - with error handling
-  const { data: lateFeeConfig, error: lateFeeError } = trpc.businessRules.getLateFeeConfig.useQuery(undefined, {
-    enabled: !!user,
+  // Fetch late fee config - pass tenantId
+  const { data: lateFeeConfig, error: lateFeeError } = trpc.businessRules.getLateFeeConfig.useQuery({ 
+    tenantId: user?.tenantId 
+  }, {
+    enabled: !!user?.tenantId,
     retry: 1,
     staleTime: 30000,
   })
   
-  // Fetch loan config - with error handling  
-  const { data: loanConfig, error: loanConfigError } = trpc.businessRules.getLoanConfig.useQuery(undefined, {
-    enabled: !!user,
+  // Fetch loan config - pass tenantId
+  const { data: loanConfig, error: loanConfigError } = trpc.businessRules.getLoanConfig.useQuery({ 
+    tenantId: user?.tenantId 
+  }, {
+    enabled: !!user?.tenantId,
     retry: 1,
     staleTime: 30000,
   })
@@ -231,9 +237,31 @@ export default function BusinessRulesPage() {
     )
   }
 
-  // Show content even if tRPC fails - use fallback data
-  if (rulesError) {
-    console.error("Error loading interest rules:", rulesError)
+  // Show error if no tenantId
+  if (!user?.tenantId && !authLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <h1 className="text-2xl font-bold">Regras de Negócio</h1>
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+          <p className="text-yellow-700 font-medium">Configuração de tenant não encontrada.</p>
+          <p className="text-yellow-600 text-sm mt-1">Faça login novamente para carregar suas configurações.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error message if exists
+  if (rulesError || lateFeeError || loanConfigError) {
+    return (
+      <div className="p-6 space-y-6">
+        <h1 className="text-2xl font-bold">Regras de Negócio</h1>
+        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+          <p className="text-red-700 font-medium">Erro ao carregar configurações:</p>
+          <p className="text-red-600 text-sm mt-1">{rulesError?.message || lateFeeError?.message || loanConfigError?.message}</p>
+          <p className="text-gray-500 text-xs mt-2">Verifique se você está logado corretamente.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
