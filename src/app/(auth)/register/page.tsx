@@ -49,6 +49,7 @@ export default function RegisterPage() {
     }
 
     const { error } = await signUp(email, password, name)
+    console.log("Register: Signup result:", { error })
 
     if (error) {
       // Check if it's email confirmation required
@@ -62,7 +63,14 @@ export default function RegisterPage() {
       } else {
         setError(error.message)
       }
+    } else {
+      // No error means registration was successful
+      console.log("Register: Registration successful, redirecting...")
+      // Small delay to show the form was processed
+      await new Promise(resolve => setTimeout(resolve, 500))
+      router.push("/dashboard")
     }
+    // Always set loading to false when done
     setIsLoading(false)
   }
 

@@ -304,25 +304,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
-      // First check if user already exists in our users table
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("email")
-        .eq("email", email.toLowerCase())
-        .single()
+      // First check if user already exists (suppress errors for network issues)
+      try {
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("email")
+          .eq("email", email.toLowerCase())
+          .single()
 
-      if (existingUser) {
-        return { 
-          error: { 
-            message: locale === "en" ? "This email is already registered" : 
-                    locale === "es" ? "Este correo ya está registrado" : 
-                    "Este e-mail já está cadastrado",
-            code: "EMAIL_EXISTS" 
-          } 
+        if (existingUser) {
+          return { 
+            error: { 
+              message: locale === "en" ? "This email is already registered" : 
+                      locale === "es" ? "Este correo ya está registrado" : 
+                      "Este e-mail já está cadastrado",
+              code: "EMAIL_EXISTS" 
+            } 
+          }
         }
+      } catch (checkError) {
+        // Continue with signup even if check fails (network might be down)
+        console.warn("User check failed, continuing with signup:", checkError)
       }
 
-      // Create tenant first
+      // Attempt Supabase Auth signup
       const { data: tenantData, error: tenantError } = await supabase
         .from("tenants")
         .insert({
@@ -338,6 +343,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Now create the user in Supabase Auth
+=======
+      // Attempt Supabase Auth signup
+>>>>>>> c8fa688 (fix(auth): corrige fluxo de cadastro com tratamento adequado de erros)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -355,36 +363,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: mapAuthError(error, locale) }
       }
 
+      // If user was created successfully
       if (data.user) {
-        // Create user record in our users table
-        const { error: userError } = await supabase.from("users").insert({
-          id: data.user.id,
-          email: data.user.email,
-          name: name || email.split("@")[0],
-          role: "owner",
-          tenant_id: tenantData.id
-        })
+        const userName = name || email.split("@")[0]
+        
+        try {
+          // Create user in our users table
+          await supabase.from("users").insert({
+            id: data.user.id,
+            email: data.user.email,
+            name: userName,
+            role: "owner",
+            tenant_id: tenantData.id,
+            email_confirmed: !data.session // false if confirmation required
+          })
 
-        if (userError) {
-          console.error("User creation error:", userError)
-          // Continue anyway - user can be created on first login
+          // If no session (email confirmation required), return success message
+          if (!data.session) {
+            return { 
+              error: { 
+                message: locale === "en" ? "Please check your email to confirm your account" : 
+                        locale === "es" ? "Por favor revisa tu correo para confirmar tu cuenta" : 
+                        "Por favor, verifique seu e-mail para confirmar sua conta",
+                code: "EMAIL_CONFIRMATION_REQUIRED" 
+              } 
+            }
+          }
+
+          // If session exists (email auto-confirmed), log user in
+          const appUser: AppUser = {
+            id: data.user.id,
+            email: data.user.email!,
+            name: userName,
+            role: "owner",
+            tenantId: tenantData.id
+          }
+          setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
+        } catch (dbError) {
+          console.error("Database error during signup:", dbError)
+        }
+
+        // Redirect to dashboard
+        if (typeof window !== "undefined") {
+          router.push("/dashboard")
         }
       }
 
-      // Check if email confirmation is required
-      if (data.user && !data.session) {
-        return { 
-          error: { 
-            message: locale === "en" ? "Please check your email to confirm your account" : 
-                    locale === "es" ? "Por favor revisa tu correo para confirmar tu cuenta" : 
-                    "Por favor, verifique seu e-mail para confirmar sua conta",
-            code: "EMAIL_CONFIRMATION_REQUIRED" 
-          } 
-        }
-      }
-
-      // If we get here, user was created successfully without email confirmation
-      router.push("/dashboard")
       return { error: null }
 
     } catch (error) {
