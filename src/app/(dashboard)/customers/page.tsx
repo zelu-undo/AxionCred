@@ -209,9 +209,10 @@ export default function CustomersPage() {
           <form onSubmit={handleCreateCustomer}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">Nome</label>
+                <label htmlFor="name" className="text-sm font-medium">Nome *</label>
                 <Input
                   id="name"
+                  placeholder="Nome completo"
                   value={newCustomer.name}
                   onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
                   required
@@ -222,24 +223,29 @@ export default function CustomersPage() {
                 <Input
                   id="email"
                   type="email"
+                  placeholder="email@exemplo.com"
                   value={newCustomer.email}
                   onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-medium">Telefone</label>
+                <label htmlFor="phone" className="text-sm font-medium">Telefone *</label>
                 <Input
                   id="phone"
+                  placeholder="(00) 00000-0000"
                   value={newCustomer.phone}
                   onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="document" className="text-sm font-medium">CPF/CNPJ</label>
+                <label htmlFor="document" className="text-sm font-medium">CPF/CNPJ *</label>
                 <Input
                   id="document"
+                  placeholder="000.000.000-00"
                   value={newCustomer.document}
                   onChange={(e) => setNewCustomer({ ...newCustomer, document: e.target.value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -247,6 +253,7 @@ export default function CustomersPage() {
                 <Input
                   id="credit_limit"
                   type="number"
+                  placeholder="0,00"
                   value={newCustomer.credit_limit}
                   onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: Number(e.target.value) })}
                 />

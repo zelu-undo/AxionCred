@@ -35,23 +35,49 @@ import { LanguageSelector } from "@/components/ui/language-selector"
 
 function NavigationItems() {
   const { t } = useI18n()
+  const { user } = useAuth()
+  
+  // Define permissions for each role
+  const permissions = {
+    owner: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "reports", "settings"],
+    admin: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "settings"],
+    manager: ["dashboard", "customers", "loans", "collections"],
+    operator: ["dashboard", "customers", "loans"],
+  }
+  
+  // Starter plan limitations
+  const starterLimits = {
+    "quick-sale": false,
+    "alerts": false,
+    "reports": false,
+  }
+  
+  // Get user permissions based on role
+  const userPermissions = user ? permissions[user.role as keyof typeof permissions] || ["dashboard"] : ["dashboard"]
+  const hasPermission = (feature: string) => {
+    // Check role permission
+    if (!userPermissions.includes(feature)) return false
+    // Check plan limitations for starter plan
+    if (user?.plan === "starter" && starterLimits[feature as keyof typeof starterLimits] === false) return false
+    return true
+  }
   
   const navigation = [
-    { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard },
-    { name: t("navigation.customers"), href: "/customers", icon: Users },
-    { name: t("navigation.loans"), href: "/loans", icon: CreditCard },
-    { name: t("navigation.collections"), href: "/collections", icon: Receipt },
-    { name: "⚡ Venda Rápida", href: "/loans/quick", icon: TrendingUp },
-    { name: "🔔 Alertas", href: "/alerts", icon: Bell },
-    { name: "📄 Relatórios", href: "/reports", icon: Receipt },
-    { name: t("navigation.settings"), href: "/settings", icon: Settings },
+    { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
+    { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
+    { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
+    { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
+    { name: "⚡ Venda Rápida", href: "/loans/quick", icon: TrendingUp, permission: "quick-sale" },
+    { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
+    { name: "📄 Relatórios", href: "/reports", icon: Receipt, permission: "reports" },
+    { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
   ]
 
   const pathname = usePathname()
 
   return (
     <>
-      {navigation.map((item) => {
+      {navigation.filter(item => hasPermission(item.permission)).map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
         return (
           <Link

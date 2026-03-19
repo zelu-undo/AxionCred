@@ -170,6 +170,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "auth.signupSuccess": "Conta criada com sucesso!",
     "auth.logoutSuccess": "Logout realizado com sucesso!",
     "auth.emailNotConfirmed": "Por favor, confirme seu e-mail. Verifique sua caixa de entrada.",
+    "auth.emailConfirmationRequired": "Por favor, verifique seu e-mail para confirmar sua conta",
     // Notifications
     "notifications.title": "Notificações",
     "notifications.noNotifications": "Nenhuma notificação nova",
@@ -271,6 +272,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "auth.signupSuccess": "Account created successfully!",
     "auth.logoutSuccess": "Logout successful!",
     "auth.emailNotConfirmed": "Please confirm your email. Check your inbox for the confirmation link.",
+    "auth.emailConfirmationRequired": "Please check your email to confirm your account",
   },
   es: {
     "common.appName": "AXION",
@@ -368,6 +370,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "auth.signupSuccess": "¡Cuenta creada exitosamente!",
     "auth.logoutSuccess": "¡Cierre de sesión exitoso!",
     "auth.emailNotConfirmed": "Por favor, confirma tu correo. Revisa tu bandeja de entrada.",
+    "auth.emailConfirmationRequired": "Por favor revisa tu correo para confirmar tu cuenta",
   },
 }
 

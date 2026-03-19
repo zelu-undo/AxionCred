@@ -10,6 +10,7 @@ type AppUser = {
   name: string
   role: string
   tenantId: string
+  plan?: string
 }
 
 type AuthError = {
@@ -175,6 +176,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
+        // Check if email is confirmed
+        if (!session.user.email_confirmed_at) {
+          // Email not confirmed - don't set user, redirect to login
+          await supabase.auth.signOut()
+          setUser(null)
+          localStorage.removeItem("axion_user")
+          router.push("/login?error=email_not_confirmed")
+          return
+        }
+
         const { data: userData } = await supabase
           .from("users")
           .select("id, email, name, role, tenant_id")
@@ -229,6 +240,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
+        // Check if email is confirmed
+        if (!data.user.email_confirmed_at) {
+          return { 
+            error: { 
+              message: locale === "en" ? "Please confirm your email before logging in. Check your inbox." : 
+                      locale === "es" ? "Por favor confirma tu correo antes de iniciar sesión." : 
+                      "Por favor, confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.",
+              code: "EMAIL_NOT_CONFIRMED" 
+            } 
+          }
+        }
+
         // Get user data from our users table
         const { data: userData, error: userError } = await supabase
           .from("users")
@@ -242,12 +265,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (userData) {
+          // Get tenant data for plan info
+          let plan = "starter"
+          if (userData.tenant_id) {
+            const { data: tenantData } = await supabase
+              .from("tenants")
+              .select("plan")
+              .eq("id", userData.tenant_id)
+              .single()
+            if (tenantData) {
+              plan = tenantData.plan || "starter"
+            }
+          }
+
           const appUser: AppUser = {
             id: userData.id,
             email: userData.email,
             name: userData.name,
             role: userData.role || "operator",
-            tenantId: userData.tenant_id
+            tenantId: userData.tenant_id,
+            plan
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
@@ -267,6 +304,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
+      // First check if user already exists
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("email")
+        .eq("email", email.toLowerCase())
+        .single()
+
+      if (existingUser) {
+        return { 
+          error: { 
+            message: locale === "en" ? "This email is already registered" : 
+                    locale === "es" ? "Este correo ya está registrado" : 
+                    "Este e-mail já está cadastrado",
+            code: "EMAIL_EXISTS" 
+          } 
+        }
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -279,6 +334,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         return { error: mapAuthError(error, locale) }
+      }
+
+      // Check if email confirmation is required
+      // If user is created but email is not confirmed yet, we still create the tenant/user
+      // but user will need to confirm email to access the system
+      if (data.user && !data.session) {
+        // Email confirmation required - create a pending user record
+        const { data: tenantData } = await supabase
+          .from("tenants")
+          .insert({
+            name: name || email.split("@")[0],
+            slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
+          })
+          .select()
+          .single()
+
+        const tenantId = tenantData?.id || ""
+
+        await supabase.from("users").insert({
+          id: data.user.id,
+          email: data.user.email,
+          name: name || email.split("@")[0],
+          role: "owner",
+          tenant_id: tenantId,
+          email_confirmed: false
+        })
+
+        return { 
+          error: { 
+            message: locale === "en" ? "Please check your email to confirm your account" : 
+                    locale === "es" ? "Por favor revisa tu correo para confirmar tu cuenta" : 
+                    "Por favor, verifique seu e-mail para confirmar sua conta",
+            code: "EMAIL_CONFIRMATION_REQUIRED" 
+          } 
+        }
       }
 
       if (data.user) {
