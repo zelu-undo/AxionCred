@@ -4,6 +4,36 @@ import { TRPCError } from "@trpc/server"
 
 // Interest rules router
 export const businessRulesRouter = router({
+  // Get all business rules in one call
+  get: protectedProcedure.query(async ({ ctx }) => {
+    // Get interest rules
+    const { data: interestRules, error: irError } = await ctx.supabase
+      .from("interest_rules")
+      .select("*")
+      .eq("tenant_id", ctx.tenantId!)
+      .order("min_installments", { ascending: true })
+
+    // Get loan config
+    const { data: loanConfig, error: lcError } = await ctx.supabase
+      .from("loan_config")
+      .select("*")
+      .eq("tenant_id", ctx.tenantId!)
+      .single()
+
+    // Get late fee config
+    const { data: lateFeeConfig, error: lfError } = await ctx.supabase
+      .from("late_fee_config")
+      .select("*")
+      .eq("tenant_id", ctx.tenantId!)
+      .single()
+
+    return {
+      interestRules: interestRules || [],
+      loanConfig,
+      lateFeeConfig,
+    }
+  }),
+
   // Interest Rules
   listInterestRules: protectedProcedure
     .query(async ({ ctx }) => {

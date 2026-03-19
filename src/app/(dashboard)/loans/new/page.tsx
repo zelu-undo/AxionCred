@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Calculator, CheckCircle, Loader2 } from "lucide-react"
+import { ArrowLeft, Calculator, CheckCircle, Loader2, Search } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 
@@ -21,8 +20,12 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
-  // Get customers for dropdown
-  const { data: customersData } = trpc.customer.list.useQuery({ limit: 1000 })
+  // Get customers with search
+  const [customerSearch, setCustomerSearch] = useState("")
+  const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
+    limit: 100,
+    search: customerSearch || undefined
+  })
   const customers = customersData?.customers || []
 
   const createMutation = trpc.loan.create.useMutation({
@@ -41,7 +44,6 @@ export default function NewLoanPage() {
   const [formData, setFormData] = useState({
     customerId: "",
     principal: "",
-    interestRate: "5",
     installments: "6",
     firstPaymentDate: new Date().toISOString().split("T")[0],
   })
@@ -56,12 +58,21 @@ export default function NewLoanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  // Calculate loan preview using business rules
+  const { data: businessRulesData } = trpc.businessRules.get.useQuery()
+
   const calculateLoan = () => {
     const principal = parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100
-    const rate = parseFloat(formData.interestRate) / 100
     const numInstallments = parseInt(formData.installments)
     
     if (!principal || !numInstallments) return
+
+    // Get interest rate from business rules (or default to 0)
+    const interestRate = businessRulesData?.interestRules?.find(
+      rule => numInstallments >= rule.minInstallments && numInstallments <= rule.maxInstallments
+    )?.interestRate || 0
+    
+    const rate = interestRate / 100
 
     let monthlyPayment: number
     let totalAmount: number
@@ -102,10 +113,10 @@ export default function NewLoanPage() {
   }
 
   useEffect(() => {
-    if (formData.principal && formData.installments) {
+    if (formData.principal && formData.installments && businessRulesData) {
       calculateLoan()
     }
-  }, [formData.principal, formData.interestRate, formData.installments, formData.firstPaymentDate])
+  }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,7 +127,6 @@ export default function NewLoanPage() {
     createMutation.mutate({
       customer_id: formData.customerId,
       principal_amount: principal,
-      interest_rate: parseFloat(formData.interestRate),
       installments_count: parseInt(formData.installments),
       first_due_date: formData.firstPaymentDate,
     })
@@ -132,6 +142,16 @@ export default function NewLoanPage() {
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("pt-BR")
   }
+
+  // Get current interest rate for display
+  const currentInterestRate = useMemo(() => {
+    const numInstallments = parseInt(formData.installments)
+    if (!businessRulesData?.interestRules) return 0
+    const rule = businessRulesData.interestRules.find(
+      r => numInstallments >= r.minInstallments && numInstallments <= r.maxInstallments
+    )
+    return rule?.interestRate || 0
+  }, [formData.installments, businessRulesData])
 
   if (isSuccess) {
     return (
@@ -169,23 +189,51 @@ export default function NewLoanPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Searchable Customer Select */}
               <div className="space-y-2">
                 <Label>Cliente *</Label>
-                <Select 
-                  value={formData.customerId} 
-                  onValueChange={(value) => setFormData({ ...formData, customerId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer: any) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por nome ou CPF..."
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                {customerSearch && (
+                  <div className="border rounded-md max-h-48 overflow-y-auto">
+                    {loadingCustomers ? (
+                      <div className="p-2 text-center text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                        Carregando...
+                      </div>
+                    ) : customers.length === 0 ? (
+                      <div className="p-2 text-center text-gray-500">Nenhum cliente encontrado</div>
+                    ) : (
+                      customers.map((customer: any) => (
+                        <div
+                          key={customer.id}
+                          className={`p-2 cursor-pointer hover:bg-purple-50 ${
+                            formData.customerId === customer.id ? "bg-purple-100" : ""
+                          }`}
+                          onClick={() => {
+                            setFormData({ ...formData, customerId: customer.id })
+                            setCustomerSearch(customer.name)
+                          }}
+                        >
+                          <div className="font-medium">{customer.name}</div>
+                          <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+                {formData.customerId && (
+                  <div className="text-sm text-green-600 flex items-center gap-1">
+                    ✓ Cliente selecionado
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -207,43 +255,32 @@ export default function NewLoanPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Taxa de Juros (% ao mês)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={formData.interestRate}
-                    onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
-                  />
+                  <Label>Número de Parcelas</Label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.installments}
+                    onChange={(e) => setFormData({ ...formData, installments: e.target.value })}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 18, 24, 36, 48].map((num) => (
+                      <option key={num} value={num}>
+                        {num}x
+                      </option>
+                    ))}
+                  </select>
+                  {currentInterestRate > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Taxa: {currentInterestRate}% ao mês
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Número de Parcelas</Label>
-                  <Select 
-                    value={formData.installments} 
-                    onValueChange={(value) => setFormData({ ...formData, installments: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 8, 10, 12, 18, 24].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num}x
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Data da Primeira Parcela</Label>
+                  <Input
+                    type="date"
+                    value={formData.firstPaymentDate}
+                    onChange={(e) => setFormData({ ...formData, firstPaymentDate: e.target.value })}
+                  />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data da Primeira Parcela</Label>
-                <Input
-                  type="date"
-                  value={formData.firstPaymentDate}
-                  onChange={(e) => setFormData({ ...formData, firstPaymentDate: e.target.value })}
-                />
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal}>
