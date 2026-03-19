@@ -85,9 +85,9 @@ export function Sidebar({ className, ...props }: SidebarProps) {
     router.push("/login")
   }
 
-  const userInitial = user?.email ? user.email[0].toUpperCase() : "D"
+  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "D")
   const userEmail = user?.email || "demo@axioncred.com.br"
-  const userName = user?.email ? user.email.split("@")[0] : "Demo User"
+  const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Demo User")
 
   return (
     <div className={cn("flex h-full w-64 flex-col bg-slate-900", className)} {...props}>
@@ -135,7 +135,7 @@ export function Header() {
     router.push("/login")
   }
 
-  const userInitial = user?.email ? user.email[0].toUpperCase() : "D"
+  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "D")
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6">

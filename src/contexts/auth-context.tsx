@@ -220,11 +220,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.user) {
         // Get user data from our users table
-        const { data: userData } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from("users")
           .select("id, email, name, role, tenant_id")
           .eq("id", data.user.id)
           .single()
+
+        if (userError) {
+          console.error("Error fetching user data:", userError)
+          return { error: { message: "Erro ao buscar dados do usuário", code: "USER_FETCH_ERROR" } }
+        }
 
         if (userData) {
           const appUser: AppUser = {
@@ -236,6 +241,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
+        } else {
+          // User exists in Supabase Auth but not in users table
+          console.error("User not found in users table:", data.user.id)
+          return { error: { message: "Usuário não encontrado. Entre em contato com o suporte.", code: "USER_NOT_FOUND" } }
         }
       }
 

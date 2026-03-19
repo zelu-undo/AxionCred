@@ -11,22 +11,54 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 
 export default function CustomersPage() {
   const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState("")
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    document: "",
+    credit_limit: 0,
+  })
   
   // Fetch customers from database
-  const { data, isLoading, error } = trpc.customer.list.useQuery({
+  const { data, isLoading, error, refetch } = trpc.customer.list.useQuery({
     search: searchQuery || undefined,
     limit: 50,
     offset: 0,
+  }, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
+  const createMutation = trpc.customer.create.useMutation({
+    onSuccess: () => {
+      setIsCreateOpen(false)
+      setNewCustomer({ name: "", email: "", phone: "", document: "", credit_limit: 0 })
+      refetch()
+    },
   })
 
   const customers = data?.customers || []
   const total = data?.total || 0
+
+  const handleCreateCustomer = (e: React.FormEvent) => {
+    e.preventDefault()
+    createMutation.mutate(newCustomer)
+  }
 
   return (
     <div className="space-y-6">
@@ -35,7 +67,7 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold text-gray-900">{t("customers.title")}</h1>
           <p className="text-gray-500">{t("customers.subtitle")}</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {t("customers.newCustomer")}
         </Button>
@@ -61,8 +93,16 @@ export default function CustomersPage() {
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
             </div>
           ) : error ? (
-            <div className="py-8 text-center text-red-500">
-              Erro ao carregar clientes: {error.message}
+            <div className="py-8 text-center">
+              <p className="text-red-500 font-medium">Erro ao carregar clientes</p>
+              <p className="text-gray-500 text-sm mt-1">{error.message}</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => refetch()}
+              >
+                Tentar novamente
+              </Button>
             </div>
           ) : (
             <>
@@ -156,6 +196,73 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Customer Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("customers.newCustomer")}</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do novo cliente
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateCustomer}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">Nome</label>
+                <Input
+                  id="name"
+                  value={newCustomer.name}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">E-mail</label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newCustomer.email}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="phone" className="text-sm font-medium">Telefone</label>
+                <Input
+                  id="phone"
+                  value={newCustomer.phone}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="document" className="text-sm font-medium">CPF/CNPJ</label>
+                <Input
+                  id="document"
+                  value={newCustomer.document}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, document: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="credit_limit" className="text-sm font-medium">Limite de Crédito</label>
+                <Input
+                  id="credit_limit"
+                  type="number"
+                  value={newCustomer.credit_limit}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? t("common.loading") : t("common.save")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
