@@ -62,7 +62,7 @@ export default function CustomerDetailPage() {
   const [isCheckingCpf, setIsCheckingCpf] = useState(false)
   const [notesLength, setNotesLength] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const MAX_NOTES_LENGTH = 800
+  const MAX_NOTES_LENGTH = 400
   
   const [formData, setFormData] = useState({
     name: "",
@@ -108,15 +108,18 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     if (customer) {
       // Parse address from full address string
+      // Format: "Rua, Número, Complemento, Bairro, Cidade, Estado" OR could have CEP embedded
       let street = ""
       let number = ""
       let complement = ""
       let neighborhood = ""
       let city = ""
       let state = ""
+      let cep = ""
       
       if (customer.address) {
         const parts = customer.address.split(",").map((p: string) => p.trim())
+        // Try to parse - assumes minimum street exists
         street = parts[0] || ""
         number = parts[1] || ""
         complement = parts[2] || ""
@@ -125,12 +128,15 @@ export default function CustomerDetailPage() {
         state = parts[5] || ""
       }
       
+      // Also check if there's a CEP stored separately (if we start saving it)
+      // For now, leave CEP empty - user can re-enter or we'd need a migration
+      
       setFormData({
         name: customer.name || "",
         email: customer.email || "",
         phone: customer.phone || "",
         document: customer.document || "",
-        cep: "",
+        cep: cep,
         street,
         number,
         complement,
@@ -566,10 +572,42 @@ export default function CustomerDetailPage() {
                   onFocus={adjustTextareaHeight}
                   onInput={adjustTextareaHeight}
                 />
-                <div className="flex justify-end">
-                  <span className={`text-xs ${notesLength >= MAX_NOTES_LENGTH ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                    {notesLength}/{MAX_NOTES_LENGTH}
-                  </span>
+                <div className="flex items-center justify-between">
+                  {notesLength >= MAX_NOTES_LENGTH && (
+                    <span className="text-xs text-red-500 font-medium animate-pulse">
+                      Limite atingido!
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2 ml-auto">
+                    {/* Progress circle */}
+                    <div className="relative w-5 h-5">
+                      <svg className="w-5 h-5 transform -rotate-90" viewBox="0 0 24 24">
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          fill="none"
+                          className="text-gray-200"
+                        />
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          fill="none"
+                          strokeDasharray={2 * Math.PI * 10}
+                          strokeDashoffset={2 * Math.PI * 10 * (1 - notesLength / MAX_NOTES_LENGTH)}
+                          className={`${notesLength >= MAX_NOTES_LENGTH ? 'text-red-500' : 'text-purple-500'} transition-all duration-300`}
+                        />
+                      </svg>
+                    </div>
+                    <span className={`text-xs ${notesLength >= MAX_NOTES_LENGTH ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                      {notesLength}/{MAX_NOTES_LENGTH}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
