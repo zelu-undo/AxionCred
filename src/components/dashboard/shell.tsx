@@ -118,9 +118,10 @@ export function Sidebar({ className, ...props }: SidebarProps) {
     router.push("/login")
   }
 
-  const userInitial = mounted && user?.name ? user.name[0].toUpperCase() : (mounted && user?.email ? user.email[0].toUpperCase() : "?")
-  const userEmail = mounted && user?.email || "Carregando..."
-  const userName = mounted && user?.name || (mounted && user?.email ? user.email.split("@")[0] : "Usuário")
+  // Simple logic - use user data if available, fallback to "?"
+  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "?")
+  const userEmail = user?.email || ""
+  const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Usuário")
 
   return (
     <div className={cn("flex h-full w-64 flex-col bg-slate-900", className)} {...props}>
@@ -174,7 +175,8 @@ export function Header() {
     router.push("/login")
   }
 
-  const userInitial = mounted && user?.name ? user.name[0].toUpperCase() : (mounted && user?.email ? user.email[0].toUpperCase() : "?")
+  // Simple logic - use user data if available
+  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "?")
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6">

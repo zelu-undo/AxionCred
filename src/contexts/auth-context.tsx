@@ -149,13 +149,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Try to get user data from our users table
           try {
-            const { data: userData } = await supabase
+            const { data: userData, error: userError } = await supabase
               .from("users")
               .select("id, email, name, role, tenant_id")
               .eq("id", session.user.id)
               .single()
 
-            if (userData) {
+            // Only use DB data if query succeeded
+            if (!userError && userData) {
               appUser = {
                 id: userData.id,
                 email: userData.email,
@@ -165,8 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
           } catch (err) {
-            // Table doesn't exist or error - use Supabase Auth data
-            console.log("Using Supabase Auth data directly")
+            console.log("Users table not accessible, using Supabase Auth data")
           }
 
           // Fallback to Supabase Auth data if no user in DB
@@ -186,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Session check error:", error)
       } finally {
+        // Always set loading to false - critical to avoid infinite loading
         setLoading(false)
       }
     }
