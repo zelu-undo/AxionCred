@@ -22,10 +22,19 @@ interface InterestRule {
 }
 
 interface LateFeeConfig {
-  lateFeeType: 'percentage';
+  // Multa por atraso (valor fixo ou percentual)
+  lateFeeType: 'percentage' | 'fixed';
   lateFeeValue: number;
-  lateInterestType: 'daily' | 'monthly';
+  
+  // Tipo de cobrança da multa: uma vez (total), semanal, mensal, diário
+  lateFeeChargeType: 'one_time' | 'weekly' | 'monthly' | 'daily';
+  
+  // Juros por atraso (valor fixo ou percentual)
+  lateInterestType: 'percentage' | 'fixed';
   lateInterestValue: number;
+  
+  // Tipo de cobrança dos juros: uma vez (total), semanal, mensal, diário
+  lateInterestChargeType: 'one_time' | 'weekly' | 'monthly' | 'daily';
 }
 
 function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, excludeId?: string): string | null {
@@ -75,8 +84,10 @@ export default function BusinessRulesPage() {
   const [lateFeeConfig, setLateFeeConfig] = useState<LateFeeConfig>({
     lateFeeType: 'percentage',
     lateFeeValue: 0,
-    lateInterestType: 'monthly',
+    lateFeeChargeType: 'one_time',
+    lateInterestType: 'percentage',
     lateInterestValue: 0,
+    lateInterestChargeType: 'daily',
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -119,13 +130,14 @@ export default function BusinessRulesPage() {
           .single()
         
         if (lateFeeData) {
-          setConfig(prev => ({
-            ...prev,
+          setLateFeeConfig({
             lateFeeType: lateFeeData.percentage ? 'percentage' : 'fixed',
             lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
-            lateInterestType: lateFeeData.monthly_interest ? 'monthly' : 'daily',
-            lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || 0
-          }))
+            lateFeeChargeType: lateFeeData.late_fee_charge_type || 'one_time',
+            lateInterestType: lateFeeData.late_interest_type || 'percentage',
+            lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || lateFeeData.late_interest_value || 0,
+            lateInterestChargeType: lateFeeData.late_interest_charge_type || 'daily'
+          })
         }
       } catch (err: any) {
         console.error("Error fetching data:", err)
@@ -288,14 +300,22 @@ export default function BusinessRulesPage() {
         .eq("tenant_id", user?.tenantId)
         .single()
       
+      const updateData = {
+        // Multa por atraso
+        percentage: lateFeeConfig.lateFeeType === 'percentage' ? lateFeeConfig.lateFeeValue : null,
+        fixed_fee: lateFeeConfig.lateFeeType === 'fixed' ? lateFeeConfig.lateFeeValue : null,
+        late_fee_charge_type: lateFeeConfig.lateFeeChargeType,
+        
+        // Juros por atraso
+        late_interest_type: lateFeeConfig.lateInterestType,
+        late_interest_value: lateFeeConfig.lateInterestValue,
+        late_interest_charge_type: lateFeeConfig.lateInterestChargeType,
+      }
+      
       if (existing) {
         const { error: updateError } = await supabase
           .from("late_fee_config")
-          .update({
-            percentage: lateFeeConfig.lateFeeValue,
-            monthly_interest: lateFeeConfig.lateInterestType === 'monthly' ? lateFeeConfig.lateInterestValue : null,
-            daily_interest: lateFeeConfig.lateInterestType === 'daily' ? lateFeeConfig.lateInterestValue : null,
-          })
+          .update(updateData)
           .eq("tenant_id", user?.tenantId)
         
         if (updateError) throw updateError
@@ -304,9 +324,7 @@ export default function BusinessRulesPage() {
           .from("late_fee_config")
           .insert({
             tenant_id: user?.tenantId,
-            percentage: lateFeeConfig.lateFeeValue,
-            monthly_interest: lateFeeConfig.lateInterestType === 'monthly' ? lateFeeConfig.lateInterestValue : null,
-            daily_interest: lateFeeConfig.lateInterestType === 'daily' ? lateFeeConfig.lateInterestValue : null,
+            ...updateData
           })
         
         if (insertError) throw insertError
@@ -468,34 +486,71 @@ export default function BusinessRulesPage() {
       {/* Late Fee Section */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Configuração de Juros por Atraso</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Multa por Atraso (%)</label>
-            <input 
-              type="text" 
-              className="border p-2 rounded w-full"
-              placeholder="0,00"
-              value={formatPercentInput(lateFeeConfig.lateFeeValue)} 
-              onChange={e => {
-                const val = parsePercentInput(e.target.value);
-                setLateFeeConfig({...lateFeeConfig, lateFeeValue: val})
-              }} 
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Juros por Atraso (%)</label>
-            <div className="flex gap-2">
+        
+        {/* Multa por Atraso */}
+        <div className="mb-6 pb-6 border-b">
+          <h3 className="text-lg font-medium mb-4">Multa por Atraso</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tipo</label>
               <select 
-                className="border p-2 rounded"
-                value={lateFeeConfig.lateInterestType}
-                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestType: e.target.value as 'daily' | 'monthly'})}
+                className="border p-2 rounded w-full"
+                value={lateFeeConfig.lateFeeType}
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateFeeType: e.target.value as 'percentage' | 'fixed'})}
               >
-                <option value="daily">Ao dia</option>
-                <option value="monthly">Ao mês</option>
+                <option value="percentage">Percentual (%)</option>
+                <option value="fixed">Valor Fixo (R$)</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Valor</label>
               <input 
                 type="text" 
-                className="flex-1 border p-2 rounded"
+                className="border p-2 rounded w-full"
+                placeholder="0,00"
+                value={formatPercentInput(lateFeeConfig.lateFeeValue)} 
+                onChange={e => {
+                  const val = parsePercentInput(e.target.value);
+                  setLateFeeConfig({...lateFeeConfig, lateFeeValue: val})
+                }} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Cobrar</label>
+              <select 
+                className="border p-2 rounded w-full"
+                value={lateFeeConfig.lateFeeChargeType}
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateFeeChargeType: e.target.value as 'one_time' | 'weekly' | 'monthly' | 'daily'})}
+              >
+                <option value="one_time">Uma vez</option>
+                <option value="daily">Diariamente</option>
+                <option value="weekly">Semanalmente</option>
+                <option value="monthly">Mensalmente</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Juros por Atraso */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Juros por Atraso</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tipo</label>
+              <select 
+                className="border p-2 rounded w-full"
+                value={lateFeeConfig.lateInterestType}
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestType: e.target.value as 'percentage' | 'fixed'})}
+              >
+                <option value="percentage">Percentual (%)</option>
+                <option value="fixed">Valor Fixo (R$)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Valor</label>
+              <input 
+                type="text" 
+                className="border p-2 rounded w-full"
                 placeholder="0,00"
                 value={formatPercentInput(lateFeeConfig.lateInterestValue)} 
                 onChange={e => {
@@ -504,9 +559,23 @@ export default function BusinessRulesPage() {
                 }}
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Cobrar</label>
+              <select 
+                className="border p-2 rounded w-full"
+                value={lateFeeConfig.lateInterestChargeType}
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestChargeType: e.target.value as 'one_time' | 'weekly' | 'monthly' | 'daily'})}
+              >
+                <option value="one_time">Uma vez</option>
+                <option value="daily">Diariamente</option>
+                <option value="weekly">Semanalmente</option>
+                <option value="monthly">Mensalmente</option>
+              </select>
+            </div>
           </div>
         </div>
-        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
+        
+        <button onClick={handleSaveLateFee} className="mt-6 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
       </div>
     </div>
   );
