@@ -12,6 +12,39 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
 import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User } from "lucide-react"
 
+// CPF formatting
+function formatCpf(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11)
+  if (digits.length >= 9) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+  } else if (digits.length >= 6) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+  } else if (digits.length >= 3) {
+    return `${digits.slice(0, 3)}.${digits.slice(3)}`
+  }
+  return digits
+}
+
+// Phone formatting
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11)
+  if (digits.length >= 6) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  } else if (digits.length >= 2) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  }
+  return digits
+}
+
+// CEP formatting
+function formatCep(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8)
+  if (digits.length >= 5) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  }
+  return digits
+}
+
 export default function CustomerDetailPage() {
   const { t } = useI18n()
   const router = useRouter()
@@ -22,12 +55,23 @@ export default function CustomerDetailPage() {
 
   const [isEditing, setIsEditing] = useState(isEditMode)
   const [showHistory, setShowHistory] = useState(false)
+  const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [cpfError, setCpfError] = useState("")
+  const [cepError, setCepError] = useState("")
+  const [isCheckingCpf, setIsCheckingCpf] = useState(false)
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     document: "",
-    address: "",
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
     notes: "",
     status: "active" as "active" | "inactive" | "blocked",
   })
@@ -37,6 +81,23 @@ export default function CustomerDetailPage() {
     { id: customerId },
     { enabled: !!customerId }
   )
+
+  // Parse address from full address string when customer loads
+  useEffect(() => {
+    if (customer?.address) {
+      // Try to parse the address
+      const parts = customer.address.split(",").map((p: string) => p.trim())
+      setFormData(prev => ({
+        ...prev,
+        street: parts[0] || "",
+        number: parts[1] || "",
+        complement: parts[2] || "",
+        neighborhood: parts[3] || "",
+        city: parts[4] || "",
+        state: parts[5] || "",
+      }))
+    }
+  }, [customer])
 
   // Fetch customer events for audit
   const { data: events } = trpc.customer.events.useQuery(
@@ -64,20 +125,145 @@ export default function CustomerDetailPage() {
         email: customer.email || "",
         phone: customer.phone || "",
         document: customer.document || "",
-        address: customer.address || "",
+        cep: "",
+        street: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: "",
         notes: customer.notes || "",
         status: customer.status || "active",
       })
     }
   }, [customer])
 
+  // Validate CPF on blur
+  const handleCpfBlur = async () => {
+    const cleanCpf = formData.document.replace(/\D/g, "")
+    
+    if (!cleanCpf) {
+      setCpfError("")
+      return
+    }
+
+    if (cleanCpf.length !== 11) {
+      setCpfError("CPF deve ter 11 dígitos")
+      return
+    }
+
+    // Basic CPF validation
+    if (/^(\d)\1{10}$/.test(cleanCpf)) {
+      setCpfError("CPF inválido")
+      return
+    }
+
+    // Check CPF digits
+    let sum = 0
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(cleanCpf.charAt(i - 1)) * (11 - i)
+    }
+    let remainder = (sum * 10) % 11
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== parseInt(cleanCpf.charAt(9))) {
+      setCpfError("CPF inválido")
+      return
+    }
+
+    sum = 0
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(cleanCpf.charAt(i - 1)) * (12 - i)
+    }
+    remainder = (sum * 10) % 11
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== parseInt(cleanCpf.charAt(10))) {
+      setCpfError("CPF inválido")
+      return
+    }
+
+    // Check for duplicate CPF (excluding current customer)
+    setIsCheckingCpf(true)
+    try {
+      const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}&excludeId=${customerId}`)
+      const result = await response.json()
+      
+      if (result.exists) {
+        setCpfError("CPF já está cadastrado para outro cliente")
+      } else {
+        setCpfError("")
+      }
+    } catch (error) {
+      console.error("Erro ao verificar CPF:", error)
+    } finally {
+      setIsCheckingCpf(false)
+    }
+  }
+
+  // Validate CEP on blur
+  const handleCepBlur = () => {
+    const cleanCep = formData.cep.replace(/\D/g, "")
+    
+    if (!cleanCep) {
+      setCepError("")
+      return
+    }
+
+    if (cleanCep.length !== 8) {
+      setCepError("CEP deve ter 8 dígitos")
+      return
+    }
+
+    setCepError("")
+  }
+
+  // Consulta CEP via ViaCEP
+  const handleCepChange = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, "")
+    setFormData({ ...formData, cep })
+
+    if (cleanCep.length === 8) {
+      setIsLoadingCep(true)
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+        const data = await response.json()
+
+        if (!data.erro) {
+          setFormData((prev) => ({
+            ...prev,
+            cep: cleanCep,
+            street: data.logradouro || "",
+            neighborhood: data.bairro || "",
+            city: data.localidade || "",
+            state: data.uf || "",
+          }))
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error)
+      } finally {
+        setIsLoadingCep(false)
+      }
+    }
+  }
+
   const handleSave = () => {
+    // Build address string
+    const addressParts = [
+      formData.street,
+      formData.number,
+      formData.complement,
+      formData.neighborhood,
+      formData.city,
+      formData.state,
+    ].filter(Boolean)
+    
+    const fullAddress = addressParts.join(", ")
+
     updateMutation.mutate({
       id: customerId,
       name: formData.name,
       email: formData.email || undefined,
       phone: formData.phone,
-      address: formData.address || undefined,
+      address: fullAddress || undefined,
       notes: formData.notes || undefined,
       status: formData.status,
     })
@@ -173,11 +359,12 @@ export default function CustomerDetailPage() {
             {isEditing ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name">Nome *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -194,19 +381,12 @@ export default function CustomerDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
+                  <Label htmlFor="phone">Telefone *</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -237,26 +417,112 @@ export default function CustomerDetailPage() {
                   <FileText className="h-4 w-4 text-gray-400" />
                   <span>{customer.document || "-"}</span>
                 </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Address */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Endereço</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isEditing ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="cep">CEP</Label>
+                  <div className="relative">
+                    <Input
+                      id="cep"
+                      placeholder="00000-000"
+                      value={formData.cep}
+                      onChange={(e) => setFormData({ ...formData, cep: formatCep(e.target.value) })}
+                      onBlur={handleCepBlur}
+                    />
+                    {isLoadingCep && (
+                      <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />
+                    )}
+                  </div>
+                  {cepError && <p className="text-sm text-red-500">{cepError}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="street">Rua</Label>
+                  <Input
+                    id="street"
+                    value={formData.street}
+                    onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="number">Número</Label>
+                    <Input
+                      id="number"
+                      value={formData.number}
+                      onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="complement">Complemento</Label>
+                    <Input
+                      id="complement"
+                      value={formData.complement}
+                      onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">Estado</Label>
+                    <Input
+                      id="state"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
                 {customer.address && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-gray-400 mt-1" />
                     <span>{customer.address}</span>
                   </div>
                 )}
+                {!customer.address && <p className="text-gray-500">Sem endereço cadastrado</p>}
               </>
             )}
           </CardContent>
         </Card>
 
         {/* Notes */}
-        <Card>
+        <Card className={isEditing ? "" : "md:col-span-2"}>
           <CardHeader>
             <CardTitle className="text-lg">Observações</CardTitle>
           </CardHeader>
           <CardContent>
             {isEditing ? (
               <textarea
-                className="w-full border rounded-md p-3 min-h-[150px]"
+                className="w-full border rounded-md p-3 min-h-[100px]"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Adicione observações sobre o cliente..."
@@ -295,19 +561,22 @@ export default function CustomerDetailPage() {
         </Card>
       </div>
 
-      {/* Save Button */}
+      {/* Action Buttons - Fixed at top for better visibility */}
       {isEditing && (
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end gap-3 z-50">
           <Button variant="outline" onClick={() => setIsEditing(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={updateMutation.isPending}>
+          <Button onClick={handleSave} disabled={updateMutation.isPending || !!cpfError || !!cepError}>
             {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Save className="mr-2 h-4 w-4" />
             Salvar
           </Button>
         </div>
       )}
+      
+      {/* Add padding when editing to avoid content being hidden behind fixed buttons */}
+      {isEditing && <div className="h-20" />}
     </div>
   )
 }

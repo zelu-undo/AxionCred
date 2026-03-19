@@ -42,6 +42,9 @@ export default function CustomersPage() {
   const [isLoadingCep, setIsLoadingCep] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null)
+  const [cpfError, setCpfError] = useState("")
+  const [isCheckingCpf, setIsCheckingCpf] = useState(false)
+  const [cepError, setCepError] = useState("")
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -111,6 +114,88 @@ export default function CustomersPage() {
 
   const customers = data?.customers || []
   const total = data?.total || 0
+
+  // Validate CPF format and check for duplicates on blur
+  const handleCpfBlur = async () => {
+    const cleanCpf = newCustomer.document.replace(/\D/g, "")
+    
+    if (!cleanCpf) {
+      setCpfError("")
+      return
+    }
+
+    if (cleanCpf.length !== 11) {
+      setCpfError("CPF deve ter 11 dígitos")
+      return
+    }
+
+    // Basic CPF validation
+    if (/^(\d)\1{10}$/.test(cleanCpf)) {
+      setCpfError("CPF inválido")
+      return
+    }
+
+    // Check CPF digits
+    let sum = 0
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(cleanCpf.charAt(i - 1)) * (11 - i)
+    }
+    let remainder = (sum * 10) % 11
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== parseInt(cleanCpf.charAt(9))) {
+      setCpfError("CPF inválido")
+      return
+    }
+
+    sum = 0
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(cleanCpf.charAt(i - 1)) * (12 - i)
+    }
+    remainder = (sum * 10) % 11
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== parseInt(cleanCpf.charAt(10))) {
+      setCpfError("CPF inválido")
+      return
+    }
+
+    // Check for duplicate in database
+    setIsCheckingCpf(true)
+    try {
+      const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}`)
+      const result = await response.json()
+      
+      if (result.exists) {
+        if (result.deleted) {
+          setCpfError(`CPF já foi cadastrado. Cliente "${result.name}" foi excluído em ${result.deletedAt}. deseja reativar?`)
+        } else {
+          setCpfError("CPF já está cadastrado para outro cliente")
+        }
+      } else {
+        setCpfError("")
+      }
+    } catch (error) {
+      console.error("Erro ao verificar CPF:", error)
+    } finally {
+      setIsCheckingCpf(false)
+    }
+  }
+
+  // Validate CEP format on blur
+  const handleCepBlur = () => {
+    const cleanCep = newCustomer.cep.replace(/\D/g, "")
+    
+    if (!cleanCep) {
+      setCepError("")
+      return
+    }
+
+    if (cleanCep.length !== 8) {
+      setCepError("CEP deve ter 8 dígitos")
+      return
+    }
+
+    setCepError("")
+  }
 
   // Consulta CEP via ViaCEP
   const handleCepChange = async (cep: string) => {
@@ -379,13 +464,22 @@ export default function CustomersPage() {
               </div>
               <div className="space-y-2">
                 <label htmlFor="document" className="text-sm font-medium">CPF/CNPJ *</label>
-                <Input
-                  id="document"
-                  placeholder="000.000.000-00"
-                  value={newCustomer.document}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, document: formatCpf(e.target.value) })}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="document"
+                    placeholder="000.000.000-00"
+                    value={newCustomer.document}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, document: formatCpf(e.target.value) })}
+                    onBlur={handleCpfBlur}
+                    required
+                  />
+                  {isCheckingCpf && (
+                    <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />
+                  )}
+                </div>
+                {cpfError && (
+                  <p className="text-sm text-red-500">{cpfError}</p>
+                )}
               </div>
               
               {/* Endereço */}
@@ -407,12 +501,16 @@ export default function CustomersPage() {
                           const formatted = formatCep(e.target.value)
                           handleCepChange(formatted)
                         }}
+                        onBlur={handleCepBlur}
                         required
                       />
                       {isLoadingCep && (
                         <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />
                       )}
                     </div>
+                    {cepError && (
+                      <p className="text-sm text-red-500">{cepError}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="state" className="text-sm font-medium">Estado *</label>
