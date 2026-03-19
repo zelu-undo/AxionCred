@@ -304,7 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
-      // First check if user already exists
+      // First check if user already exists in our users table
       const { data: existingUser } = await supabase
         .from("users")
         .select("email")
@@ -322,45 +322,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Create tenant first
+      const { data: tenantData, error: tenantError } = await supabase
+        .from("tenants")
+        .insert({
+          name: name || email.split("@")[0],
+          slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
+        })
+        .select()
+        .single()
+
+      if (tenantError) {
+        console.error("Tenant creation error:", tenantError)
+        return { error: { message: "Erro ao criar empresa. Tente novamente.", code: "TENANT_ERROR" } }
+      }
+
+      // Now create the user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name: name || email.split("@")[0]
+            name: name || email.split("@")[0],
+            tenant_id: tenantData.id
           }
         }
       })
 
       if (error) {
+        // Rollback tenant creation if auth fails
+        await supabase.from("tenants").delete().eq("id", tenantData.id)
         return { error: mapAuthError(error, locale) }
       }
 
-      // Check if email confirmation is required
-      // If user is created but email is not confirmed yet, we still create the tenant/user
-      // but user will need to confirm email to access the system
-      if (data.user && !data.session) {
-        // Email confirmation required - create a pending user record
-        const { data: tenantData } = await supabase
-          .from("tenants")
-          .insert({
-            name: name || email.split("@")[0],
-            slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-          })
-          .select()
-          .single()
-
-        const tenantId = tenantData?.id || ""
-
-        await supabase.from("users").insert({
+      if (data.user) {
+        // Create user record in our users table
+        const { error: userError } = await supabase.from("users").insert({
           id: data.user.id,
           email: data.user.email,
           name: name || email.split("@")[0],
           role: "owner",
-          tenant_id: tenantId,
-          email_confirmed: false
+          tenant_id: tenantData.id
         })
 
+        if (userError) {
+          console.error("User creation error:", userError)
+          // Continue anyway - user can be created on first login
+        }
+      }
+
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
         return { 
           error: { 
             message: locale === "en" ? "Please check your email to confirm your account" : 
@@ -371,43 +383,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (data.user) {
-        // Create tenant for new user
-        const { data: tenantData } = await supabase
-          .from("tenants")
-          .insert({
-            name: name || email.split("@")[0],
-            slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "")
-          })
-          .select()
-          .single()
-
-        const tenantId = tenantData?.id || ""
-
-        // Create user in our users table
-        await supabase.from("users").insert({
-          id: data.user.id,
-          email: data.user.email,
-          name: name || email.split("@")[0],
-          role: "owner",
-          tenant_id: tenantId
-        })
-
-        const appUser: AppUser = {
-          id: data.user.id,
-          email: data.user.email!,
-          name: name || email.split("@")[0],
-          role: "owner",
-          tenantId
-        }
-        setUser(appUser)
-        localStorage.setItem("axion_user", JSON.stringify(appUser))
-      }
-
+      // If we get here, user was created successfully without email confirmation
       router.push("/dashboard")
       return { error: null }
+
     } catch (error) {
-      return { error: mapAuthError(error as { message: string; name?: string }, locale) }
+      console.error("Signup error:", error)
+      return { error: { message: "Erro ao criar conta. Tente novamente.", code: "UNKNOWN_ERROR" } }
     }
   }
 
