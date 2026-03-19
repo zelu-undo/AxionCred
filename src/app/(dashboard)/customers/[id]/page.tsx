@@ -299,8 +299,8 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header with actions */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.push("/customers")}>
             <ArrowLeft className="h-5 w-5" />
@@ -317,7 +317,18 @@ export default function CustomerDetailPage() {
             <History className="mr-2 h-4 w-4" />
             Histórico
           </Button>
-          {!isEditing && customer.status !== "deleted" && (
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={updateMutation.isPending || !!cpfError || !!cepError}>
+                {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Save className="mr-2 h-4 w-4" />
+                Salvar
+              </Button>
+            </>
+          ) : customer.status !== "deleted" && (
             <Button onClick={() => setIsEditing(true)}>Editar</Button>
           )}
         </div>
@@ -560,23 +571,6 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Action Buttons - Fixed at top for better visibility */}
-      {isEditing && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end gap-3 z-50">
-          <Button variant="outline" onClick={() => setIsEditing(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={updateMutation.isPending || !!cpfError || !!cepError}>
-            {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <Save className="mr-2 h-4 w-4" />
-            Salvar
-          </Button>
-        </div>
-      )}
-      
-      {/* Add padding when editing to avoid content being hidden behind fixed buttons */}
-      {isEditing && <div className="h-20" />}
     </div>
   )
 }
