@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,9 +36,12 @@ interface Address {
 
 export default function CustomersPage() {
   const { t } = useI18n()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null)
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -91,6 +95,17 @@ export default function CustomersPage() {
     },
     onError: (error) => {
       showErrorToast(error.message || "Erro ao criar cliente")
+    },
+  })
+
+  // Delete customer mutation
+  const deleteMutation = trpc.customer.delete.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Cliente excluído com sucesso!")
+      refetch()
+    },
+    onError: (error) => {
+      showErrorToast(error.message || "Erro ao excluir cliente")
     },
   })
 
@@ -275,22 +290,26 @@ export default function CustomersPage() {
                           }
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <DropdownMenu>
+                          <DropdownMenu open={openDropdown === customer.id} onOpenChange={(open) => setOpenDropdown(open ? customer.id : null)}>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" onClick={() => setOpenDropdown(customer.id)}>
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 {t("customers.viewDetails")}
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}?edit=true`)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 {t("common.edit")}
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem className="text-red-600" onClick={() => {
+                                if (confirm("Tem certeza que deseja excluir este cliente?")) {
+                                  deleteMutation.mutate(customer.id)
+                                }
+                              }}>
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 {t("common.delete")}
                               </DropdownMenuItem>
