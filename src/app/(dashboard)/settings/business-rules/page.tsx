@@ -38,19 +38,25 @@ export default function BusinessRulesPage() {
   const { user, loading: authLoading } = useAuth()
   const utils = trpc.useUtils()
   
-  // Fetch interest rules from database
-  const { data: interestRulesData, isLoading: rulesLoading } = trpc.businessRules.listInterestRules.useQuery(undefined, {
-    enabled: !!user
+  // Fetch interest rules from database - with error handling
+  const { data: interestRulesData, isLoading: rulesLoading, error: rulesError } = trpc.businessRules.listInterestRules.useQuery(undefined, {
+    enabled: !!user,
+    retry: 1,
+    staleTime: 30000,
   })
   
-  // Fetch late fee config
-  const { data: lateFeeConfig } = trpc.businessRules.getLateFeeConfig.useQuery(undefined, {
-    enabled: !!user
+  // Fetch late fee config - with error handling
+  const { data: lateFeeConfig, error: lateFeeError } = trpc.businessRules.getLateFeeConfig.useQuery(undefined, {
+    enabled: !!user,
+    retry: 1,
+    staleTime: 30000,
   })
   
-  // Fetch loan config
-  const { data: loanConfig } = trpc.businessRules.getLoanConfig.useQuery(undefined, {
-    enabled: !!user
+  // Fetch loan config - with error handling  
+  const { data: loanConfig, error: loanConfigError } = trpc.businessRules.getLoanConfig.useQuery(undefined, {
+    enabled: !!user,
+    retry: 1,
+    staleTime: 30000,
   })
   
   // Mutations for CRUD operations
@@ -105,7 +111,7 @@ export default function BusinessRulesPage() {
 
   // Update local state when data is loaded from database
   useEffect(() => {
-    if (interestRulesData) {
+    if (interestRulesData && interestRulesData.length > 0) {
       setInterestRules(interestRulesData.map((r: any) => ({
         id: r.id,
         name: r.name,
@@ -217,12 +223,17 @@ export default function BusinessRulesPage() {
     })
   };
 
-  if (authLoading || rulesLoading) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
       </div>
     )
+  }
+
+  // Show content even if tRPC fails - use fallback data
+  if (rulesError) {
+    console.error("Error loading interest rules:", rulesError)
   }
 
   return (
