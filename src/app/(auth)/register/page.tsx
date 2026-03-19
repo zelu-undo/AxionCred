@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
+import { useI18n } from "@/i18n/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,26 +19,28 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const { signUp } = useAuth()
   const router = useRouter()
+  const { t } = useI18n()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
 
+    // Validation with translations
     if (!name.trim()) {
-      setError("Por favor, insira seu nome")
+      setError(t("auth.nameRequired"))
       setIsLoading(false)
       return
     }
 
     if (password !== confirmPassword) {
-      setError("As senhas não coincidem")
+      setError(t("auth.passwordMismatch"))
       setIsLoading(false)
       return
     }
 
     if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres")
+      setError(t("auth.weakPassword"))
       setIsLoading(false)
       return
     }

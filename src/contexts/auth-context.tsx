@@ -12,12 +12,98 @@ type AppUser = {
   tenantId: string
 }
 
+type AuthError = {
+  message: string
+  code?: string
+}
+
 type AuthContextType = {
   user: AppUser | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, name?: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
+}
+
+// Map Supabase error codes to user-friendly messages
+function mapAuthError(error: { message: string; name?: string }, locale: string = "pt"): AuthError {
+  const errorLower = error.message.toLowerCase()
+  
+  // Invalid login credentials
+  if (errorLower.includes("invalid login credentials") || errorLower.includes("invalid email or password")) {
+    return { 
+      message: locale === "en" ? "Invalid email or password" : 
+              locale === "es" ? "Correo o contraseña incorrectos" : 
+              "E-mail ou senha incorretos",
+      code: "INVALID_CREDENTIALS"
+    }
+  }
+  
+  // User not found
+  if (errorLower.includes("user not found")) {
+    return { 
+      message: locale === "en" ? "User not found" : 
+              locale === "es" ? "Usuario no encontrado" : 
+              "Usuário não encontrado",
+      code: "USER_NOT_FOUND"
+    }
+  }
+  
+  // Email already exists
+  if (errorLower.includes("email already in use") || errorLower.includes("email already registered") || errorLower.includes("already been registered")) {
+    return { 
+      message: locale === "en" ? "This email is already registered" : 
+              locale === "es" ? "Este correo ya está registrado" : 
+              "Este e-mail já está cadastrado",
+      code: "EMAIL_EXISTS"
+    }
+  }
+  
+  // Invalid email
+  if (errorLower.includes("invalid email")) {
+    return { 
+      message: locale === "en" ? "Invalid email address" : 
+              locale === "es" ? "Dirección de correo inválida" : 
+              "Endereço de e-mail inválido",
+      code: "INVALID_EMAIL"
+    }
+  }
+  
+  // Password too short
+  if (errorLower.includes("password should be at least") || errorLower.includes("minimum length of 6")) {
+    return { 
+      message: locale === "en" ? "Password must be at least 6 characters" : 
+              locale === "es" ? "La contraseña debe tener al menos 6 caracteres" : 
+              "A senha deve ter pelo menos 6 caracteres",
+      code: "WEAK_PASSWORD"
+    }
+  }
+  
+  // Network error
+  if (errorLower.includes("network") || errorLower.includes("fetch")) {
+    return { 
+      message: locale === "en" ? "Connection error. Please try again." : 
+              locale === "es" ? "Error de conexión. Intenta de nuevo." : 
+              "Erro de conexão. Tente novamente.",
+      code: "NETWORK_ERROR"
+    }
+  }
+  
+  // Too many attempts
+  if (errorLower.includes("too many requests") || errorLower.includes("rate limit")) {
+    return { 
+      message: locale === "en" ? "Too many attempts. Try again later." : 
+              locale === "es" ? "Demasiados intentos. Intenta más tarde." : 
+              "Muitas tentativas. Tente novamente mais tarde.",
+      code: "TOO_MANY_ATTEMPTS"
+    }
+  }
+  
+  // Default fallback
+  return { 
+    message: error.message,
+    code: "UNKNOWN"
+  }
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -28,9 +114,18 @@ const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/d
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [locale, setLocaleState] = useState<string>("pt")
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
+
+  // Get locale from localStorage
+  useEffect(() => {
+    const savedLocale = localStorage.getItem("axion-locale")
+    if (savedLocale && ["pt", "en", "es"].includes(savedLocale)) {
+      setLocaleState(savedLocale)
+    }
+  }, [])
 
   useEffect(() => {
     // Check current session
@@ -120,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) {
-        return { error: error }
+        return { error: mapAuthError(error, locale) }
       }
 
       if (data.user) {
@@ -147,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/dashboard")
       return { error: null }
     } catch (error) {
-      return { error: error as Error }
+      return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
   }
 
@@ -164,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) {
-        return { error: error }
+        return { error: mapAuthError(error, locale) }
       }
 
       if (data.user) {
@@ -203,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/dashboard")
       return { error: null }
     } catch (error) {
-      return { error: error as Error }
+      return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
   }
 
