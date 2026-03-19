@@ -145,24 +145,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user) {
-          // Get user data from our users table
-          const { data: userData } = await supabase
-            .from("users")
-            .select("id, email, name, role, tenant_id")
-            .eq("id", session.user.id)
-            .single()
+          let appUser: AppUser | null = null
+          
+          // Try to get user data from our users table
+          try {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("id, email, name, role, tenant_id")
+              .eq("id", session.user.id)
+              .single()
 
-          if (userData) {
-            const appUser: AppUser = {
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              role: userData.role || "operator",
-              tenantId: userData.tenant_id
+            if (userData) {
+              appUser = {
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                role: userData.role || "owner",
+                tenantId: userData.tenant_id || ""
+              }
             }
-            setUser(appUser)
-            localStorage.setItem("axion_user", JSON.stringify(appUser))
+          } catch (err) {
+            // Table doesn't exist or error - use Supabase Auth data
+            console.log("Using Supabase Auth data directly")
           }
+
+          // Fallback to Supabase Auth data if no user in DB
+          if (!appUser) {
+            appUser = {
+              id: session.user.id,
+              email: session.user.email || "",
+              name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+              role: "owner",
+              tenantId: ""
+            }
+          }
+          
+          setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
         }
       } catch (error) {
         console.error("Session check error:", error)
@@ -186,23 +205,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        const { data: userData } = await supabase
-          .from("users")
-          .select("id, email, name, role, tenant_id")
-          .eq("id", session.user.id)
-          .single()
+        let appUser: AppUser | null = null
+        
+        // Try to get from database
+        try {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("id, email, name, role, tenant_id")
+            .eq("id", session.user.id)
+            .single()
 
-        if (userData) {
-          const appUser: AppUser = {
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            role: userData.role || "operator",
-            tenantId: userData.tenant_id
+          if (userData) {
+            appUser = {
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              role: userData.role || "owner",
+              tenantId: userData.tenant_id || ""
+            }
           }
-          setUser(appUser)
-          localStorage.setItem("axion_user", JSON.stringify(appUser))
+        } catch (err) {
+          console.log("Using Supabase Auth data directly")
         }
+
+        // Fallback to Supabase Auth data
+        if (!appUser) {
+          appUser = {
+            id: session.user.id,
+            email: session.user.email || "",
+            name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+            role: "owner",
+            tenantId: ""
+          }
+        }
+        
+        setUser(appUser)
+        localStorage.setItem("axion_user", JSON.stringify(appUser))
       } else {
         setUser(null)
         localStorage.removeItem("axion_user")
