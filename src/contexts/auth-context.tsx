@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       try {
         // Simple timeout without AbortController (getSession doesn't support abort)
-        const timeoutMs = 10000 // 10 seconds - reduced for faster fallback
+        const timeoutMs = 5000 // 5 seconds timeout
         
         // Start session check
         const sessionPromise = supabase.auth.getSession()
