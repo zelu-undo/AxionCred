@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { httpBatchLink } from "@trpc/client"
 import { createTRPCReact } from "@trpc/react-query"
 import { useState, useEffect, useMemo } from "react"
+import { createClient } from "@/lib/supabase"
 import type { AppRouter } from "@/server/routers"
 
 export const trpc = createTRPCReact<AppRouter>()
@@ -12,12 +13,6 @@ function getBaseUrl() {
   if (typeof window !== "undefined") return ""
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   return `http://localhost:${process.env.PORT ?? 3000}`
-}
-
-// Check if user is logged in (demo mode)
-function checkIsDemoMode(): boolean {
-  if (typeof window === "undefined") return false
-  return !!localStorage.getItem("axion_user")
 }
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
@@ -33,44 +28,49 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       })
   )
 
-  // Use state but initialize with synchronous check
-  const [isDemoMode, setIsDemoMode] = useState(() => checkIsDemoMode())
+  const [sessionToken, setSessionToken] = useState<string>("")
 
   useEffect(() => {
-    // Listen for changes in localStorage
-    const handleStorage = () => {
-      setIsDemoMode(checkIsDemoMode())
+    // Get Supabase session token
+    const getSession = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        setSessionToken(session.access_token)
+      }
     }
-    
-    // Also check on mount in case localStorage changed
-    setIsDemoMode(checkIsDemoMode())
-    
-    // Poll every second for localStorage changes (for demo login/logout)
-    const interval = setInterval(() => {
-      setIsDemoMode(checkIsDemoMode())
-    }, 1000)
-    
-    window.addEventListener("storage", handleStorage)
+
+    getSession()
+
+    // Listen for auth changes
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.access_token) {
+        setSessionToken(session.access_token)
+      } else {
+        setSessionToken("")
+      }
+    })
+
     return () => {
-      window.removeEventListener("storage", handleStorage)
-      clearInterval(interval)
+      subscription.unsubscribe()
     }
   }, [])
 
-  // Create client with current isDemoMode value
+  // Create client with session token
   const trpcClient = useMemo(() => {
     return trpc.createClient({
       links: [
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
           headers: {
-            // Always send demo mode header - server will handle both cases
-            "x-demo-mode": isDemoMode ? "true" : "false",
+            // Send Supabase session token for authentication
+            ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
           },
         }),
       ],
     })
-  }, [isDemoMode])
+  }, [sessionToken])
 
   return (
     <trpc.Provider 

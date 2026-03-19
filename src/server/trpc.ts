@@ -17,12 +17,14 @@ const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
 export const createContext = async (opts: {
   headers: Headers
 }): Promise<Context> => {
+  // Get the Authorization header (contains Supabase session token)
   const authHeader = opts.headers.get("authorization") || ""
+  const token = authHeader.replace("Bearer ", "")
   
   // Check for demo mode header
   const isDemoMode = opts.headers.get("x-demo-mode") === "true" || authHeader === "demo"
   
-  const supabase = supabaseServer(authHeader)
+  const supabase = supabaseServer(token)
   
   // If in demo mode, return demo credentials
   if (isDemoMode) {
@@ -35,29 +37,35 @@ export const createContext = async (opts: {
     }
   }
   
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  // Try to get user from Supabase Auth
+  let userId: string | undefined
   let tenantId: string | undefined
   let userRole: string | undefined
 
-  if (user) {
-    const { data: userData } = await supabase
-      .from("users")
-      .select("tenant_id, role")
-      .eq("id", user.id)
-      .single()
+  if (token) {
+    // Get user from Supabase using the session token
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (user && !error) {
+      userId = user.id
+      
+      // Get user data from our users table
+      const { data: userData } = await supabase
+        .from("users")
+        .select("tenant_id, role")
+        .eq("id", user.id)
+        .single()
 
-    if (userData) {
-      tenantId = userData.tenant_id
-      userRole = userData.role
+      if (userData) {
+        tenantId = userData.tenant_id
+        userRole = userData.role
+      }
     }
   }
 
   return {
     supabase,
-    userId: user?.id,
+    userId,
     tenantId,
     userRole,
     isDemoMode: false,
