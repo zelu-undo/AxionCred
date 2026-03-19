@@ -304,59 +304,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
-      // First check if user already exists (suppress errors for network issues)
-      try {
-        const { data: existingUser } = await supabase
-          .from("users")
-          .select("email")
-          .eq("email", email.toLowerCase())
-          .single()
-
-        if (existingUser) {
-          return { 
-            error: { 
-              message: locale === "en" ? "This email is already registered" : 
-                      locale === "es" ? "Este correo ya está registrado" : 
-                      "Este e-mail já está cadastrado",
-              code: "EMAIL_EXISTS" 
-            } 
-          }
-        }
-      } catch (checkError) {
-        // Continue with signup even if check fails (network might be down)
-        console.warn("User check failed, continuing with signup:", checkError)
-      }
-
-      // Attempt Supabase Auth signup
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
-        .insert({
-          name: name || email.split("@")[0],
-          slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-        })
-        .select()
-        .single()
-
-      if (tenantError) {
-        console.error("Tenant creation error:", tenantError)
-        return { error: { message: "Erro ao criar empresa. Tente novamente.", code: "TENANT_ERROR" } }
-      }
-
-      // Now create the user in Supabase Auth
+      // Attempt Supabase Auth signup directly
+      // The user record will be created in the database after successful auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name: name || email.split("@")[0],
-            tenant_id: tenantData.id
+            name: name || email.split("@")[0]
           }
         }
       })
 
       if (error) {
-        // Rollback tenant creation if auth fails
-        await supabase.from("tenants").delete().eq("id", tenantData.id)
         return { error: mapAuthError(error, locale) }
       }
 
@@ -365,15 +325,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userName = name || email.split("@")[0]
         
         try {
+          // Create tenant for new user
+          const { data: tenantData, error: tenantError } = await supabase
+            .from("tenants")
+            .insert({
+              name: userName,
+              slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
+            })
+            .select()
+            .single()
+
+          if (tenantError) {
+            console.error("Tenant creation error:", tenantError)
+            // Continue anyway - user can be created without tenant initially
+          }
+
+          const tenantId = tenantData?.id || ""
+
           // Create user in our users table
-          await supabase.from("users").insert({
+          const { error: userError } = await supabase.from("users").insert({
             id: data.user.id,
             email: data.user.email,
             name: userName,
             role: "owner",
-            tenant_id: tenantData.id,
-            email_confirmed: !data.session // false if confirmation required
+            tenant_id: tenantId,
+            email_confirmed: !data.session
           })
+
+          if (userError) {
+            console.error("User creation error:", userError)
+          }
 
           // If no session (email confirmation required), return success message
           if (!data.session) {
@@ -393,22 +374,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: data.user.email!,
             name: userName,
             role: "owner",
-            tenantId: tenantData.id
+            tenantId
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
+
+          // Redirect to dashboard
+          if (typeof window !== "undefined") {
+            router.push("/dashboard")
+          }
         } catch (dbError) {
           console.error("Database error during signup:", dbError)
-        }
-
-        // Redirect to dashboard
-        if (typeof window !== "undefined") {
-          router.push("/dashboard")
         }
       }
 
       return { error: null }
-
     } catch (error) {
       console.error("Signup error:", error)
       return { error: { message: "Erro ao criar conta. Tente novamente.", code: "UNKNOWN_ERROR" } }
