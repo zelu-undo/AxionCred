@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, Edit2, Save, X } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2, Plus, Edit2, Save, X, Calculator, AlertCircle } from 'lucide-react';
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
+
+// Tipos de juros:
+// - monthly: percentual ao mês (recorrente)
+// - weekly: percentual ao semana (recorrente)  
+// - total: percentual único aplicado no total (não recorrente)
+type InterestType = 'monthly' | 'weekly' | 'total';
 
 interface InterestRule {
   id: string;
@@ -12,17 +17,15 @@ interface InterestRule {
   minInstallments: number;
   maxInstallments: number;
   interestRate: number;
-  interestType: 'fixed' | 'weekly' | 'monthly';
+  interestType: InterestType;
   isActive: boolean;
 }
 
-interface SystemConfig {
-  lateFeeType: 'percentage' | 'fixed';
+interface LateFeeConfig {
+  lateFeeType: 'percentage';
   lateFeeValue: number;
   lateInterestType: 'daily' | 'monthly';
   lateInterestValue: number;
-  renegotiationInterestRate: number;
-  renegotiationMaxInstallments: number;
 }
 
 function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, excludeId?: string): string | null {
@@ -34,14 +37,46 @@ function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, exclude
   return null;
 }
 
+function getInterestTypeLabel(type: InterestType): string {
+  switch (type) {
+    case 'monthly': return 'Ao mês';
+    case 'weekly': return 'À semana';
+    case 'total': return 'Taxa única';
+  }
+}
+
+function getInterestTypeExample(type: InterestType, rate: number): string {
+  switch (type) {
+    case 'monthly': return `${rate}% ao mês`;
+    case 'weekly': return `${rate}% por semana`;
+    case 'total': return `${rate}% total`;
+  }
+}
+
+// Format number to percent input (e.g., 10 -> "10", 5.5 -> "5,5")
+function formatPercentInput(value: number): string {
+  if (value === 0 || value === null || value === undefined) return '';
+  return value.toString().replace('.', ',');
+}
+
+// Parse percent input to number (e.g., "10,5" -> 10.5)
+function parsePercentInput(value: string): number {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^0-9,]/g, '').replace(',', '.');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
 export default function BusinessRulesPage() {
   const { user, loading: authLoading } = useAuth()
   const supabase = createClient()
   
   const [interestRules, setInterestRules] = useState<InterestRule[]>([])
-  const [config, setConfig] = useState<SystemConfig>({
-    lateFeeType: 'percentage', lateFeeValue: 2,
-    lateInterestType: 'monthly', lateInterestValue: 1, renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
+  const [lateFeeConfig, setLateFeeConfig] = useState<LateFeeConfig>({
+    lateFeeType: 'percentage',
+    lateFeeValue: 0,
+    lateInterestType: 'monthly',
+    lateInterestValue: 0,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -257,10 +292,9 @@ export default function BusinessRulesPage() {
         const { error: updateError } = await supabase
           .from("late_fee_config")
           .update({
-            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
-            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
-            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
-            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+            percentage: lateFeeConfig.lateFeeValue,
+            monthly_interest: lateFeeConfig.lateInterestType === 'monthly' ? lateFeeConfig.lateInterestValue : null,
+            daily_interest: lateFeeConfig.lateInterestType === 'daily' ? lateFeeConfig.lateInterestValue : null,
           })
           .eq("tenant_id", user?.tenantId)
         
@@ -270,10 +304,9 @@ export default function BusinessRulesPage() {
           .from("late_fee_config")
           .insert({
             tenant_id: user?.tenantId,
-            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
-            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
-            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
-            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+            percentage: lateFeeConfig.lateFeeValue,
+            monthly_interest: lateFeeConfig.lateInterestType === 'monthly' ? lateFeeConfig.lateInterestValue : null,
+            daily_interest: lateFeeConfig.lateInterestType === 'daily' ? lateFeeConfig.lateInterestValue : null,
           })
         
         if (insertError) throw insertError
@@ -339,13 +372,19 @@ export default function BusinessRulesPage() {
               <input type="text" placeholder="Nome" className="border p-2 rounded" value={newRule.name || ''} onChange={e => setNewRule({...newRule, name: e.target.value})} />
               <input type="number" placeholder="Mínimas" className="border p-2 rounded" value={newRule.minInstallments || ''} onChange={e => setNewRule({...newRule, minInstallments: Number(e.target.value)})} />
               <input type="number" placeholder="Máximas" className="border p-2 rounded" value={newRule.maxInstallments || ''} onChange={e => setNewRule({...newRule, maxInstallments: Number(e.target.value)})} />
-              <input type="number" placeholder="Juros %" className="border p-2 rounded" value={newRule.interestRate || ''} onChange={e => setNewRule({...newRule, interestRate: Number(e.target.value)})} />
-              <Select value={newRule.interestType || 'monthly'} onValueChange={(v) => setNewRule({...newRule, interestType: v as any})}>
+              <input 
+                type="text" 
+                placeholder="Juros %" 
+                className="border p-2 rounded"
+                value={formatPercentInput(newRule.interestRate)} 
+                onChange={e => setNewRule({...newRule, interestRate: parsePercentInput(e.target.value)})} 
+              />
+              <Select value={newRule.interestType || 'monthly'} onValueChange={(v) => setNewRule({...newRule, interestType: v as InterestType})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="fixed">Fixo</SelectItem>
+                  <SelectItem value="monthly">Ao mês</SelectItem>
+                  <SelectItem value="weekly">À semana</SelectItem>
+                  <SelectItem value="total">Taxa única</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
@@ -378,14 +417,21 @@ export default function BusinessRulesPage() {
                     <>
                       <td className="py-2"><input className="border p-1 rounded w-full" value={editingRule.name || ''} onChange={e => setEditingRule({...editingRule, name: e.target.value})} /></td>
                       <td className="py-2"><input className="border p-1 rounded w-16" type="number" value={editingRule.minInstallments || 0} onChange={e => setEditingRule({...editingRule, minInstallments: Number(e.target.value)})} /> - <input className="border p-1 rounded w-16" type="number" value={editingRule.maxInstallments || 0} onChange={e => setEditingRule({...editingRule, maxInstallments: Number(e.target.value)})} /></td>
-                      <td className="py-2"><input className="border p-1 rounded w-20" type="number" value={editingRule.interestRate || 0} onChange={e => setEditingRule({...editingRule, interestRate: Number(e.target.value)})} /></td>
                       <td className="py-2">
-                        <Select value={editingRule.interestType || 'monthly'} onValueChange={(v) => setEditingRule({...editingRule, interestType: v as any})}>
+                        <input 
+                          className="border p-1 rounded w-20" 
+                          type="text"
+                          value={formatPercentInput(editingRule.interestRate)} 
+                          onChange={e => setEditingRule({...editingRule, interestRate: parsePercentInput(e.target.value)})} 
+                        />
+                      </td>
+                      <td className="py-2">
+                        <Select value={editingRule.interestType || 'monthly'} onValueChange={(v) => setEditingRule({...editingRule, interestType: v as InterestType})}>
                           <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="monthly">Mensal</SelectItem>
-                            <SelectItem value="weekly">Semanal</SelectItem>
-                            <SelectItem value="fixed">Fixo</SelectItem>
+                            <SelectItem value="monthly">Ao mês</SelectItem>
+                            <SelectItem value="weekly">À semana</SelectItem>
+                            <SelectItem value="total">Taxa única</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
@@ -401,8 +447,8 @@ export default function BusinessRulesPage() {
                     <>
                       <td className="py-2">{rule.name}</td>
                       <td className="py-2">{rule.minInstallments} - {rule.maxInstallments}</td>
-                      <td className="py-2">{rule.interestRate}%</td>
-                      <td className="py-2">{rule.interestType === 'monthly' ? 'Mensal' : rule.interestType === 'weekly' ? 'Semanal' : 'Fixo'}</td>
+                      <td className="py-2">{rule.interestRate.toFixed(2).replace('.', ',')}%</td>
+                      <td className="py-2">{getInterestTypeLabel(rule.interestType)}</td>
                       <td className="py-2">
                         <button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-sm ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button>
                       </td>
@@ -424,32 +470,40 @@ export default function BusinessRulesPage() {
         <h2 className="text-xl font-semibold mb-4">Configuração de Juros por Atraso</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Cobrança</label>
-            <Select value={config.lateFeeType} onValueChange={(v: any) => setConfig({...config, lateFeeType: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percentage">Percentual</SelectItem>
-                <SelectItem value="fixed">Valor Fixo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{config.lateFeeType === 'percentage' ? 'Percentual (%)' : 'Valor Fixo (R$)'}</label>
-            <input type="number" className="border p-2 rounded w-full" value={config.lateFeeValue} onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Juros por Atraso</label>
-            <Select value={config.lateInterestType} onValueChange={(v: any) => setConfig({...config, lateInterestType: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Diário</SelectItem>
-                <SelectItem value="monthly">Mensal</SelectItem>
-              </SelectContent>
-            </Select>
+            <label className="block text-sm font-medium mb-2">Multa por Atraso (%)</label>
+            <input 
+              type="text" 
+              className="border p-2 rounded w-full"
+              placeholder="0,00"
+              value={formatPercentInput(lateFeeConfig.lateFeeValue)} 
+              onChange={e => {
+                const val = parsePercentInput(e.target.value);
+                setLateFeeConfig({...lateFeeConfig, lateFeeValue: val})
+              }} 
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Juros por Atraso (%)</label>
-            <input type="number" className="border p-2 rounded w-full" value={config.lateInterestValue} onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})} />
+            <div className="flex gap-2">
+              <select 
+                className="border p-2 rounded"
+                value={lateFeeConfig.lateInterestType}
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestType: e.target.value as 'daily' | 'monthly'})}
+              >
+                <option value="daily">Ao dia</option>
+                <option value="monthly">Ao mês</option>
+              </select>
+              <input 
+                type="text" 
+                className="flex-1 border p-2 rounded"
+                placeholder="0,00"
+                value={formatPercentInput(lateFeeConfig.lateInterestValue)} 
+                onChange={e => {
+                  const val = parsePercentInput(e.target.value);
+                  setLateFeeConfig({...lateFeeConfig, lateInterestValue: val})
+                }}
+              />
+            </div>
           </div>
         </div>
         <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
