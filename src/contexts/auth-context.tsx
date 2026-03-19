@@ -143,16 +143,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkSession = async () => {
       console.log("[Auth] Starting session check...")
       
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Session check timeout")), 10000)
-      )
+      // First, try to get cached user from localStorage (for faster load)
+      const cachedUser = localStorage.getItem("axion_user")
+      if (cachedUser) {
+        try {
+          const parsed = JSON.parse(cachedUser)
+          if (parsed?.tenantId) {
+            console.log("[Auth] Using cached user:", parsed.id)
+            setUser(parsed)
+          }
+        } catch (e) {
+          console.log("[Auth] Failed to parse cached user")
+        }
+      }
       
       try {
+        // Simple timeout without AbortController (getSession doesn't support abort)
+        const timeoutMs = 15000 // 15 seconds
+        
+        // Start session check
         const sessionPromise = supabase.auth.getSession()
         
-        // Race between session check and timeout
-        const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any
+        // Add timeout wrapper
+        const sessionResult = await new Promise<{ data: { session: any }; error: any }>((resolve) => {
+          const timeout = setTimeout(() => {
+            // If timeout, resolve with no session (fallback to cached)
+            console.log("[Auth] Session check timed out, using cached user")
+            resolve({ data: { session: null }, error: null })
+          }, timeoutMs)
+          
+          sessionPromise.then(result => {
+            clearTimeout(timeout)
+            resolve(result)
+          }).catch(err => {
+            clearTimeout(timeout)
+            resolve({ data: { session: null }, error: err })
+          })
+        })
+        
+        const { data: { session }, error: sessionError } = sessionResult
         
         console.log("[Auth] getSession result:", sessionError ? sessionError.message : "success", session ? "has session" : "no session")
         
