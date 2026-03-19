@@ -7,17 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Calculator, CheckCircle } from "lucide-react"
+import { ArrowLeft, Calculator, CheckCircle, Loader2 } from "lucide-react"
 import { useI18n } from "@/i18n/client"
-
-// Demo customers
-const demoCustomers = [
-  { id: "1", name: "João Silva" },
-  { id: "2", name: "Maria Santos" },
-  { id: "3", name: "Pedro Costa" },
-  { id: "5", name: "Roberto Lima" },
-  { id: "6", name: "Juliana Oliveira" },
-]
+import { trpc } from "@/trpc/client"
 
 interface InstallmentPreview {
   number: number
@@ -29,6 +21,23 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
+  // Get customers for dropdown
+  const { data: customersData } = trpc.customer.list.useQuery({ limit: 1000 })
+  const customers = customersData?.customers || []
+
+  const createMutation = trpc.loan.create.useMutation({
+    onSuccess: () => {
+      setIsSuccess(true)
+      setTimeout(() => {
+        router.push("/loans")
+      }, 2000)
+    },
+    onError: (error) => {
+      alert(error.message)
+      setIsSubmitting(false)
+    }
+  })
+
   const [formData, setFormData] = useState({
     customerId: "",
     principal: "",
@@ -102,16 +111,15 @@ export default function NewLoanPage() {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const principal = parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100
     
-    setIsSubmitting(false)
-    setIsSuccess(true)
-    
-    // Redirect after success
-    setTimeout(() => {
-      router.push("/loans")
-    }, 2000)
+    createMutation.mutate({
+      customer_id: formData.customerId,
+      principal_amount: principal,
+      interest_rate: parseFloat(formData.interestRate),
+      installments_count: parseInt(formData.installments),
+      first_due_date: formData.firstPaymentDate,
+    })
   }
 
   const formatCurrency = (value: number) => {
@@ -162,7 +170,7 @@ export default function NewLoanPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Cliente</Label>
+                <Label>Cliente *</Label>
                 <Select 
                   value={formData.customerId} 
                   onValueChange={(value) => setFormData({ ...formData, customerId: value })}
@@ -171,7 +179,7 @@ export default function NewLoanPage() {
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {demoCustomers.map((customer) => (
+                    {customers.map((customer: any) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
                       </SelectItem>
@@ -181,7 +189,7 @@ export default function NewLoanPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Valor Principal (R$)</Label>
+                <Label>Valor Principal (R$) *</Label>
                 <Input
                   type="text"
                   placeholder="0,00"
@@ -239,7 +247,12 @@ export default function NewLoanPage() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal}>
-                {isSubmitting ? "Criando..." : "Criar Empréstimo"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando...
+                  </>
+                ) : "Criar Empréstimo"}
               </Button>
             </form>
           </CardContent>
