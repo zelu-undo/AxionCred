@@ -171,12 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Fallback to Supabase Auth data if no user in DB
           if (!appUser) {
+            // Try to get tenant_id from user_metadata in JWT token
+            const metadataTenantId = session.user.user_metadata?.tenant_id
             appUser = {
               id: session.user.id,
               email: session.user.email || "",
               name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
               role: "owner",
-              tenantId: ""
+              tenantId: metadataTenantId || ""
             }
           }
           
@@ -231,12 +233,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Fallback to Supabase Auth data
         if (!appUser) {
+          // Try to get tenant_id from user_metadata in JWT token
+          const metadataTenantId = session.user.user_metadata?.tenant_id
           appUser = {
             id: session.user.id,
             email: session.user.email || "",
             name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
             role: "owner",
-            tenantId: ""
+            tenantId: metadataTenantId || ""
           }
         }
         
