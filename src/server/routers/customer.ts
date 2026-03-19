@@ -2,6 +2,40 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 
+// Validate Brazilian CPF
+function validateCPF(cpf: string): boolean {
+  if (cpf.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(cpf)) return false
+
+  let sum = 0
+  let remainder
+
+  for (let i = 1; i <= 9; i++) {
+    sum += parseInt(cpf.charAt(i - 1)) * (11 - i)
+  }
+
+  remainder = (sum * 10) % 11
+  if (remainder === 10 || remainder === 11) remainder = 0
+  if (remainder !== parseInt(cpf.charAt(9))) return false
+
+  sum = 0
+  for (let i = 1; i <= 10; i++) {
+    sum += parseInt(cpf.charAt(i - 1)) * (12 - i)
+  }
+
+  remainder = (sum * 10) % 11
+  if (remainder === 10 || remainder === 11) remainder = 0
+  if (remainder !== parseInt(cpf.charAt(10))) return false
+
+  return true
+}
+
+// Validate Brazilian CEP
+function validateCEP(cep: string): boolean {
+  const cleanCEP = cep.replace(/\D/g, "")
+  return cleanCEP.length === 8 && /^\d{8}$/.test(cleanCEP)
+}
+
 export const customerRouter = router({
   list: protectedProcedure
     .input(
@@ -70,24 +104,85 @@ export const customerRouter = router({
         email: z.string().email().optional(),
         phone: z.string().min(1),
         document: z.string().optional(),
+        cep: z.string().optional(),
         address: z.string().optional(),
         notes: z.string().optional(),
         credit_limit: z.number().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check for duplicate CPF if document is provided
-      if (input.document) {
-        const { data: existing } = await ctx.supabase
-          .from("customers")
-          .select("id")
-          .eq("tenant_id", ctx.tenantId!)
-          .eq("document", input.document)
-          .neq("status", "deleted")
-          .limit(1)
-          .single()
+      // Validate CEP if provided
+      if (input.cep && !validateCEP(input.cep)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "CEP inválido. Deve ter 8 dígitos.",
+        })
+      }
 
-        if (existing) {
+      // Validate CPF if provided
+      if (input.document) {
+        const cleanDoc = input.document.replace(/\D/g, "")
+        if (cleanDoc.length !== 11) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CPF deve ter 11 dígitos",
+          })
+        }
+        // CPF validation
+        if (!validateCPF(cleanDoc)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CPF inválido",
+          })
+        }
+        input.document = cleanDoc
+      }
+
+      // Check for existing customer with same CPF
+      const { data: existing } = await ctx.supabase
+        .from("customers")
+        .select("id, status, name, email, phone, address, notes")
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("document", input.document || "")
+        .in("status", ["active", "inactive", "blocked", "deleted"])
+        .limit(1)
+        .single()
+
+      if (existing) {
+        if (existing.status === "deleted") {
+          // Reactivate deleted customer instead of creating new
+          const { data: reactivated, error } = await ctx.supabase
+            .from("customers")
+            .update({
+              status: "active",
+              deleted_at: null,
+              name: input.name,
+              email: input.email,
+              phone: input.phone,
+              address: input.address,
+              notes: input.notes,
+            })
+            .eq("id", existing.id)
+            .select()
+            .single()
+
+          if (error) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: error.message,
+            })
+          }
+
+          // Log reactivation
+          await ctx.supabase.from("customer_events").insert({
+            customer_id: reactivated.id,
+            type: "reactivated",
+            description: "Cliente reativado após exclusão",
+          })
+
+          return reactivated
+        } else {
+          // Customer already exists and is active
           throw new TRPCError({
             code: "CONFLICT",
             message: "Já existe um cliente cadastrado com este CPF",
