@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2 } from "lucide-react"
+import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,16 +22,34 @@ import {
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 
+interface Address {
+  cep: string
+  street: string
+  number: string
+  complement: string
+  neighborhood: string
+  city: string
+  state: string
+}
+
 export default function CustomersPage() {
   const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isLoadingCep, setIsLoadingCep] = useState(false)
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
     phone: "",
     document: "",
     credit_limit: 0,
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
   })
   
   // Fetch customers from database
@@ -47,7 +65,20 @@ export default function CustomersPage() {
   const createMutation = trpc.customer.create.useMutation({
     onSuccess: () => {
       setIsCreateOpen(false)
-      setNewCustomer({ name: "", email: "", phone: "", document: "", credit_limit: 0 })
+      setNewCustomer({
+        name: "",
+        email: "",
+        phone: "",
+        document: "",
+        credit_limit: 0,
+        cep: "",
+        street: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: "",
+      })
       refetch()
     },
   })
@@ -55,9 +86,59 @@ export default function CustomersPage() {
   const customers = data?.customers || []
   const total = data?.total || 0
 
+  // Consulta CEP via ViaCEP
+  const handleCepChange = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, "")
+    setNewCustomer({ ...newCustomer, cep })
+
+    if (cleanCep.length === 8) {
+      setIsLoadingCep(true)
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+        const data = await response.json()
+
+        if (!data.erro) {
+          setNewCustomer((prev: typeof newCustomer) => ({
+            ...prev,
+            cep: cleanCep,
+            street: data.logradouro || "",
+            complement: data.complemento || "",
+            neighborhood: data.bairro || "",
+            city: data.localidade || "",
+            state: data.uf || "",
+          }))
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error)
+      } finally {
+        setIsLoadingCep(false)
+      }
+    }
+  }
+
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault()
-    createMutation.mutate(newCustomer)
+    
+    // Build address string
+    const addressParts = [
+      newCustomer.street,
+      newCustomer.number,
+      newCustomer.complement,
+      newCustomer.neighborhood,
+      newCustomer.city,
+      newCustomer.state,
+    ].filter(Boolean)
+    
+    const fullAddress = addressParts.join(", ")
+    
+    createMutation.mutate({
+      name: newCustomer.name,
+      email: newCustomer.email || undefined,
+      phone: newCustomer.phone,
+      document: newCustomer.document,
+      credit_limit: newCustomer.credit_limit,
+      address: fullAddress || undefined,
+    })
   }
 
   return (
@@ -207,7 +288,7 @@ export default function CustomersPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateCustomer}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">Nome *</label>
                 <Input
@@ -257,6 +338,93 @@ export default function CustomersPage() {
                   value={newCustomer.credit_limit}
                   onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: Number(e.target.value) })}
                 />
+              </div>
+              
+              {/* Endereço */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Endereço
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label htmlFor="cep" className="text-sm font-medium">CEP *</label>
+                    <div className="relative">
+                      <Input
+                        id="cep"
+                        placeholder="00000-000"
+                        value={newCustomer.cep}
+                        onChange={(e) => handleCepChange(e.target.value)}
+                        required
+                        maxLength={8}
+                      />
+                      {isLoadingCep && (
+                        <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="state" className="text-sm font-medium">Estado *</label>
+                    <Input
+                      id="state"
+                      placeholder="UF"
+                      value={newCustomer.state}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, state: e.target.value.toUpperCase() })}
+                      required
+                      maxLength={2}
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label htmlFor="city" className="text-sm font-medium">Cidade *</label>
+                    <Input
+                      id="city"
+                      placeholder="Cidade"
+                      value={newCustomer.city}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label htmlFor="neighborhood" className="text-sm font-medium">Bairro *</label>
+                    <Input
+                      id="neighborhood"
+                      placeholder="Bairro"
+                      value={newCustomer.neighborhood}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, neighborhood: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label htmlFor="street" className="text-sm font-medium">Rua *</label>
+                    <Input
+                      id="street"
+                      placeholder="Rua, Avenida, etc."
+                      value={newCustomer.street}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, street: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="number" className="text-sm font-medium">Número *</label>
+                    <Input
+                      id="number"
+                      placeholder="Número"
+                      value={newCustomer.number}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, number: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="complement" className="text-sm font-medium">Complemento</label>
+                    <Input
+                      id="complement"
+                      placeholder="Apto, sala, etc."
+                      value={newCustomer.complement}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, complement: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
