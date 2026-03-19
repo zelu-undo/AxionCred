@@ -43,6 +43,7 @@ function NavigationItems() {
     admin: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "settings"],
     manager: ["dashboard", "customers", "loans", "collections"],
     operator: ["dashboard", "customers", "loans"],
+    pending: [], // No permissions - waiting for approval
   }
   
   // Starter plan limitations

@@ -43,7 +43,6 @@ export default function CustomersPage() {
     email: "",
     phone: "",
     document: "",
-    credit_limit: 0,
     cep: "",
     street: "",
     number: "",
@@ -52,6 +51,27 @@ export default function CustomersPage() {
     city: "",
     state: "",
   })
+  
+  // Reset form when modal closes
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsCreateOpen(open)
+    if (!open) {
+      // Clear form when closing
+      setNewCustomer({
+        name: "",
+        email: "",
+        phone: "",
+        document: "",
+        cep: "",
+        street: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: "",
+      })
+    }
+  }
   
   // Fetch customers from database
   const { data, isLoading, error, refetch } = trpc.customer.list.useQuery({
@@ -65,21 +85,7 @@ export default function CustomersPage() {
 
   const createMutation = trpc.customer.create.useMutation({
     onSuccess: () => {
-      setIsCreateOpen(false)
-      setNewCustomer({
-        name: "",
-        email: "",
-        phone: "",
-        document: "",
-        credit_limit: 0,
-        cep: "",
-        street: "",
-        number: "",
-        complement: "",
-        neighborhood: "",
-        city: "",
-        state: "",
-      })
+      handleDialogOpenChange(false)
       refetch()
       showSuccessToast("Cliente criado com sucesso!")
     },
@@ -103,11 +109,11 @@ export default function CustomersPage() {
         const data = await response.json()
 
         if (!data.erro) {
-          setNewCustomer((prev: typeof newCustomer) => ({
+          setNewCustomer((prev) => ({
             ...prev,
             cep: cleanCep,
             street: data.logradouro || "",
-            complement: data.complemento || "",
+            // Don't auto-fill complement - it causes confusion
             neighborhood: data.bairro || "",
             city: data.localidade || "",
             state: data.uf || "",
@@ -141,9 +147,31 @@ export default function CustomersPage() {
       email: newCustomer.email || undefined,
       phone: newCustomer.phone,
       document: newCustomer.document,
-      credit_limit: newCustomer.credit_limit,
       address: fullAddress || undefined,
     })
+  }
+
+  // Format input masks
+  const formatCpf = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+  }
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    if (digits.length <= 5) return digits
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
   }
 
   return (
@@ -290,7 +318,7 @@ export default function CustomersPage() {
       </Card>
 
       {/* Create Customer Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <Dialog open={isCreateOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("customers.newCustomer")}</DialogTitle>
@@ -326,7 +354,7 @@ export default function CustomersPage() {
                   id="phone"
                   placeholder="(00) 00000-0000"
                   value={newCustomer.phone}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: formatPhone(e.target.value) })}
                   required
                 />
               </div>
@@ -336,18 +364,8 @@ export default function CustomersPage() {
                   id="document"
                   placeholder="000.000.000-00"
                   value={newCustomer.document}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, document: e.target.value })}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, document: formatCpf(e.target.value) })}
                   required
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="credit_limit" className="text-sm font-medium">Limite de Crédito</label>
-                <Input
-                  id="credit_limit"
-                  type="number"
-                  placeholder="0,00"
-                  value={newCustomer.credit_limit}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: Number(e.target.value) })}
                 />
               </div>
               
@@ -366,9 +384,11 @@ export default function CustomersPage() {
                         id="cep"
                         placeholder="00000-000"
                         value={newCustomer.cep}
-                        onChange={(e) => handleCepChange(e.target.value)}
+                        onChange={(e) => {
+                          const formatted = formatCep(e.target.value)
+                          handleCepChange(formatted)
+                        }}
                         required
-                        maxLength={8}
                       />
                       {isLoadingCep && (
                         <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />

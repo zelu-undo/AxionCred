@@ -253,12 +253,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Use user data from Supabase Auth directly
-        // The user_metadata contains the name provided during signup
+        // New users start with "pending" role until approved by admin
         const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
-          role: "owner",
+          role: "pending", // User needs approval before accessing features
           tenantId: "",
           plan: "starter"
         }
