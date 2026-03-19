@@ -82,23 +82,6 @@ export default function CustomerDetailPage() {
     { enabled: !!customerId }
   )
 
-  // Parse address from full address string when customer loads
-  useEffect(() => {
-    if (customer?.address) {
-      // Try to parse the address
-      const parts = customer.address.split(",").map((p: string) => p.trim())
-      setFormData(prev => ({
-        ...prev,
-        street: parts[0] || "",
-        number: parts[1] || "",
-        complement: parts[2] || "",
-        neighborhood: parts[3] || "",
-        city: parts[4] || "",
-        state: parts[5] || "",
-      }))
-    }
-  }, [customer])
-
   // Fetch customer events for audit
   const { data: events } = trpc.customer.events.useQuery(
     { customerId },
@@ -120,18 +103,36 @@ export default function CustomerDetailPage() {
   // Set form data when customer loads
   useEffect(() => {
     if (customer) {
+      // Parse address from full address string
+      let street = ""
+      let number = ""
+      let complement = ""
+      let neighborhood = ""
+      let city = ""
+      let state = ""
+      
+      if (customer.address) {
+        const parts = customer.address.split(",").map((p: string) => p.trim())
+        street = parts[0] || ""
+        number = parts[1] || ""
+        complement = parts[2] || ""
+        neighborhood = parts[3] || ""
+        city = parts[4] || ""
+        state = parts[5] || ""
+      }
+      
       setFormData({
         name: customer.name || "",
         email: customer.email || "",
         phone: customer.phone || "",
         document: customer.document || "",
         cep: "",
-        street: "",
-        number: "",
-        complement: "",
-        neighborhood: "",
-        city: "",
-        state: "",
+        street,
+        number,
+        complement,
+        neighborhood,
+        city,
+        state,
         notes: customer.notes || "",
         status: customer.status || "active",
       })

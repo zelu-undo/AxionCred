@@ -112,9 +112,9 @@ export function Sidebar({ className, ...props }: SidebarProps) {
     router.push("/login")
   }
 
-  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "D")
-  const userEmail = user?.email || "demo@axioncred.com.br"
-  const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Demo User")
+  const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "?")
+  const userEmail = user?.email || "Não identificado"
+  const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Usuário")
 
   return (
     <div className={cn("flex h-full w-64 flex-col bg-slate-900", className)} {...props}>
