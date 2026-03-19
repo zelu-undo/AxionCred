@@ -83,7 +83,7 @@ export default function CustomersPage() {
     limit: 50,
     offset: 0,
   }, {
-    retry: false,
+    retry: 1,
     refetchOnWindowFocus: false,
   })
 

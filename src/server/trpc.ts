@@ -7,12 +7,7 @@ export interface Context {
   userId?: string
   tenantId?: string
   userRole?: string
-  isDemoMode?: boolean
 }
-
-// Demo tenant and user IDs for testing without Supabase Auth
-const DEMO_TENANT_ID = "00000000-0000-0000-0000-000000000001"
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 export const createContext = async (opts: {
   headers: Headers
@@ -21,21 +16,7 @@ export const createContext = async (opts: {
   const authHeader = opts.headers.get("authorization") || ""
   const token = authHeader.replace("Bearer ", "")
   
-  // Check for demo mode header
-  const isDemoMode = opts.headers.get("x-demo-mode") === "true" || authHeader === "demo"
-  
   const supabase = supabaseServer(token)
-  
-  // If in demo mode, return demo credentials
-  if (isDemoMode) {
-    return {
-      supabase,
-      userId: DEMO_USER_ID,
-      tenantId: DEMO_TENANT_ID,
-      userRole: "owner",
-      isDemoMode: true,
-    }
-  }
   
   // Try to get user from Supabase Auth
   let userId: string | undefined
@@ -50,15 +31,19 @@ export const createContext = async (opts: {
       userId = user.id
       
       // Get user data from our users table
-      const { data: userData } = await supabase
-        .from("users")
-        .select("tenant_id, role")
-        .eq("id", user.id)
-        .single()
+      try {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("tenant_id, role")
+          .eq("id", user.id)
+          .single()
 
-      if (userData) {
-        tenantId = userData.tenant_id
-        userRole = userData.role
+        if (userData) {
+          tenantId = userData.tenant_id
+          userRole = userData.role
+        }
+      } catch (e) {
+        // Table might not exist
       }
     }
   }
@@ -68,7 +53,6 @@ export const createContext = async (opts: {
     userId,
     tenantId,
     userRole,
-    isDemoMode: false,
   }
 }
 
@@ -90,18 +74,6 @@ export const publicProcedure = t.procedure
 export const middleware = t.middleware
 
 const isAuthed = middleware(async ({ ctx, next }) => {
-  // Allow access in demo mode
-  if (ctx.isDemoMode) {
-    return next({
-      ctx: {
-        userId: ctx.userId,
-        tenantId: ctx.tenantId,
-        userRole: ctx.userRole,
-        isDemoMode: ctx.isDemoMode,
-      },
-    })
-  }
-  
   if (!ctx.userId || !ctx.tenantId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
@@ -110,7 +82,6 @@ const isAuthed = middleware(async ({ ctx, next }) => {
       userId: ctx.userId,
       tenantId: ctx.tenantId,
       userRole: ctx.userRole,
-      isDemoMode: ctx.isDemoMode,
     },
   })
 })
