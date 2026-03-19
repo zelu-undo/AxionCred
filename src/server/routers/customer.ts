@@ -19,6 +19,7 @@ export const customerRouter = router({
         .from("customers")
         .select("*", { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
+        .neq("status", "deleted") // Exclude soft-deleted customers
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -75,6 +76,25 @@ export const customerRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Check for duplicate CPF if document is provided
+      if (input.document) {
+        const { data: existing } = await ctx.supabase
+          .from("customers")
+          .select("id")
+          .eq("tenant_id", ctx.tenantId!)
+          .eq("document", input.document)
+          .neq("status", "deleted")
+          .limit(1)
+          .single()
+
+        if (existing) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Já existe um cliente cadastrado com este CPF",
+          })
+        }
+      }
+
       const { data, error } = await ctx.supabase
         .from("customers")
         .insert({
@@ -112,17 +132,24 @@ export const customerRouter = router({
       z.object({
         id: z.string(),
         name: z.string().min(1).optional(),
-        email: z.string().email().optional(),
+        email: z.string().email().optional().nullable(),
         phone: z.string().min(1).optional(),
         document: z.string().optional(),
-        address: z.string().optional(),
-        notes: z.string().optional(),
+        address: z.string().optional().nullable(),
+        notes: z.string().optional().nullable(),
         status: z.enum(["active", "inactive", "blocked"]).optional(),
         credit_limit: z.number().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...updates } = input
+
+      // Get current customer data for audit
+      const { data: current } = await ctx.supabase
+        .from("customers")
+        .select("name, email, phone, address, notes, status")
+        .eq("id", id)
+        .single()
 
       const { data, error } = await ctx.supabase
         .from("customers")
@@ -139,15 +166,44 @@ export const customerRouter = router({
         })
       }
 
+      // Log changes for audit
+      if (current) {
+        const changes: string[] = []
+        if (current.name !== data.name) changes.push(`nome: "${current.name}" → "${data.name}"`)
+        if (current.email !== data.email) changes.push(`e-mail: "${current.email || '-'}" → "${data.email || '-'}"`)
+        if (current.phone !== data.phone) changes.push(`telefone: "${current.phone}" → "${data.phone}"`)
+        if (current.address !== data.address) changes.push(`endereço alterado`)
+        if (current.notes !== data.notes) changes.push(`observações alteradas`)
+        if (current.status !== data.status) changes.push(`status: "${current.status}" → "${data.status}"`)
+
+        if (changes.length > 0) {
+          await ctx.supabase.from("customer_events").insert({
+            customer_id: id,
+            type: "updated",
+            description: `Alterações: ${changes.join(", ")}`,
+          })
+        }
+      }
+
       return data
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // Soft delete - mark as deleted but keep data for score sharing
       const { error } = await ctx.supabase
         .from("customers")
-        .delete()
+        .update({ 
+          status: "deleted",
+          deleted_at: new Date().toISOString(),
+          // Clear personal data but keep CPF for score
+          email: null,
+          phone: null,
+          address: null,
+          notes: null,
+          name: "[EXCLUÍDO]"
+        })
         .eq("tenant_id", ctx.tenantId!)
         .eq("id", input.id)
 
@@ -157,6 +213,13 @@ export const customerRouter = router({
           message: error.message,
         })
       }
+
+      // Log the deletion
+      await ctx.supabase.from("customer_events").insert({
+        customer_id: input.id,
+        type: "deleted",
+        description: "Cliente excluído (soft delete - dados mantidos para score)",
+      })
 
       return { success: true }
     }),

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,16 +10,18 @@ import { Badge } from "@/components/ui/badge"
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
-import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User } from "lucide-react"
 
 export default function CustomerDetailPage() {
   const { t } = useI18n()
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const customerId = params.id as string
-  const isEditMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("edit") === "true"
+  const isEditMode = searchParams.get("edit") === "true"
 
   const [isEditing, setIsEditing] = useState(isEditMode)
+  const [showHistory, setShowHistory] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -33,6 +35,12 @@ export default function CustomerDetailPage() {
   // Fetch customer data
   const { data: customer, isLoading, refetch } = trpc.customer.byId.useQuery(
     { id: customerId },
+    { enabled: !!customerId }
+  )
+
+  // Fetch customer events for audit
+  const { data: events } = trpc.customer.events.useQuery(
+    { customerId },
     { enabled: !!customerId }
   )
 
@@ -66,8 +74,18 @@ export default function CustomerDetailPage() {
   const handleSave = () => {
     updateMutation.mutate({
       id: customerId,
-      ...formData,
+      name: formData.name,
+      email: formData.email || undefined,
+      phone: formData.phone,
+      address: formData.address || undefined,
+      notes: formData.notes || undefined,
+      status: formData.status,
     })
+  }
+
+  const formatDate = (date: string | null) => {
+    if (!date) return "-"
+    return new Date(date).toLocaleString("pt-BR")
   }
 
   if (isLoading) {
@@ -104,14 +122,46 @@ export default function CustomerDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{customer.name}</h1>
             <Badge variant={customer.status === "active" ? "default" : "secondary"}>
-              {customer.status === "active" ? "Ativo" : customer.status === "inactive" ? "Inativo" : "Bloqueado"}
+              {customer.status === "active" ? "Ativo" : customer.status === "inactive" ? "Inativo" : customer.status === "deleted" ? "Excluído" : "Bloqueado"}
             </Badge>
           </div>
         </div>
-        {!isEditing && (
-          <Button onClick={() => setIsEditing(true)}>Editar</Button>
-        )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowHistory(!showHistory)}>
+            <History className="mr-2 h-4 w-4" />
+            Histórico
+          </Button>
+          {!isEditing && customer.status !== "deleted" && (
+            <Button onClick={() => setIsEditing(true)}>Editar</Button>
+          )}
+        </div>
       </div>
+
+      {/* Audit History */}
+      {showHistory && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Histórico de Alterações</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {events && events.length > 0 ? (
+              <div className="space-y-3">
+                {events.map((event: any) => (
+                  <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <History className="h-4 w-4 text-gray-400 mt-1" />
+                    <div>
+                      <p className="font-medium">{event.description}</p>
+                      <p className="text-sm text-gray-500">{formatDate(event.created_at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">Nenhum histórico disponível</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Customer Info */}
@@ -131,6 +181,10 @@ export default function CustomerDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="document">CPF/CNPJ (não editável)</Label>
+                  <Input id="document" value={formData.document} disabled className="bg-gray-100" />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
                   <Input
                     id="email"
@@ -148,11 +202,11 @@ export default function CustomerDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="document">CPF/CNPJ</Label>
+                  <Label htmlFor="address">Endereço</Label>
                   <Input
-                    id="document"
-                    value={formData.document}
-                    onChange={(e) => setFormData({ ...formData, document: e.target.value })}
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -213,7 +267,7 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Meta Info */}
+        {/* System Info */}
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg">Informações do Sistema</CardTitle>
@@ -226,9 +280,15 @@ export default function CustomerDetailPage() {
               </div>
               <div>
                 <span className="text-gray-500">Criado em:</span>
-                <span className="ml-2">
-                  {customer.created_at ? new Date(customer.created_at).toLocaleDateString("pt-BR") : "-"}
-                </span>
+                <span className="ml-2">{formatDate(customer.created_at)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Última alteração:</span>
+                <span className="ml-2">{formatDate(customer.updated_at)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Excluído em:</span>
+                <span className="ml-2">{formatDate((customer as any).deleted_at)}</span>
               </div>
             </div>
           </CardContent>
