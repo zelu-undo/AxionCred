@@ -55,23 +55,22 @@ export const businessRulesRouter = router({
   createInterestRule: protectedProcedure
     .input(
       z.object({
+        tenantId: z.string().optional(),
         name: z.string().min(1),
         min_installments: z.number().positive(),
         max_installments: z.number().positive(),
         interest_rate: z.number().min(0),
-        // interest_type:
-        // - fixed: taxa fixa aplicada sobre o valor total no ato
-        // - weekly: taxa aplicada semanalmente
-        // - monthly: taxa aplicada mensalmente
         interest_type: z.enum(["fixed", "weekly", "monthly"]).default("monthly"),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const tenantId = input.tenantId || ctx.tenantId
+      
       // Validate no overlap
       const { data: existing } = await ctx.supabase
         .from("interest_rules")
         .select("id")
-        .eq("tenant_id", ctx.tenantId!)
+        .eq("tenant_id", tenantId!)
         .lte("min_installments", input.max_installments)
         .gte("max_installments", input.min_installments)
 
@@ -85,8 +84,12 @@ export const businessRulesRouter = router({
       const { data, error } = await ctx.supabase
         .from("interest_rules")
         .insert({
-          tenant_id: ctx.tenantId,
-          ...input,
+          tenant_id: tenantId,
+          name: input.name,
+          min_installments: input.min_installments,
+          max_installments: input.max_installments,
+          interest_rate: input.interest_rate,
+          interest_type: input.interest_type,
         })
         .select()
         .single()
@@ -102,6 +105,7 @@ export const businessRulesRouter = router({
     .input(
       z.object({
         id: z.string(),
+        tenantId: z.string().optional(),
         name: z.string().min(1).optional(),
         min_installments: z.number().positive().optional(),
         max_installments: z.number().positive().optional(),
@@ -111,12 +115,13 @@ export const businessRulesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...updates } = input
+      const { id, tenantId, ...updates } = input
+      const tenant = tenantId || ctx.tenantId
 
       const { data, error } = await ctx.supabase
         .from("interest_rules")
         .update(updates)
-        .eq("tenant_id", ctx.tenantId!)
+        .eq("tenant_id", tenant!)
         .eq("id", id)
         .select()
         .single()
@@ -129,12 +134,13 @@ export const businessRulesRouter = router({
     }),
 
   deleteInterestRule: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string(), tenantId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
+      const tenant = input.tenantId || ctx.tenantId
       const { error } = await ctx.supabase
         .from("interest_rules")
         .delete()
-        .eq("tenant_id", ctx.tenantId!)
+        .eq("tenant_id", tenant!)
         .eq("id", input.id)
 
       if (error) {
@@ -187,6 +193,7 @@ export const businessRulesRouter = router({
   updateLateFeeConfig: protectedProcedure
     .input(
       z.object({
+        tenantId: z.string().optional(),
         fixed_fee: z.number().min(0).optional(),
         percentage: z.number().min(0).max(100).optional(),
         daily_interest: z.number().min(0).optional(),
@@ -195,11 +202,13 @@ export const businessRulesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const tenantId = input.tenantId || ctx.tenantId
+      
       // Check if config exists
       const { data: existing } = await ctx.supabase
         .from("late_fee_config")
         .select("id")
-        .eq("tenant_id", ctx.tenantId!)
+        .eq("tenant_id", tenantId!)
         .single()
 
       let data, error
@@ -208,13 +217,13 @@ export const businessRulesRouter = router({
         ;({ data, error } = await ctx.supabase
           .from("late_fee_config")
           .update(input)
-          .eq("tenant_id", ctx.tenantId!)
+          .eq("tenant_id", tenantId!)
           .select()
           .single())
       } else {
         ;({ data, error } = await ctx.supabase
           .from("late_fee_config")
-          .insert({ tenant_id: ctx.tenantId, ...input })
+          .insert({ tenant_id: tenantId, ...input })
           .select()
           .single())
       }

@@ -65,7 +65,7 @@ export default function BusinessRulesPage() {
     staleTime: 30000,
   })
   
-  // Mutations for CRUD operations
+  // Mutations for CRUD operations - pass tenantId
   const createMutation = trpc.businessRules.createInterestRule.useMutation({
     onSuccess: () => {
       utils.businessRules.listInterestRules.invalidate()
@@ -101,6 +101,7 @@ export default function BusinessRulesPage() {
   
   const updateLateFeeMutation = trpc.businessRules.updateLateFeeConfig.useMutation({
     onSuccess: () => {
+      utils.businessRules.getLateFeeConfig.invalidate()
       setMessage({ type: 'success', text: 'Configurações de multa salvas!' })
       setTimeout(() => setMessage(null), 3000)
     },
@@ -150,6 +151,7 @@ export default function BusinessRulesPage() {
 
   const handleSaveLateFee = () => {
     updateLateFeeMutation.mutate({
+      tenantId: user?.tenantId,
       percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : undefined,
       fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : undefined,
       monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : undefined,
@@ -175,6 +177,7 @@ export default function BusinessRulesPage() {
     
     // Save to database
     createMutation.mutate({
+      tenantId: user?.tenantId,
       name: ruleToAdd.name,
       min_installments: ruleToAdd.minInstallments,
       max_installments: ruleToAdd.maxInstallments,
@@ -187,7 +190,7 @@ export default function BusinessRulesPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Excluir esta faixa?')) { 
-      deleteMutation.mutate({ id })
+      deleteMutation.mutate({ id, tenantId: user?.tenantId })
     }
   };
 
@@ -210,6 +213,7 @@ export default function BusinessRulesPage() {
     // Update in database
     updateMutation.mutate({
       id: editingId!,
+      tenantId: user?.tenantId,
       name: ruleToUpdate.name,
       min_installments: ruleToUpdate.minInstallments,
       max_installments: ruleToUpdate.maxInstallments,
@@ -225,6 +229,7 @@ export default function BusinessRulesPage() {
   const toggleRuleActive = (rule: InterestRule) => { 
     updateMutation.mutate({
       id: rule.id,
+      tenantId: user?.tenantId,
       is_active: !rule.isActive
     })
   };
