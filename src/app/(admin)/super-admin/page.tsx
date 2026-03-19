@@ -110,7 +110,7 @@ export default function SuperAdminPage() {
               </button>
             </div>
             <div className="mt-4 p-4 bg-#22C55E/10 rounded-lg">
-              <p className="text-purple-800 font-medium">Link: https://seusite.vercel.app/demo</p>
+              <p className="text-[#22C55E]800 font-medium">Link: https://seusite.vercel.app/demo</p>
               <button onClick={() => router.push('/demo')} className="mt-2 px-4 py-2 bg-#22C55E text-white rounded">
                 Ver Demo
               </button>

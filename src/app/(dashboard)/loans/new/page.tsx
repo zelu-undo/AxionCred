@@ -235,8 +235,8 @@ export default function NewLoanPage() {
                       customers.map((customer: any) => (
                         <div
                           key={customer.id}
-                          className={`p-2 cursor-pointer hover:bg-purple-50 ${
-                            formData.customerId === customer.id ? "bg-purple-100" : ""
+                          className={`p-2 cursor-pointer hover:bg-[#22C55E]50 ${
+                            formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
                           }`}
                           onClick={() => {
                             setFormData({ ...formData, customerId: customer.id })
@@ -336,9 +336,9 @@ export default function NewLoanPage() {
                     <p className="text-sm text-gray-500">Total Juros</p>
                     <p className="text-lg font-bold text-orange-600">{formatCurrency(preview.totalInterest)}</p>
                   </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <p className="text-sm text-purple-600">Total a Pagar</p>
-                    <p className="text-lg font-bold text-purple-600">{formatCurrency(preview.totalAmount)}</p>
+                  <div className="text-center p-4 bg-[#22C55E]50 rounded-lg">
+                    <p className="text-sm text-[#22C55E]600">Total a Pagar</p>
+                    <p className="text-lg font-bold text-[#22C55E]600">{formatCurrency(preview.totalAmount)}</p>
                   </div>
                 </div>
 

@@ -80,7 +80,7 @@ export default function RegisterPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#22C55E]600">
               <TrendingUp className="h-7 w-7 text-white" />
             </div>
             <span className="text-2xl font-bold text-gray-900">AXION</span>
@@ -110,7 +110,7 @@ export default function RegisterPage() {
                 <p className="text-sm text-gray-500">
                   Você será redirecionado para o login em alguns segundos...
                 </p>
-                <Link href="/login" className="inline-block mt-4 text-purple-600 hover:underline font-medium">
+                <Link href="/login" className="inline-block mt-4 text-[#22C55E]600 hover:underline font-medium">
                   Ir para Login agora
                 </Link>
               </div>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#22C55E]600">
             <TrendingUp className="h-7 w-7 text-white" />
           </div>
           <span className="text-2xl font-bold text-gray-900">AXION</span>
@@ -225,7 +225,7 @@ export default function RegisterPage() {
 
             <div className="mt-6 text-center text-sm">
               <span className="text-gray-600">Já tem uma conta? </span>
-              <Link href="/login" className="text-purple-600 hover:underline font-medium">
+              <Link href="/login" className="text-[#22C55E]600 hover:underline font-medium">
                 Entrar
               </Link>
             </div>

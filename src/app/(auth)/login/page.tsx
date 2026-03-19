@@ -131,7 +131,7 @@ function LoginForm() {
 
         <div className="mt-6 text-center text-sm">
           <span className="text-gray-600">Não tem uma conta? </span>
-          <Link href="/register" className="text-purple-600 hover:underline font-medium">
+          <Link href="/register" className="text-[#22C55E]600 hover:underline font-medium">
             Criar conta
           </Link>
         </div>
@@ -145,7 +145,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#22C55E]600">
             <TrendingUp className="h-7 w-7 text-white" />
           </div>
           <span className="text-2xl font-bold text-gray-900">AXION</span>

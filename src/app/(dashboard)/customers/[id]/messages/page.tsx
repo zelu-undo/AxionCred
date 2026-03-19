@@ -28,7 +28,7 @@ export default function CustomerMessagesPage() {
           <div className="text-2xl mb-2">💬</div>
           <div className="font-medium">Enviar WhatsApp</div>
         </button>
-        <button onClick={() => setSelectedMessage('custom')} className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 text-left">
+        <button onClick={() => setSelectedMessage('custom')} className="p-4 bg-[#22C55E]50 rounded-lg hover:bg-[#22C55E]100 text-left">
           <div className="text-2xl mb-2">✏️</div>
           <div className="font-medium">Mensagem Personalizada</div>
         </button>

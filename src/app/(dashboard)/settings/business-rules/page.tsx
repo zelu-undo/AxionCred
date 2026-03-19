@@ -359,12 +359,12 @@ export default function BusinessRulesPage() {
 
       {/* Interest Rules Section */}
       <div className="bg-white rounded-lg shadow p-6">
-              <Calculator className="h-5 w-5 text-purple-600" />
+              <Calculator className="h-5 w-5 text-[#22C55E]600" />
               Taxas por Faixa de Parcelas
             </h2>
             <p className="text-sm text-gray-500 mt-1">Configure o percentual de juros para cada quantidade de parcelas.</p>
           </div>
-          <button onClick={() => setIsAddingNew(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+          <button onClick={() => setIsAddingNew(true)} className="flex items-center gap-2 px-4 py-2 bg-[#22C55E]600 text-white rounded hover:bg-[#22C55E]700">
 >>>>>>> 6aba21a79762aaec1363f0bbf5339fbd88cba923
             <Plus size={16} /> Nova Faixa
           </button>
@@ -372,7 +372,7 @@ export default function BusinessRulesPage() {
 
         {/* Add new rule form */}
         {isAddingNew && (
-          <div className="bg-purple-50 p-4 rounded-lg mb-6 border border-purple-200">
+          <div className="bg-[#22C55E]50 p-4 rounded-lg mb-6 border border-[#22C55E]200">
             <h3 className="font-medium mb-4">Nova Faixa de Juros</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
@@ -429,7 +429,7 @@ export default function BusinessRulesPage() {
               </div>
             </div>
             {newRule.interestRate && newRule.interestType && (
-              <div className="mt-3 p-2 bg-purple-100 rounded text-sm text-purple-700">
+              <div className="mt-3 p-2 bg-[#22C55E]100 rounded text-sm text-[#22C55E]700">
                 <strong>Exemplo:</strong> {getInterestTypeExample(newRule.interestType, newRule.interestRate)}
                 {newRule.interestType === 'total' && newRule.minInstallments && newRule.maxInstallments && (
                   <span> - O valor total terá {newRule.interestRate}% de juros incluído</span>
@@ -498,9 +498,9 @@ export default function BusinessRulesPage() {
                       <>
                         <td className="py-3 px-4 font-medium">{rule.name}</td>
                         <td className="py-3 px-4">{rule.minInstallments} - {rule.maxInstallments}</td>
-                        <td className="py-3 px-4 font-semibold text-purple-600">{rule.interestRate}%</td>
+                        <td className="py-3 px-4 font-semibold text-[#22C55E]600">{rule.interestRate}%</td>
                         <td className="py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded text-sm bg-purple-50 text-purple-700">
+                          <span className="inline-flex items-center px-2 py-1 rounded text-sm bg-[#22C55E]50 text-[#22C55E]700">
                             {getInterestTypeLabel(rule.interestType)}
                           </span>
                           <span className="ml-2 text-xs text-gray-500">{getInterestTypeExample(rule.interestType, rule.interestRate)}</span>
@@ -569,7 +569,7 @@ export default function BusinessRulesPage() {
             </p>
           </div>
         </div>
-        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-[#22C55E]600 text-white rounded hover:bg-[#22C55E]700">
           Salvar Configurações de Atraso
         </button>
 >>>>>>> 6aba21a79762aaec1363f0bbf5339fbd88cba923

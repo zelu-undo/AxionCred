@@ -95,11 +95,11 @@ export default function AdvancedDashboardPage() {
                 <p className="text-sm text-gray-500">Novos Clientes</p>
                 <p className="text-2xl font-bold">28</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="h-12 w-12 rounded-full bg-[#22C55E]100 flex items-center justify-center">
+                <Users className="h-6 w-6 text-[#22C55E]600" />
               </div>
             </div>
-            <p className="text-xs text-purple-600 mt-2">+18% vs mês anterior</p>
+            <p className="text-xs text-[#22C55E]600 mt-2">+18% vs mês anterior</p>
           </CardContent>
         </Card>
       </div>
@@ -116,7 +116,7 @@ export default function AdvancedDashboardPage() {
               {monthlyData.map((data, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center gap-2">
                   <div 
-                    className="w-full bg-purple-600 rounded-t-md transition-all hover:bg-purple-700"
+                    className="w-full bg-[#22C55E]600 rounded-t-md transition-all hover:bg-[#22C55E]700"
                     style={{ height: `${(data.revenue / maxRevenue) * 200}px` }}
                     title={`R$ ${data.revenue.toLocaleString("pt-BR")}`}
                   />

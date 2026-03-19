@@ -610,7 +610,7 @@ export default function CustomerDetailPage() {
               <div className="space-y-2">
                 <textarea
                   ref={textareaRef}
-                  className="w-full border border-gray-300 rounded-md p-3 min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-md p-3 min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-[#22C55E]500 focus:border-transparent"
                   value={formData.notes}
                   onChange={handleNotesChange}
                   placeholder="Adicione observações sobre o cliente..."
@@ -645,7 +645,7 @@ export default function CustomerDetailPage() {
                           fill="none"
                           strokeDasharray={2 * Math.PI * 10}
                           strokeDashoffset={2 * Math.PI * 10 * (1 - notesLength / MAX_NOTES_LENGTH)}
-                          className={`${notesLength >= MAX_NOTES_LENGTH ? 'text-red-500' : 'text-purple-500'} transition-all duration-300`}
+                          className={`${notesLength >= MAX_NOTES_LENGTH ? 'text-red-500' : 'text-[#22C55E]500'} transition-all duration-300`}
                         />
                       </svg>
                     </div>

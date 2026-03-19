@@ -50,7 +50,7 @@ export default function LoanDetailPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#22C55E]600" />
       </div>
     )
   }
@@ -86,8 +86,8 @@ export default function LoanDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-[#22C55E]100 rounded-lg">
+                <DollarSign className="h-5 w-5 text-[#22C55E]600" />
               </div>
               <div>
                 <p className="text-sm text-gray-500">Valor Principal</p>
@@ -199,23 +199,23 @@ export default function LoanDetailPage() {
             <div className="relative pt-1">
               <div className="flex mb-2 items-center justify-between">
                 <div>
-                  <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-purple-600 bg-purple-200">
+                  <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-[#22C55E]600 bg-[#22C55E]200">
                     Progresso
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-semibold inline-block text-purple-600">
+                  <span className="text-xs font-semibold inline-block text-[#22C55E]600">
                     {paidPercent.toFixed(0)}%
                   </span>
                 </div>
               </div>
-              <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-purple-200">
-                <div style={{ width: `${paidPercent}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-600 transition-all duration-500"></div>
+              <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[#22C55E]200">
+                <div style={{ width: `${paidPercent}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-[#22C55E]600 transition-all duration-500"></div>
               </div>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-500">Valor por Parcela</p>
-              <p className="text-2xl font-bold text-purple-600">
+              <p className="text-2xl font-bold text-[#22C55E]600">
                 {formatCurrency(loan.total_amount / loan.installments_count)}
               </p>
             </div>
