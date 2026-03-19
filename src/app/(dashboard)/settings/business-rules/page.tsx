@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, Edit2, Save, X } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2, Plus, Edit2, Save, X, Calculator, AlertCircle } from 'lucide-react';
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
+
+// Tipos de juros:
+// - monthly: percentual ao mês (recorrente)
+// - weekly: percentual ao semana (recorrente)  
+// - total: percentual único aplicado no total (não recorrente)
+type InterestType = 'monthly' | 'weekly' | 'total';
 
 interface InterestRule {
   id: string;
@@ -12,17 +17,19 @@ interface InterestRule {
   minInstallments: number;
   maxInstallments: number;
   interestRate: number;
-  interestType: 'fixed' | 'weekly' | 'monthly';
+  interestType: InterestType;
   isActive: boolean;
 }
 
-interface SystemConfig {
-  lateFeeType: 'percentage' | 'fixed';
+interface LateFeeConfig {
+  lateFeeType: 'percentage';
   lateFeeValue: number;
   lateInterestType: 'daily' | 'monthly';
   lateInterestValue: number;
-  renegotiationInterestRate: number;
-  renegotiationMaxInstallments: number;
+}
+
+function formatPercent(value: number): string {
+  return value.toString().replace(/[^0-9.]/g, '');
 }
 
 function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, excludeId?: string): string | null {
@@ -34,14 +41,32 @@ function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, exclude
   return null;
 }
 
+function getInterestTypeLabel(type: InterestType): string {
+  switch (type) {
+    case 'monthly': return 'Ao mês';
+    case 'weekly': return 'À semana';
+    case 'total': return 'Taxa única';
+  }
+}
+
+function getInterestTypeExample(type: InterestType, rate: number): string {
+  switch (type) {
+    case 'monthly': return `${rate}% ao mês`;
+    case 'weekly': return `${rate}% por semana`;
+    case 'total': return `${rate}% total`;
+  }
+}
+
 export default function BusinessRulesPage() {
   const { user, loading: authLoading } = useAuth()
   const supabase = createClient()
   
   const [interestRules, setInterestRules] = useState<InterestRule[]>([])
-  const [config, setConfig] = useState<SystemConfig>({
-    lateFeeType: 'percentage', lateFeeValue: 2,
-    lateInterestType: 'monthly', lateInterestValue: 1, renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
+  const [lateFeeConfig, setLateFeeConfig] = useState<LateFeeConfig>({
+    lateFeeType: 'percentage',
+    lateFeeValue: 2,
+    lateInterestType: 'monthly',
+    lateInterestValue: 1,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,13 +109,12 @@ export default function BusinessRulesPage() {
           .single()
         
         if (lateFeeData) {
-          setConfig(prev => ({
-            ...prev,
-            lateFeeType: lateFeeData.percentage ? 'percentage' : 'fixed',
-            lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
+          setLateFeeConfig({
+            lateFeeType: 'percentage',
+            lateFeeValue: lateFeeData.percentage || 0,
             lateInterestType: lateFeeData.monthly_interest ? 'monthly' : 'daily',
             lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || 0
-          }))
+          })
         }
       } catch (err: any) {
         console.error("Error fetching data:", err)
@@ -257,10 +281,9 @@ export default function BusinessRulesPage() {
         const { error: updateError } = await supabase
           .from("late_fee_config")
           .update({
-            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
-            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
-            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
-            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+            percentage: lateFeeConfig.lateFeeValue,
+            monthly_interest: lateFeeConfig.lateInterestType === 'monthly' ? lateFeeConfig.lateInterestValue : null,
+            daily_interest: lateFeeConfig.lateInterestType === 'daily' ? lateFeeConfig.lateInterestValue : null,
           })
           .eq("tenant_id", user?.tenantId)
         
@@ -270,10 +293,9 @@ export default function BusinessRulesPage() {
           .from("late_fee_config")
           .insert({
             tenant_id: user?.tenantId,
-            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
-            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
-            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
-            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+            percentage: lateFeeConfig.lateFeeValue,
+            monthly_interest: lateFeeConfig.lateInterestType === 'monthly' ? lateFeeConfig.lateInterestValue : null,
+            daily_interest: lateFeeConfig.lateInterestType === 'daily' ? lateFeeConfig.lateInterestValue : null,
           })
         
         if (insertError) throw insertError
@@ -320,140 +342,239 @@ export default function BusinessRulesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Regras de Negócio</h1>
+      <h1 className="text-2xl font-bold">Configuração de Juros</h1>
+      <p className="text-gray-600">Defina as taxas de juros para cada faixa de parcelas.</p>
       {message && <div className={`px-4 py-2 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{message.text}</div>}
 
       {/* Interest Rules Section */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Faixas de Parcelas</h2>
-          <button onClick={() => setIsAddingNew(true)} className="flex items-center gap-2 px-4 py-2 bg-#22C55E text-white rounded hover:bg-#16A34A">
+              <Calculator className="h-5 w-5 text-purple-600" />
+              Taxas por Faixa de Parcelas
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">Configure o percentual de juros para cada quantidade de parcelas.</p>
+          </div>
+          <button onClick={() => setIsAddingNew(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+>>>>>>> 6aba21a79762aaec1363f0bbf5339fbd88cba923
             <Plus size={16} /> Nova Faixa
           </button>
         </div>
 
         {/* Add new rule form */}
         {isAddingNew && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <input type="text" placeholder="Nome" className="border p-2 rounded" value={newRule.name || ''} onChange={e => setNewRule({...newRule, name: e.target.value})} />
-              <input type="number" placeholder="Mínimas" className="border p-2 rounded" value={newRule.minInstallments || ''} onChange={e => setNewRule({...newRule, minInstallments: Number(e.target.value)})} />
-              <input type="number" placeholder="Máximas" className="border p-2 rounded" value={newRule.maxInstallments || ''} onChange={e => setNewRule({...newRule, maxInstallments: Number(e.target.value)})} />
-              <input type="number" placeholder="Juros %" className="border p-2 rounded" value={newRule.interestRate || ''} onChange={e => setNewRule({...newRule, interestRate: Number(e.target.value)})} />
-              <Select value={newRule.interestType || 'monthly'} onValueChange={(v) => setNewRule({...newRule, interestType: v as any})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="fixed">Fixo</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex gap-2">
-                <button onClick={handleAddNew} className="p-2 bg-green-600 text-white rounded hover:bg-green-700"><Save size={16} /></button>
-                <button onClick={handleCancelEdit} className="p-2 bg-gray-500 text-white rounded hover:bg-gray-600"><X size={16} /></button>
+          <div className="bg-purple-50 p-4 rounded-lg mb-6 border border-purple-200">
+            <h3 className="font-medium mb-4">Nova Faixa de Juros</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: Parcelas Pequenas" 
+                  className="w-full border p-2 rounded"
+                  value={newRule.name || ''} 
+                  onChange={e => setNewRule({...newRule, name: e.target.value})} 
+                />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parcelas Mínimas</label>
+                <input 
+                  type="number" 
+                  placeholder="1" 
+                  className="w-full border p-2 rounded no-arrows"
+                  value={newRule.minInstallments || ''} 
+                  onChange={e => setNewRule({...newRule, minInstallments: Number(e.target.value)})} 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parcelas Máximas</label>
+                <input 
+                  type="number" 
+                  placeholder="6" 
+                  className="w-full border p-2 rounded no-arrows"
+                  value={newRule.maxInstallments || ''} 
+                  onChange={e => setNewRule({...newRule, maxInstallments: Number(e.target.value)})} 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Percentual (%)</label>
+                <input 
+                  type="number" 
+                  placeholder="10" 
+                  className="w-full border p-2 rounded no-arrows"
+                  value={newRule.interestRate || ''} 
+                  onChange={e => setNewRule({...newRule, interestRate: Number(e.target.value)})} 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Juros</label>
+                <select 
+                  className="w-full border p-2 rounded"
+                  value={newRule.interestType || 'monthly'}
+                  onChange={e => setNewRule({...newRule, interestType: e.target.value as InterestType})}
+                >
+                  <option value="monthly">Ao mês (recorrente)</option>
+                  <option value="weekly">À semana (recorrente)</option>
+                  <option value="total">Taxa única (total)</option>
+                </select>
+              </div>
+            </div>
+            {newRule.interestRate && newRule.interestType && (
+              <div className="mt-3 p-2 bg-purple-100 rounded text-sm text-purple-700">
+                <strong>Exemplo:</strong> {getInterestTypeExample(newRule.interestType, newRule.interestRate)}
+                {newRule.interestType === 'total' && newRule.minInstallments && newRule.maxInstallments && (
+                  <span> - O valor total terá {newRule.interestRate}% de juros incluído</span>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleAddNew} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                <Save size={16} /> Salvar
+              </button>
+              <button onClick={handleCancelEdit} className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                <X size={16} /> Cancelar
+              </button>
             </div>
           </div>
         )}
 
         {/* Rules list */}
         {interestRules.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">Nenhuma faixa de parcelas configurada. Clique em "Nova Faixa" para adicionar.</p>
+          <div className="text-center py-8">
+            <Calculator className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">Nenhuma faixa de juros configurada.</p>
+            <p className="text-gray-400 text-sm">Clique em "Nova Faixa" para adicionar sua primeira regra.</p>
+          </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2">Nome</th>
-                <th className="text-left py-2">Parcelas</th>
-                <th className="text-left py-2">Taxa</th>
-                <th className="text-left py-2">Tipo</th>
-                <th className="text-left py-2">Status</th>
-                <th className="text-right py-2">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {interestRules.map(rule => (
-                <tr key={rule.id} className="border-b">
-                  {editingId === rule.id ? (
-                    <>
-                      <td className="py-2"><input className="border p-1 rounded w-full" value={editingRule.name || ''} onChange={e => setEditingRule({...editingRule, name: e.target.value})} /></td>
-                      <td className="py-2"><input className="border p-1 rounded w-16" type="number" value={editingRule.minInstallments || 0} onChange={e => setEditingRule({...editingRule, minInstallments: Number(e.target.value)})} /> - <input className="border p-1 rounded w-16" type="number" value={editingRule.maxInstallments || 0} onChange={e => setEditingRule({...editingRule, maxInstallments: Number(e.target.value)})} /></td>
-                      <td className="py-2"><input className="border p-1 rounded w-20" type="number" value={editingRule.interestRate || 0} onChange={e => setEditingRule({...editingRule, interestRate: Number(e.target.value)})} /></td>
-                      <td className="py-2">
-                        <Select value={editingRule.interestType || 'monthly'} onValueChange={(v) => setEditingRule({...editingRule, interestType: v as any})}>
-                          <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="monthly">Mensal</SelectItem>
-                            <SelectItem value="weekly">Semanal</SelectItem>
-                            <SelectItem value="fixed">Fixo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="py-2">
-                        <button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-sm ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button>
-                      </td>
-                      <td className="py-2 text-right">
-                        <button onClick={handleSaveEdit} className="p-1 text-green-600 hover:bg-green-50 rounded mr-2"><Save size={18} /></button>
-                        <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:bg-gray-50 rounded"><X size={18} /></button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="py-2">{rule.name}</td>
-                      <td className="py-2">{rule.minInstallments} - {rule.maxInstallments}</td>
-                      <td className="py-2">{rule.interestRate}%</td>
-                      <td className="py-2">{rule.interestType === 'monthly' ? 'Mensal' : rule.interestType === 'weekly' ? 'Semanal' : 'Fixo'}</td>
-                      <td className="py-2">
-                        <button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-sm ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button>
-                      </td>
-                      <td className="py-2 text-right">
-                        <button onClick={() => handleEdit(rule)} className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-2"><Edit2 size={18} /></button>
-                        <button onClick={() => handleDelete(rule.id)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 size={18} /></button>
-                      </td>
-                    </>
-                  )}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Nome</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Parcelas</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Percentual</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Como Aplica</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-600">Status</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {interestRules.map(rule => (
+                  <tr key={rule.id} className="border-b hover:bg-gray-50">
+                    {editingId === rule.id ? (
+                      <>
+                        <td className="py-3 px-4"><input className="border p-1 rounded w-full" value={editingRule.name || ''} onChange={e => setEditingRule({...editingRule, name: e.target.value})} /></td>
+                        <td className="py-3 px-4">
+                          <input className="border p-1 rounded w-16 no-arrows" type="number" value={editingRule.minInstallments || 0} onChange={e => setEditingRule({...editingRule, minInstallments: Number(e.target.value)})} />
+                          <span className="mx-1">-</span>
+                          <input className="border p-1 rounded w-16 no-arrows" type="number" value={editingRule.maxInstallments || 0} onChange={e => setEditingRule({...editingRule, maxInstallments: Number(e.target.value)})} />
+                        </td>
+                        <td className="py-3 px-4"><input className="border p-1 rounded w-20 no-arrows" type="number" value={editingRule.interestRate || 0} onChange={e => setEditingRule({...editingRule, interestRate: Number(e.target.value)})} /></td>
+                        <td className="py-3 px-4">
+                          <select className="border p-1 rounded" value={editingRule.interestType || 'monthly'} onChange={e => setEditingRule({...editingRule, interestType: e.target.value as InterestType})}>
+                            <option value="monthly">Ao mês</option>
+                            <option value="weekly">À semana</option>
+                            <option value="total">Taxa única</option>
+                          </select>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-sm ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button onClick={handleSaveEdit} className="p-1 text-green-600 hover:bg-green-50 rounded mr-1"><Save size={18} /></button>
+                          <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:bg-gray-50 rounded"><X size={18} /></button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-3 px-4 font-medium">{rule.name}</td>
+                        <td className="py-3 px-4">{rule.minInstallments} - {rule.maxInstallments}</td>
+                        <td className="py-3 px-4 font-semibold text-purple-600">{rule.interestRate}%</td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center px-2 py-1 rounded text-sm bg-purple-50 text-purple-700">
+                            {getInterestTypeLabel(rule.interestType)}
+                          </span>
+                          <span className="ml-2 text-xs text-gray-500">{getInterestTypeExample(rule.interestType, rule.interestRate)}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-sm ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button onClick={() => handleEdit(rule)} className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-1"><Edit2 size={18} /></button>
+                          <button onClick={() => handleDelete(rule.id)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 size={18} /></button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       {/* Late Fee Section */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Configuração de Juros por Atraso</h2>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-orange-600" />
+            Juros por Atraso
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">Configure a cobrança adicional para parcelas atrasadas.</p>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Cobrança</label>
-            <Select value={config.lateFeeType} onValueChange={(v: any) => setConfig({...config, lateFeeType: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percentage">Percentual</SelectItem>
-                <SelectItem value="fixed">Valor Fixo</SelectItem>
-              </SelectContent>
-            </Select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Multa por Atraso (%)</label>
+            <input 
+              type="number" 
+              className="w-full border p-2 rounded no-arrows"
+              value={lateFeeConfig.lateFeeValue} 
+              onChange={e => setLateFeeConfig({...lateFeeConfig, lateFeeValue: Number(e.target.value)})} 
+            />
+            <p className="text-xs text-gray-500 mt-1">Percentual aplicado sobre o valor da parcela atrasada.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">{config.lateFeeType === 'percentage' ? 'Percentual (%)' : 'Valor Fixo (R$)'}</label>
-            <input type="number" className="border p-2 rounded w-full" value={config.lateFeeValue} onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Juros por Atraso</label>
-            <Select value={config.lateInterestType} onValueChange={(v: any) => setConfig({...config, lateInterestType: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Diário</SelectItem>
-                <SelectItem value="monthly">Mensal</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Juros por Atraso (%)</label>
-            <input type="number" className="border p-2 rounded w-full" value={config.lateInterestValue} onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Juros por Dia de Atraso (%)</label>
+            <div className="flex gap-2">
+              <select 
+                className="border p-2 rounded"
+                value={lateFeeConfig.lateInterestType}
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestType: e.target.value as 'daily' | 'monthly'})}
+              >
+                <option value="daily">Ao dia</option>
+                <option value="monthly">Ao mês</option>
+              </select>
+              <input 
+                type="number" 
+                className="flex-1 border p-2 rounded no-arrows"
+                value={lateFeeConfig.lateInterestValue} 
+                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestValue: Number(e.target.value)})} 
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {lateFeeConfig.lateInterestType === 'daily' 
+                ? `${lateFeeConfig.lateInterestValue}% por dia de atraso`
+                : `${lateFeeConfig.lateInterestValue}% ao mês de atraso`
+              }
+            </p>
           </div>
         </div>
-        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-#22C55E text-white rounded hover:bg-#16A34A">Salvar Configurações</button>
+        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+          Salvar Configurações de Atraso
+        </button>
+>>>>>>> 6aba21a79762aaec1363f0bbf5339fbd88cba923
       </div>
+
+      {/* CSS for hiding number input arrows */}
+      <style jsx>{`
+        .no-arrows::-webkit-outer-spin-button,
+        .no-arrows::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .no-arrows[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
     </div>
   );
 }
