@@ -139,11 +139,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // Check current session
+    // Check current session with timeout
     const checkSession = async () => {
       console.log("[Auth] Starting session check...")
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Session check timeout")), 10000)
+      )
+      
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const sessionPromise = supabase.auth.getSession()
+        
+        // Race between session check and timeout
+        const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any
+        
         console.log("[Auth] getSession result:", sessionError ? sessionError.message : "success", session ? "has session" : "no session")
         
         if (session?.user) {
