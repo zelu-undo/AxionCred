@@ -1,25 +1,37 @@
 @import "tailwindcss";
 
+/* AXION Brand Colors - According to Design Manual */
 :root {
+  /* Brand Colors */
+  --axion-blue: #1E3A8A;
+  --axion-green: #22C55E;
+  --axion-green-neon: #4ADE80;
+  --axion-red: #EF4444;
+  --axion-yellow: #F59E0B;
+  --axion-gray: #374151;
+  --axion-dark: #172554;
+  --axion-light-blue: #2A4A9F;
+  
+  /* Light Theme */
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 217 91% 35%; /* #1E3A8A */
+  --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 96.1%;
   --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 142 69% 45%; /* #22C55E */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 262.1 83.3% 57.8%;
+  --ring: 142 69% 45%; /* #22C55E */
   --radius: 0.5rem;
 }
 
@@ -30,25 +42,25 @@
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 4.9%;
   --popover-foreground: 210 40% 98%;
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  --primary: 217 91% 35%; /* #1E3A8A */
+  --primary-foreground: 0 0% 100%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217.2 32.6% 17.5%;
   --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 142 69% 45%; /* #22C55E */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
-  --ring: 262.1 83.3% 57.8%;
+  --ring: 142 69% 45%; /* #22C55E */
 }
 
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
 }
 
 /* Custom Scrollbar - Purple Theme */
