@@ -18,6 +18,7 @@ export default function LandingPage() {
             <nav className="hidden md:flex items-center gap-8">
               <a href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-colors">Como Funciona</a>
               <a href="#beneficios" className="text-white/70 hover:text-white font-medium transition-colors">Benefícios</a>
+              <a href="#planos" className="text-white/70 hover:text-white font-medium transition-colors">Planos</a>
             </nav>
             <div className="flex items-center gap-4">
               <Link href="/login">
@@ -53,12 +54,15 @@ export default function LandingPage() {
             
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/register">
-                <Button size="lg" className="bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold text-lg px-8">
-                  Começar a cobrar agora
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
+              <a 
+                href="https://wa.me/55449999152226?text=Olá! Quero começar a cobrar agora com o AXION."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#22C55E] hover:bg-[#4ADE80] text-white h-11 rounded-md px-8 text-lg"
+              >
+                Começar a cobrar agora
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </a>
               <Link href="#como-funciona">
                 <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white text-lg px-8">
                   Ver como funciona
@@ -276,6 +280,114 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Planos */}
+      <section id="planos" className="py-20 bg-[#0d2240]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
+            Escolha seu plano
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Plano Starter */}
+            <Card className="bg-white/5 border-white/10">
+              <CardContent className="pt-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-2">Starter</h3>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-bold text-white">R$29</span>
+                    <span className="text-white/60">/mês</span>
+                  </div>
+                </div>
+                
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Até 50 clientes
+                  </li>
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Controle de parcelas
+                  </li>
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Cobrança manual
+                  </li>
+                  <li className="flex items-center gap-2 text-white/50">
+                    <span className="h-5 w-5 flex items-center justify-center">×</span>
+                    Relatórios
+                  </li>
+                  <li className="flex items-center gap-2 text-white/50">
+                    <span className="h-5 w-5 flex items-center justify-center">×</span>
+                    Controle completo
+                  </li>
+                </ul>
+                
+                <a 
+                  href="https://wa.me/55449999152226?text=Olá! Quero saber mais sobre o Plano Starter (R$29/mês) do AXION. Preciso de até 50 clientes."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full"
+                >
+                  <Button className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold">
+                    Escolher Starter
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+
+            {/* Plano Pro */}
+            <Card className="bg-white/5 border-[#22C55E]/50 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#22C55E] text-white text-sm font-medium px-4 py-1 rounded-full">
+                Mais Popular
+              </div>
+              <CardContent className="pt-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-2">Pro</h3>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-bold text-white">R$49</span>
+                    <span className="text-white/60">/mês</span>
+                  </div>
+                </div>
+                
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Clientes ilimitados
+                  </li>
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Controle de parcelas
+                  </li>
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Cobrança pelo WhatsApp
+                  </li>
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Relatórios
+                  </li>
+                  <li className="flex items-center gap-2 text-white/80">
+                    <CheckCircle className="h-5 w-5 text-[#22C55E]" />
+                    Controle completo
+                  </li>
+                </ul>
+                
+                <a 
+                  href="https://wa.me/55449999152226?text=Olá! Quero saber mais sobre o Plano Pro (R$49/mês) do AXION. Quero clientes ilimitados e relatórios."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full"
+                >
+                  <Button className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold">
+                    Escolher Pro
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Prova Social */}
       <section className="py-20 bg-[#0d2240]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -312,12 +424,15 @@ export default function LandingPage() {
           <p className="text-xl text-white/90 mb-8">
             Comece agora e tenha controle total dos seus recebimentos.
           </p>
-          <Link href="/register">
-            <Button size="lg" className="bg-white text-[#0B1F3A] hover:bg-gray-100 font-semibold text-lg px-8">
-              Começar a cobrar agora
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <a 
+            href="https://wa.me/55449999152226?text=Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-[#0B1F3A] hover:bg-gray-100 h-11 rounded-md px-8 text-lg"
+          >
+            Começar a cobrar agora
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </a>
         </div>
       </section>
 
@@ -339,6 +454,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm text-white/50">
                 <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-colors">Como Funciona</a></li>
                 <li><a href="#beneficios" className="hover:text-[#22C55E] transition-colors">Benefícios</a></li>
+                <li><a href="#planos" className="hover:text-[#22C55E] transition-colors">Planos</a></li>
               </ul>
             </div>
             <div>
@@ -359,7 +475,7 @@ export default function LandingPage() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
             <a 
-              href="https://wa.me/" 
+              href="https://wa.me/55449999152226?text=Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-colors"
