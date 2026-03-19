@@ -22,6 +22,9 @@ function LoginForm() {
 
   // Check for email confirmation error
   const emailNotConfirmed = searchParams.get("error") === "email_not_confirmed"
+  // Check for success after registration
+  const emailSent = searchParams.get("success") === "email_sent"
+  const sentEmail = searchParams.get("email") || ""
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,7 +47,22 @@ function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {emailNotConfirmed && (
+          {emailSent && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-green-800">E-mail de confirmação enviado!</p>
+                  <p className="text-sm text-green-700 mt-1">
+                    Enviamos um link de confirmação para <strong>{sentEmail}</strong>. 
+                    Verifique sua caixa de entrada e clique no link para ativar sua conta.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {emailNotConfirmed && !emailSent && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <Mail className="h-5 w-5 text-amber-600 mt-0.5" />
