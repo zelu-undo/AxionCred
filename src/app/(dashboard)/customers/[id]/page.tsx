@@ -108,7 +108,7 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     if (customer) {
       // Parse address from full address string
-      // Format: "Rua, Número, Complemento, Bairro, Cidade, Estado" OR could have CEP embedded
+      // Format can vary: "Rua, Número, Complemento, Bairro, Cidade, Estado" OR fewer fields
       let street = ""
       let number = ""
       let complement = ""
@@ -118,18 +118,29 @@ export default function CustomerDetailPage() {
       let cep = ""
       
       if (customer.address) {
-        const parts = customer.address.split(",").map((p: string) => p.trim())
-        // Try to parse - assumes minimum street exists
-        street = parts[0] || ""
-        number = parts[1] || ""
-        complement = parts[2] || ""
-        neighborhood = parts[3] || ""
-        city = parts[4] || ""
-        state = parts[5] || ""
+        const parts = customer.address.split(",").map((p: string) => p.trim()).filter(Boolean)
+        
+        // Assign parts based on available data
+        if (parts.length >= 1) street = parts[0]
+        if (parts.length >= 2) number = parts[1]
+        if (parts.length >= 3) complement = parts[2]
+        if (parts.length >= 4) neighborhood = parts[3]
+        if (parts.length >= 5) city = parts[4]
+        if (parts.length >= 6) state = parts[5]
+        
+        // If we have fewer parts, try to detect based on content
+        // Sometimes addresses are stored as "City, State" or just "Street, City"
+        if (parts.length === 2) {
+          // Could be "City, State"
+          city = parts[0]
+          state = parts[1]
+        } else if (parts.length === 3) {
+          // Could be "Street, City, State"
+          street = parts[0]
+          city = parts[1]
+          state = parts[2]
+        }
       }
-      
-      // Also check if there's a CEP stored separately (if we start saving it)
-      // For now, leave CEP empty - user can re-enter or we'd need a migration
       
       setFormData({
         name: customer.name || "",
