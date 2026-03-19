@@ -253,14 +253,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Use user data from Supabase Auth directly
-        // New users start with "pending" role until approved by admin
-        const appUser: AppUser = {
+        // Then sync with database to get role and tenant info
+        const supabase = createClient()
+        
+        let appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
-          role: "pending", // User needs approval before accessing features
+          role: "pending", // Default until synced with DB
           tenantId: "",
           plan: "starter"
+        }
+
+        // Try to sync with database users table
+        try {
+          const { data: dbUser, error: dbError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", data.user.email!)
+            .single()
+
+          if (!dbError && dbUser) {
+            // User exists in database - use their role and tenant
+            appUser = {
+              id: dbUser.id,
+              email: dbUser.email,
+              name: dbUser.name,
+              role: dbUser.role || "pending",
+              tenantId: dbUser.tenant_id || "",
+              plan: "starter"
+            }
+          } else if (!dbUser) {
+            // User doesn't exist - create them in database
+            // First create a tenant for them
+            let tenantId = ""
+            try {
+              const { data: tenantData, error: tenantError } = await supabase
+                .from("tenants")
+                .insert({
+                  name: appUser.name,
+                  slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
+                })
+                .select()
+                .single()
+
+              if (!tenantError && tenantData) {
+                tenantId = tenantData.id
+              }
+            } catch (tenantErr) {
+              console.warn("Could not create tenant:", tenantErr)
+            }
+
+            // Create user record with default role
+            const { data: newUser, error: createError } = await supabase
+              .from("users")
+              .insert({
+                id: data.user.id,
+                email: data.user.email!,
+                name: appUser.name,
+                role: "owner", // First user becomes owner
+                tenant_id: tenantId
+              })
+              .select()
+              .single()
+
+            if (!createError && newUser) {
+              appUser.role = "owner"
+              appUser.tenantId = tenantId
+            }
+          }
+        } catch (syncErr) {
+          console.warn("Could not sync with users table:", syncErr)
+          // Continue with default user data
         }
         
         setUser(appUser)
