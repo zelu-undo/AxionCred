@@ -35,27 +35,28 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="py-20 md:py-28 bg-[#0B1F3A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto animate-fade-in-up-delay-200">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-[#22C55E]/20 text-[#22C55E] px-4 py-2 rounded-full text-sm font-medium mb-8">
+            <div className="inline-flex items-center gap-2 bg-[#22C55E]/20 text-[#22C55E] px-4 py-2 rounded-full text-sm font-medium mb-8 animate-fade-in-up">
+            
               <Users className="h-4 w-4" />
               Para quem vende fiado e quer receber
             </div>
             
             {/* Headline */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight animate-fade-in-up-delay-100">
               Saiba exatamente quem te deve — e cobre em segundos
             </h1>
             
             {/* Subheadline */}
-            <p className="text-xl text-white/70 mb-10 max-w-2xl mx-auto">
+            <p className="text-xl text-white/70 mb-10 max-w-2xl mx-auto animate-fade-in-up-delay-200">
               Controle clientes, parcelas e atrasos em um só lugar. Envie cobranças pelo WhatsApp com um clique.
             </p>
             
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up-delay-300">
               <a 
-                href="https://wa.me/55449999152226?text=Olá! Quero começar a cobrar agora com o AXION."
+                href="https://wa.me/5544999915226?text=Olá! Quero começar a cobrar agora com o AXION."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#22C55E] hover:bg-[#4ADE80] text-white h-11 rounded-md px-8 text-lg"
@@ -64,7 +65,7 @@ export default function LandingPage() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </a>
               <Link href="#como-funciona">
-                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white text-lg px-8">
+                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white bg-transparent text-lg px-8">
                   Ver como funciona
                 </Button>
               </Link>
@@ -121,11 +122,11 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             Você vende… mas não recebe como deveria
           </h2>
-          <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto">
+          <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto animate-fade-in-up-delay-200">
             Anotar no papel, esquecer cobranças e não saber quem está devendo faz você perder dinheiro todos os meses.
           </p>
           
-          <div className="grid md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto animate-fade-in-up-delay-200">
             <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
               <p className="text-white/80">Esquece quem já pagou</p>
@@ -152,14 +153,14 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             O AXION organiza tudo pra você
           </h2>
-          <p className="text-lg text-white/70 max-w-2xl mx-auto">
+          <p className="text-lg text-white/70 max-w-2xl mx-auto animate-fade-in-up-delay-200">
             Tenha controle total dos seus recebimentos e saiba exatamente quem cobrar e quando.
           </p>
         </div>
       </section>
 
       {/* Features */}
-      <section id="como-funciona" className="py-20 bg-[#0d2240]">
+      <section id="como-funciona" className="animate-fade-in py-20 bg-[#0d2240]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
@@ -238,7 +239,7 @@ export default function LandingPage() {
       </section>
 
       {/* Benefícios */}
-      <section id="beneficios" className="py-20 bg-[#0B1F3A]">
+      <section id="beneficios" className="animate-fade-in py-20 bg-[#0B1F3A]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Por que usar o AXION?
@@ -281,13 +282,13 @@ export default function LandingPage() {
       </section>
 
       {/* Planos */}
-      <section id="planos" className="py-20 bg-[#0d2240]">
+      <section id="planos" className="animate-fade-in py-20 bg-[#0d2240]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Escolha seu plano
           </h2>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto animate-fade-in-up-delay-200">
             {/* Plano Starter */}
             <Card className="bg-white/5 border-white/10">
               <CardContent className="pt-8">
@@ -323,7 +324,7 @@ export default function LandingPage() {
                 </ul>
                 
                 <a 
-                  href="https://wa.me/55449999152226?text=Olá! Quero saber mais sobre o Plano Starter (R$29/mês) do AXION. Preciso de até 50 clientes."
+                  href="https://wa.me/5544999915226?text=Olá! Quero saber mais sobre o Plano Starter (R$29/mês) do AXION. Preciso de até 50 clientes."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full"
@@ -373,7 +374,7 @@ export default function LandingPage() {
                 </ul>
                 
                 <a 
-                  href="https://wa.me/55449999152226?text=Olá! Quero saber mais sobre o Plano Pro (R$49/mês) do AXION. Quero clientes ilimitados e relatórios."
+                  href="https://wa.me/5544999915226?text=Olá! Quero saber mais sobre o Plano Pro (R$49/mês) do AXION. Quero clientes ilimitados e relatórios."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full"
@@ -391,7 +392,7 @@ export default function LandingPage() {
       {/* Prova Social */}
       <section className="py-20 bg-[#0d2240]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-2xl mx-auto">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-2xl mx-auto animate-fade-in-up-delay-200">
             <div className="h-16 w-16 bg-[#22C55E]/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <Users className="h-8 w-8 text-[#22C55E]" />
             </div>
@@ -425,7 +426,7 @@ export default function LandingPage() {
             Comece agora e tenha controle total dos seus recebimentos.
           </p>
           <a 
-            href="https://wa.me/55449999152226?text=Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais."
+            href="https://wa.me/5544999915226?text=Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais."
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-[#0B1F3A] hover:bg-gray-100 h-11 rounded-md px-8 text-lg"
@@ -475,7 +476,7 @@ export default function LandingPage() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
             <a 
-              href="https://wa.me/55449999152226?text=Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?" 
+              href="https://wa.me/5544999915226?text=Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-colors"

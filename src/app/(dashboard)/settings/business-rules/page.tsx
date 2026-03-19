@@ -1,15 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, Edit2, Save, X, Calculator, AlertCircle } from 'lucide-react';
+import { Trash2, Plus, Edit2, Save, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
-
-// Tipos de juros:
-// - monthly: percentual ao mês (recorrente)
-// - weekly: percentual ao semana (recorrente)  
-// - total: percentual único aplicado no total (não recorrente)
-type InterestType = 'monthly' | 'weekly' | 'total';
 
 interface InterestRule {
   id: string;
@@ -17,24 +12,17 @@ interface InterestRule {
   minInstallments: number;
   maxInstallments: number;
   interestRate: number;
-  interestType: InterestType;
+  interestType: 'fixed' | 'weekly' | 'monthly';
   isActive: boolean;
 }
 
-interface LateFeeConfig {
-  // Multa por atraso (valor fixo ou percentual)
+interface SystemConfig {
   lateFeeType: 'percentage' | 'fixed';
   lateFeeValue: number;
-  
-  // Tipo de cobrança da multa: uma vez (total), semanal, mensal, diário
-  lateFeeChargeType: 'one_time' | 'weekly' | 'monthly' | 'daily';
-  
-  // Juros por atraso (valor fixo ou percentual)
-  lateInterestType: 'percentage' | 'fixed';
+  lateInterestType: 'daily' | 'monthly';
   lateInterestValue: number;
-  
-  // Tipo de cobrança dos juros: uma vez (total), semanal, mensal, diário
-  lateInterestChargeType: 'one_time' | 'weekly' | 'monthly' | 'daily';
+  renegotiationInterestRate: number;
+  renegotiationMaxInstallments: number;
 }
 
 function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, excludeId?: string): string | null {
@@ -46,48 +34,14 @@ function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, exclude
   return null;
 }
 
-function getInterestTypeLabel(type: InterestType): string {
-  switch (type) {
-    case 'monthly': return 'Ao mês';
-    case 'weekly': return 'À semana';
-    case 'total': return 'Taxa única';
-  }
-}
-
-function getInterestTypeExample(type: InterestType, rate: number): string {
-  switch (type) {
-    case 'monthly': return `${rate}% ao mês`;
-    case 'weekly': return `${rate}% por semana`;
-    case 'total': return `${rate}% total`;
-  }
-}
-
-// Format number to percent input (e.g., 10 -> "10", 5.5 -> "5,5")
-function formatPercentInput(value: number): string {
-  if (value === 0 || value === null || value === undefined) return '';
-  return value.toString().replace('.', ',');
-}
-
-// Parse percent input to number (e.g., "10,5" -> 10.5)
-function parsePercentInput(value: string): number {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9,]/g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
 export default function BusinessRulesPage() {
   const { user, loading: authLoading } = useAuth()
   const supabase = createClient()
   
   const [interestRules, setInterestRules] = useState<InterestRule[]>([])
-  const [lateFeeConfig, setLateFeeConfig] = useState<LateFeeConfig>({
-    lateFeeType: 'percentage',
-    lateFeeValue: 0,
-    lateFeeChargeType: 'one_time',
-    lateInterestType: 'percentage',
-    lateInterestValue: 0,
-    lateInterestChargeType: 'daily',
+  const [config, setConfig] = useState<SystemConfig>({
+    lateFeeType: 'percentage', lateFeeValue: 2,
+    lateInterestType: 'monthly', lateInterestValue: 1, renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -130,14 +84,13 @@ export default function BusinessRulesPage() {
           .single()
         
         if (lateFeeData) {
-          setLateFeeConfig({
+          setConfig(prev => ({
+            ...prev,
             lateFeeType: lateFeeData.percentage ? 'percentage' : 'fixed',
             lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
-            lateFeeChargeType: lateFeeData.late_fee_charge_type || 'one_time',
-            lateInterestType: lateFeeData.late_interest_type || 'percentage',
-            lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || lateFeeData.late_interest_value || 0,
-            lateInterestChargeType: lateFeeData.late_interest_charge_type || 'daily'
-          })
+            lateInterestType: lateFeeData.monthly_interest ? 'monthly' : 'daily',
+            lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || 0
+          }))
         }
       } catch (err: any) {
         console.error("Error fetching data:", err)
@@ -300,22 +253,15 @@ export default function BusinessRulesPage() {
         .eq("tenant_id", user?.tenantId)
         .single()
       
-      const updateData = {
-        // Multa por atraso
-        percentage: lateFeeConfig.lateFeeType === 'percentage' ? lateFeeConfig.lateFeeValue : null,
-        fixed_fee: lateFeeConfig.lateFeeType === 'fixed' ? lateFeeConfig.lateFeeValue : null,
-        late_fee_charge_type: lateFeeConfig.lateFeeChargeType,
-        
-        // Juros por atraso
-        late_interest_type: lateFeeConfig.lateInterestType,
-        late_interest_value: lateFeeConfig.lateInterestValue,
-        late_interest_charge_type: lateFeeConfig.lateInterestChargeType,
-      }
-      
       if (existing) {
         const { error: updateError } = await supabase
           .from("late_fee_config")
-          .update(updateData)
+          .update({
+            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
+            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
+            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
+            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+          })
           .eq("tenant_id", user?.tenantId)
         
         if (updateError) throw updateError
@@ -324,7 +270,10 @@ export default function BusinessRulesPage() {
           .from("late_fee_config")
           .insert({
             tenant_id: user?.tenantId,
-            ...updateData
+            percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : null,
+            fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : null,
+            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
+            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
           })
         
         if (insertError) throw insertError
@@ -390,19 +339,13 @@ export default function BusinessRulesPage() {
               <input type="text" placeholder="Nome" className="border p-2 rounded" value={newRule.name || ''} onChange={e => setNewRule({...newRule, name: e.target.value})} />
               <input type="number" placeholder="Mínimas" className="border p-2 rounded" value={newRule.minInstallments || ''} onChange={e => setNewRule({...newRule, minInstallments: Number(e.target.value)})} />
               <input type="number" placeholder="Máximas" className="border p-2 rounded" value={newRule.maxInstallments || ''} onChange={e => setNewRule({...newRule, maxInstallments: Number(e.target.value)})} />
-              <input 
-                type="text" 
-                placeholder="Juros %" 
-                className="border p-2 rounded"
-                value={formatPercentInput(newRule.interestRate)} 
-                onChange={e => setNewRule({...newRule, interestRate: parsePercentInput(e.target.value)})} 
-              />
-              <Select value={newRule.interestType || 'monthly'} onValueChange={(v) => setNewRule({...newRule, interestType: v as InterestType})}>
+              <input type="number" placeholder="Juros %" className="border p-2 rounded" value={newRule.interestRate || ''} onChange={e => setNewRule({...newRule, interestRate: Number(e.target.value)})} />
+              <Select value={newRule.interestType || 'monthly'} onValueChange={(v) => setNewRule({...newRule, interestType: v as any})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">Ao mês</SelectItem>
-                  <SelectItem value="weekly">À semana</SelectItem>
-                  <SelectItem value="total">Taxa única</SelectItem>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                  <SelectItem value="weekly">Semanal</SelectItem>
+                  <SelectItem value="fixed">Fixo</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
@@ -435,21 +378,14 @@ export default function BusinessRulesPage() {
                     <>
                       <td className="py-2"><input className="border p-1 rounded w-full" value={editingRule.name || ''} onChange={e => setEditingRule({...editingRule, name: e.target.value})} /></td>
                       <td className="py-2"><input className="border p-1 rounded w-16" type="number" value={editingRule.minInstallments || 0} onChange={e => setEditingRule({...editingRule, minInstallments: Number(e.target.value)})} /> - <input className="border p-1 rounded w-16" type="number" value={editingRule.maxInstallments || 0} onChange={e => setEditingRule({...editingRule, maxInstallments: Number(e.target.value)})} /></td>
+                      <td className="py-2"><input className="border p-1 rounded w-20" type="number" value={editingRule.interestRate || 0} onChange={e => setEditingRule({...editingRule, interestRate: Number(e.target.value)})} /></td>
                       <td className="py-2">
-                        <input 
-                          className="border p-1 rounded w-20" 
-                          type="text"
-                          value={formatPercentInput(editingRule.interestRate)} 
-                          onChange={e => setEditingRule({...editingRule, interestRate: parsePercentInput(e.target.value)})} 
-                        />
-                      </td>
-                      <td className="py-2">
-                        <Select value={editingRule.interestType || 'monthly'} onValueChange={(v) => setEditingRule({...editingRule, interestType: v as InterestType})}>
+                        <Select value={editingRule.interestType || 'monthly'} onValueChange={(v) => setEditingRule({...editingRule, interestType: v as any})}>
                           <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="monthly">Ao mês</SelectItem>
-                            <SelectItem value="weekly">À semana</SelectItem>
-                            <SelectItem value="total">Taxa única</SelectItem>
+                            <SelectItem value="monthly">Mensal</SelectItem>
+                            <SelectItem value="weekly">Semanal</SelectItem>
+                            <SelectItem value="fixed">Fixo</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
@@ -465,8 +401,8 @@ export default function BusinessRulesPage() {
                     <>
                       <td className="py-2">{rule.name}</td>
                       <td className="py-2">{rule.minInstallments} - {rule.maxInstallments}</td>
-                      <td className="py-2">{rule.interestRate.toFixed(2).replace('.', ',')}%</td>
-                      <td className="py-2">{getInterestTypeLabel(rule.interestType)}</td>
+                      <td className="py-2">{rule.interestRate}%</td>
+                      <td className="py-2">{rule.interestType === 'monthly' ? 'Mensal' : rule.interestType === 'weekly' ? 'Semanal' : 'Fixo'}</td>
                       <td className="py-2">
                         <button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-sm ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button>
                       </td>
@@ -486,96 +422,37 @@ export default function BusinessRulesPage() {
       {/* Late Fee Section */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Configuração de Juros por Atraso</h2>
-        
-        {/* Multa por Atraso */}
-        <div className="mb-6 pb-6 border-b">
-          <h3 className="text-lg font-medium mb-4">Multa por Atraso</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Tipo</label>
-              <select 
-                className="border p-2 rounded w-full"
-                value={lateFeeConfig.lateFeeType}
-                onChange={e => setLateFeeConfig({...lateFeeConfig, lateFeeType: e.target.value as 'percentage' | 'fixed'})}
-              >
-                <option value="percentage">Percentual (%)</option>
-                <option value="fixed">Valor Fixo (R$)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Valor</label>
-              <input 
-                type="text" 
-                className="border p-2 rounded w-full"
-                placeholder="0,00"
-                value={formatPercentInput(lateFeeConfig.lateFeeValue)} 
-                onChange={e => {
-                  const val = parsePercentInput(e.target.value);
-                  setLateFeeConfig({...lateFeeConfig, lateFeeValue: val})
-                }} 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Cobrar</label>
-              <select 
-                className="border p-2 rounded w-full"
-                value={lateFeeConfig.lateFeeChargeType}
-                onChange={e => setLateFeeConfig({...lateFeeConfig, lateFeeChargeType: e.target.value as 'one_time' | 'weekly' | 'monthly' | 'daily'})}
-              >
-                <option value="one_time">Uma vez</option>
-                <option value="daily">Diariamente</option>
-                <option value="weekly">Semanalmente</option>
-                <option value="monthly">Mensalmente</option>
-              </select>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">Tipo de Cobrança</label>
+            <Select value={config.lateFeeType} onValueChange={(v: any) => setConfig({...config, lateFeeType: v})}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="percentage">Percentual</SelectItem>
+                <SelectItem value="fixed">Valor Fixo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">{config.lateFeeType === 'percentage' ? 'Percentual (%)' : 'Valor Fixo (R$)'}</label>
+            <input type="number" className="border p-2 rounded w-full" value={config.lateFeeValue} onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Tipo de Juros por Atraso</label>
+            <Select value={config.lateInterestType} onValueChange={(v: any) => setConfig({...config, lateInterestType: v})}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Juros por Atraso (%)</label>
+            <input type="number" className="border p-2 rounded w-full" value={config.lateInterestValue} onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})} />
           </div>
         </div>
-
-        {/* Juros por Atraso */}
-        <div>
-          <h3 className="text-lg font-medium mb-4">Juros por Atraso</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Tipo</label>
-              <select 
-                className="border p-2 rounded w-full"
-                value={lateFeeConfig.lateInterestType}
-                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestType: e.target.value as 'percentage' | 'fixed'})}
-              >
-                <option value="percentage">Percentual (%)</option>
-                <option value="fixed">Valor Fixo (R$)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Valor</label>
-              <input 
-                type="text" 
-                className="border p-2 rounded w-full"
-                placeholder="0,00"
-                value={formatPercentInput(lateFeeConfig.lateInterestValue)} 
-                onChange={e => {
-                  const val = parsePercentInput(e.target.value);
-                  setLateFeeConfig({...lateFeeConfig, lateInterestValue: val})
-                }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Cobrar</label>
-              <select 
-                className="border p-2 rounded w-full"
-                value={lateFeeConfig.lateInterestChargeType}
-                onChange={e => setLateFeeConfig({...lateFeeConfig, lateInterestChargeType: e.target.value as 'one_time' | 'weekly' | 'monthly' | 'daily'})}
-              >
-                <option value="one_time">Uma vez</option>
-                <option value="daily">Diariamente</option>
-                <option value="weekly">Semanalmente</option>
-                <option value="monthly">Mensalmente</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        
-        <button onClick={handleSaveLateFee} className="mt-6 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
+        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
       </div>
     </div>
   );
