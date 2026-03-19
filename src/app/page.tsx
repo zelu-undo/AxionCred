@@ -1,30 +1,27 @@
 import Link from "next/link"
 import Image from "next/image"
-import { TrendingUp, Shield, Zap, Globe, CheckCircle, ArrowRight, CreditCard, Users, BarChart3, Clock, AlertTriangle } from "lucide-react"
+import { CheckCircle, ArrowRight, Users, Clock, AlertTriangle, Shield, MessageCircle, DollarSign, TrendingUp, CreditCard, BarChart3, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0B1F3A]">
       {/* Header */}
-      <header className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <span className="text-2xl font-bold text-[#1E3A8A]">AXI</span>
-                <span className="text-2xl font-bold text-[#22C55E]">ON</span>
-              </div>
+              <span className="text-2xl font-bold text-white">AXI</span>
+              <span className="text-2xl font-bold text-[#22C55E]">ON</span>
             </div>
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-[#374151] hover:text-[#1E3A8A] font-medium transition-colors">Recursos</a>
-              <a href="#how-it-works" className="text-[#374151] hover:text-[#1E3A8A] font-medium transition-colors">Como Funciona</a>
-              <a href="#pricing" className="text-[#374151] hover:text-[#1E3A8A] font-medium transition-colors">Planos</a>
+              <a href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-colors">Como Funciona</a>
+              <a href="#beneficios" className="text-white/70 hover:text-white font-medium transition-colors">Benefícios</a>
             </nav>
             <div className="flex items-center gap-4">
               <Link href="/login">
-                <Button variant="ghost" className="text-[#1E3A8A] hover:text-[#1E3A8A] hover:bg-blue-50">Entrar</Button>
+                <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Entrar</Button>
               </Link>
               <Link href="/register">
                 <Button className="bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold px-6">Começar Agora</Button>
@@ -35,191 +32,289 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-blue-50 to-white">
+      <section className="py-20 md:py-28 bg-[#0B1F3A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1E3A8A] mb-6">
-                Gestão de Crédito <span className="text-[#22C55E]">Inteligente</span> para Pequenos Negócios
-              </h1>
-              <p className="text-xl text-[#374151] mb-8">
-                Simplifique a concessão de crédito, acompanhe inadimplência e expanda seus negócios com a plataforma mais completa do mercado.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/register">
-                  <Button size="lg" className="bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold text-lg px-8">
-                    Criar Conta Grátis
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link href="/demo">
-                  <Button size="lg" variant="outline" className="border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white text-lg px-8">
-                    Ver Demonstração
-                  </Button>
-                </Link>
-              </div>
-              <p className="mt-4 text-sm text-gray-500">
-                Não é necessário cartão de crédito • Configuração em 5 minutos
-              </p>
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-[#22C55E]/20 text-[#22C55E] px-4 py-2 rounded-full text-sm font-medium mb-8">
+              <Users className="h-4 w-4" />
+              Para quem vende fiado e quer receber
             </div>
-            <div className="relative hidden lg:block">
-              <div className="relative w-full h-[400px]">
-                <Image 
-                  src="/hero-image-1.png" 
-                  alt="AXION Cred Dashboard" 
-                  fill
-                  className="object-contain rounded-2xl shadow-2xl"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1E3A8A] mb-4">
-              Tudo o que você precisa para gerenciar crédito
-            </h2>
-            <p className="text-lg text-[#374151] max-w-2xl mx-auto">
-              Uma plataforma completa com ferramentas poderosas para pequenas empresas e microempreendedores.
+            
+            {/* Headline */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              Saiba exatamente quem te deve — e cobre em segundos
+            </h1>
+            
+            {/* Subheadline */}
+            <p className="text-xl text-white/70 mb-10 max-w-2xl mx-auto">
+              Controle clientes, parcelas e atrasos em um só lugar. Envie cobranças pelo WhatsApp com um clique.
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-6">
-                <div className="h-12 w-12 bg-[#1E3A8A]/10 rounded-lg flex items-center justify-center mb-4">
-                  <CreditCard className="h-6 w-6 text-[#1E3A8A]" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-[#1E3A8A]">Gestão de Empréstimos</h3>
-                <p className="text-[#374151]">
-                  Crie e gerencie contratos de crédito com cálculo automático de juros e parcelas.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-6">
-                <div className="h-12 w-12 bg-[#1E3A8A]/10 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-[#1E3A8A]" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-[#1E3A8A]">Cadastro de Clientes</h3>
-                <p className="text-[#374151]">
-                  Gerencie sua base de clientes com histórico completo e limite de crédito personalizado.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-6">
-                <div className="h-12 w-12 bg-[#1E3A8A]/10 rounded-lg flex items-center justify-center mb-4">
-                  <BarChart3 className="h-6 w-6 text-[#1E3A8A]" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-[#1E3A8A]">Dashboard Inteligente</h3>
-                <p className="text-[#374151]">
-                  Visualize KPIs importantes e tome decisões baseadas em dados em tempo real.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-6">
-                <div className="h-12 w-12 bg-[#22C55E]/10 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-[#22C55E]" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-[#1E3A8A]">Cobrança Automática</h3>
-                <p className="text-[#374151]">
-                  Envie lembretes automáticos pelo WhatsApp e reduza a inadimplência.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-6">
-                <div className="h-12 w-12 bg-[#22C55E]/10 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="h-6 w-6 text-[#22C55E]" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-[#1E3A8A]">Segurança Avançada</h3>
-                <p className="text-[#374151]">
-                  Seus dados protegidos com criptografia de ponta e conformidade com LGPD.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-6">
-                <div className="h-12 w-12 bg-[#22C55E]/10 rounded-lg flex items-center justify-center mb-4">
-                  <Globe className="h-6 w-6 text-[#22C55E]" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-[#1E3A8A]">Multi-idioma</h3>
-                <p className="text-[#374151]">
-                  Interface disponível em Português, Inglês e Espanhol para atender seus clientes.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-[#1E3A8A]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Como funciona
-            </h2>
-            <p className="text-lg text-blue-200">
-              Comece a usar em poucos minutos
+            
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link href="/register">
+                <Button size="lg" className="bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold text-lg px-8">
+                  Começar a cobrar agora
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="#como-funciona">
+                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white text-lg px-8">
+                  Ver como funciona
+                </Button>
+              </Link>
+            </div>
+            
+            {/* Prova social */}
+            <p className="text-white/50 text-sm mb-8">
+              +500 comerciantes já usam
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="h-16 w-16 bg-[#22C55E] rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
-                1
+            
+            {/* Mockup */}
+            <div className="bg-[#1a2d4a] rounded-2xl p-6 max-w-lg mx-auto border border-white/10">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-red-500/30 flex items-center justify-center text-white font-bold">J</div>
+                    <div>
+                      <p className="text-white font-medium">João</p>
+                      <p className="text-white/60 text-sm">R$ 150,00</p>
+                    </div>
+                  </div>
+                  <span className="text-red-400 text-sm font-medium flex items-center gap-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    Atrasado 3 dias
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between bg-[#22C55E]/20 border border-[#22C55E]/30 rounded-lg p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-[#22C55E]/30 flex items-center justify-center text-white font-bold">M</div>
+                    <div>
+                      <p className="text-white font-medium">Maria</p>
+                      <p className="text-white/60 text-sm">R$ 80,00</p>
+                    </div>
+                  </div>
+                  <span className="text-[#22C55E] text-sm font-medium flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" />
+                    Pago hoje
+                  </span>
+                </div>
+                
+                <div className="text-center text-white/50 text-sm py-2">
+                  3 parcelas vencem hoje
+                </div>
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-white">Crie sua conta</h3>
-              <p className="text-blue-200">
-                Cadastre-se gratuitamente em poucos segundos
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="h-16 w-16 bg-[#22C55E] rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
-                2
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-white">Configure regras</h3>
-              <p className="text-blue-200">
-                Defina taxas de juros e faixas de parcelas
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="h-16 w-16 bg-[#22C55E] rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
-                3
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-white">Comece a usar</h3>
-              <p className="text-blue-200">
-                Gerencie seus clientes e empréstimos
-              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-[#1E3A8A] to-[#22C55E]">
+      {/* Problema */}
+      <section className="py-20 bg-[#0d2240]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            Você vende… mas não recebe como deveria
+          </h2>
+          <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto">
+            Anotar no papel, esquecer cobranças e não saber quem está devendo faz você perder dinheiro todos os meses.
+          </p>
+          
+          <div className="grid md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+              <p className="text-white/80">Esquece quem já pagou</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+              <p className="text-white/80">Não sabe quem está atrasado</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
+              <Users className="h-5 w-5 text-white/60 mt-0.5 flex-shrink-0" />
+              <p className="text-white/80">Fica sem jeito de cobrar</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
+              <DollarSign className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+              <p className="text-white/80">Perde dinheiro no fiado</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Solução */}
+      <section className="py-20 bg-[#0B1F3A]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            O AXION organiza tudo pra você
+          </h2>
+          <p className="text-lg text-white/70 max-w-2xl mx-auto">
+            Tenha controle total dos seus recebimentos e saiba exatamente quem cobrar e quando.
+          </p>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="como-funciona" className="py-20 bg-[#0d2240]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="h-6 w-6 text-[#22C55E]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Veja quem te deve</h3>
+                <p className="text-white/60">
+                  Lista completa de todos os seus clientes e quanto cada um deve.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
+                  <CreditCard className="h-6 w-6 text-[#22C55E]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Controle parcelas automaticamente</h3>
+                <p className="text-white/60">
+                  O sistema calcula tudo: valor, datas e quantidade de parcelas.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
+                  <MessageCircle className="h-6 w-6 text-[#22C55E]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Cobre pelo WhatsApp</h3>
+                <p className="text-white/60">
+                  Envie a cobrança direto no WhatsApp do cliente com um clique.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 bg-red-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <AlertTriangle className="h-6 w-6 text-red-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Saiba quem está atrasado</h3>
+                <p className="text-white/60">
+                  Sistema avisa quem está devendo e há quanto tempo.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
+                  <BarChart3 className="h-6 w-6 text-[#22C55E]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Tenha tudo organizado</h3>
+                <p className="text-white/60">
+                  Nada de papelada. Tudo salvo e organizado no seu celular.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Wallet className="h-6 w-6 text-[#22C55E]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Receba mais</h3>
+                <p className="text-white/60">
+                  Com cobranças assertivas, você recebe mais e perde menos.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefícios */}
+      <section id="beneficios" className="py-20 bg-[#0B1F3A]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
+            Por que usar o AXION?
+          </h2>
+          
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <CheckCircle className="h-6 w-6 text-[#22C55E] mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">Nunca mais esqueça uma parcela</h3>
+                <p className="text-white/60">O sistema lembra de tudo pra você</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <CheckCircle className="h-6 w-6 text-[#22C55E] mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">Receba mais sem esforço</h3>
+                <p className="text-white/60">Cobranças automáticas pelo WhatsApp</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <CheckCircle className="h-6 w-6 text-[#22C55E] mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">Tenha controle total do seu dinheiro</h3>
+                <p className="text-white/60">Saiba exatamente quanto tem para receber</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <CheckCircle className="h-6 w-6 text-[#22C55E] mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">Pare de perder dinheiro no fiado</h3>
+                <p className="text-white/60">Não deixe mais ninguém te dever</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Prova Social */}
+      <section className="py-20 bg-[#0d2240]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-2xl mx-auto">
+            <div className="h-16 w-16 bg-[#22C55E]/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Users className="h-8 w-8 text-[#22C55E]" />
+            </div>
+            <blockquote className="text-xl text-white mb-6">
+              "Nunca mais perdi uma cobrança. Agora sei exatamente quem me deve e consigo cobrar pelo WhatsApp em segundos."
+            </blockquote>
+            <cite className="text-white/60 not-italic">
+              — João, dono de mercado
+            </cite>
+          </div>
+        </div>
+      </section>
+
+      {/* Confiança */}
+      <section className="py-12 bg-[#0B1F3A]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="flex items-center justify-center gap-3 text-white/60">
+            <Shield className="h-6 w-6 text-[#22C55E]" />
+            <span>Seus dados protegidos com segurança</span>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="py-20 bg-gradient-to-r from-[#0B1F3A] to-[#22C55E]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pronto para transformar sua gestão de crédito?
+            Pare de perder dinheiro no fiado
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            Junte-se a milhares de pequenos negócios que já usam o AXION Cred
+            Comece agora e tenha controle total dos seus recebimentos.
           </p>
           <Link href="/register">
-            <Button size="lg" className="bg-white text-[#1E3A8A] hover:bg-gray-100 font-semibold text-lg px-8">
-              Começar Gratuitamente
+            <Button size="lg" className="bg-white text-[#0B1F3A] hover:bg-gray-100 font-semibold text-lg px-8">
+              Começar a cobrar agora
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
@@ -227,45 +322,51 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#1E3A8A] text-white py-12">
+      <footer className="bg-[#0a1829] text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl font-bold text-white">AXI</span>
-                <span className="text-2xl font-bold text-[#22C55E]">ON</span>
+                <span className="text-xl font-bold text-white">AXI</span>
+                <span className="text-xl font-bold text-[#22C55E]">ON</span>
               </div>
-              <p className="text-sm text-blue-200">
-                Plataforma de gestão de crédito para pequenos negócios na América Latina.
+              <p className="text-white/50 text-sm">
+                Sistema simples para controlar quem te deve.
               </p>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Produto</h4>
-              <ul className="space-y-2 text-sm text-blue-200">
-                <li><a href="#features" className="hover:text-[#22C55E] transition-colors">Recursos</a></li>
-                <li><a href="#pricing" className="hover:text-[#22C55E] transition-colors">Planos</a></li>
-                <li><Link href="/demo" className="hover:text-[#22C55E] transition-colors">Demonstração</Link></li>
+              <ul className="space-y-2 text-sm text-white/50">
+                <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-colors">Como Funciona</a></li>
+                <li><a href="#beneficios" className="hover:text-[#22C55E] transition-colors">Benefícios</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Empresa</h4>
-              <ul className="space-y-2 text-sm text-blue-200">
+              <ul className="space-y-2 text-sm text-white/50">
                 <li><a href="#" className="hover:text-[#22C55E] transition-colors">Sobre</a></li>
-                <li><a href="#" className="hover:text-[#22C55E] transition-colors">Blog</a></li>
                 <li><a href="#" className="hover:text-[#22C55E] transition-colors">Contato</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm text-blue-200">
+              <ul className="space-y-2 text-sm text-white/50">
                 <li><a href="#" className="hover:text-[#22C55E] transition-colors">Termos de Uso</a></li>
                 <li><a href="#" className="hover:text-[#22C55E] transition-colors">Privacidade</a></li>
-                <li><a href="#" className="hover:text-[#22C55E] transition-colors">LGPD</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-blue-800 mt-8 pt-8 text-sm text-center text-blue-200">
-            <p>© 2024 AXION Cred. Todos os direitos reservados.</p>
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
+            <a 
+              href="https://wa.me/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-colors"
+            >
+              <MessageCircle className="h-5 w-5" />
+              Falar no WhatsApp
+            </a>
           </div>
         </div>
       </footer>
