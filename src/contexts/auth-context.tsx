@@ -143,23 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkSession = async () => {
       console.log("[Auth] Starting session check...")
       
-      // First, try to get cached user from localStorage (for faster load)
-      const cachedUser = localStorage.getItem("axion_user")
-      if (cachedUser) {
-        try {
-          const parsed = JSON.parse(cachedUser)
-          if (parsed?.tenantId) {
-            console.log("[Auth] Using cached user:", parsed.id)
-            setUser(parsed)
-          }
-        } catch (e) {
-          console.log("[Auth] Failed to parse cached user")
-        }
-      }
-      
       try {
         // Simple timeout without AbortController (getSession doesn't support abort)
-        const timeoutMs = 15000 // 15 seconds
+        const timeoutMs = 10000 // 10 seconds - reduced for faster fallback
         
         // Start session check
         const sessionPromise = supabase.auth.getSession()
@@ -167,9 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Add timeout wrapper
         const sessionResult = await new Promise<{ data: { session: any }; error: any }>((resolve) => {
           const timeout = setTimeout(() => {
-            // If timeout, resolve with no session (fallback to cached)
-            console.log("[Auth] Session check timed out, using cached user")
-            resolve({ data: { session: null }, error: null })
+            // If timeout, try to use cached user but it will be limited
+            console.log("[Auth] Session check timed out")
+            resolve({ data: { session: null }, error: new Error("timeout") })
           }, timeoutMs)
           
           sessionPromise.then(result => {
