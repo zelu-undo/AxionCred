@@ -151,6 +151,15 @@ export default function BusinessRulesPage() {
     if (error) { setMessage({ type: 'error', text: error }); return; }
     
     try {
+      console.log("[BusinessRules] Inserting rule:", {
+        tenant_id: user?.tenantId,
+        name: ruleToAdd.name,
+        min_installments: ruleToAdd.minInstallments,
+        max_installments: ruleToAdd.maxInstallments,
+        interest_rate: ruleToAdd.interestRate,
+        interest_type: ruleToAdd.interestType,
+      })
+      
       const { error: insertError } = await supabase
         .from("interest_rules")
         .insert({
@@ -160,8 +169,10 @@ export default function BusinessRulesPage() {
           max_installments: ruleToAdd.maxInstallments,
           interest_rate: ruleToAdd.interestRate,
           interest_type: ruleToAdd.interestType,
+          is_active: true,
         })
       
+      console.log("[BusinessRules] Insert result:", insertError)
       if (insertError) throw insertError
       
       setMessage({ type: 'success', text: 'Faixa adicionada com sucesso!' })
