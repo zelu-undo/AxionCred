@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import { showErrorToast, showSuccessToast } from "@/lib/toast"
 
 interface Address {
   cep: string
@@ -80,6 +81,10 @@ export default function CustomersPage() {
         state: "",
       })
       refetch()
+      showSuccessToast("Cliente criado com sucesso!")
+    },
+    onError: (error) => {
+      showErrorToast(error.message || "Erro ao criar cliente")
     },
   })
 
@@ -175,15 +180,21 @@ export default function CustomersPage() {
             </div>
           ) : error ? (
             <div className="py-8 text-center">
-              <p className="text-red-500 font-medium">Erro ao carregar clientes</p>
-              <p className="text-gray-500 text-sm mt-1">{error.message}</p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => refetch()}
-              >
-                Tentar novamente
-              </Button>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
+                <p className="text-red-800 font-medium">Não foi possível carregar os clientes</p>
+                <p className="text-red-600 text-sm mt-1">
+                  {error.message?.includes("Unauthorized") || error.message?.includes("UNAUTHORIZED")
+                    ? "Você não tem permissão para acessar esta funcionalidade. Verifique se seu e-mail foi confirmado."
+                    : "Tente novamente mais tarde ou entre em contato com o suporte."}
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4 bg-white"
+                  onClick={() => refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
             </div>
           ) : (
             <>

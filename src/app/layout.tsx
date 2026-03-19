@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,6 +28,7 @@ export default function RootLayout({
           <I18nProvider>
             <AuthProvider>
               {children}
+              <Toaster />
             </AuthProvider>
           </I18nProvider>
         </TRPCProvider>
