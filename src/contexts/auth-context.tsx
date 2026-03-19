@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { createClient } from "@/lib/supabase"
 
-type User = {
+type AppUser = {
   id: string
   email: string
   name: string
@@ -12,7 +13,7 @@ type User = {
 }
 
 type AuthContextType = {
-  user: User | null
+  user: AppUser | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>
@@ -25,23 +26,78 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
+  const supabase = createClient()
 
   useEffect(() => {
-    // Check for stored session
-    const storedUser = localStorage.getItem("axion_user")
-    if (storedUser) {
+    // Check current session
+    const checkSession = async () => {
       try {
-        setUser(JSON.parse(storedUser))
-      } catch {
-        localStorage.removeItem("axion_user")
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          // Get user data from our users table
+          const { data: userData } = await supabase
+            .from("users")
+            .select("id, email, name, role, tenant_id")
+            .eq("id", session.user.id)
+            .single()
+
+          if (userData) {
+            const appUser: AppUser = {
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              role: userData.role || "operator",
+              tenantId: userData.tenant_id
+            }
+            setUser(appUser)
+            localStorage.setItem("axion_user", JSON.stringify(appUser))
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error)
+      } finally {
+        setLoading(false)
       }
     }
-    setLoading(false)
-  }, [])
+
+    checkSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("id, email, name, role, tenant_id")
+          .eq("id", session.user.id)
+          .single()
+
+        if (userData) {
+          const appUser: AppUser = {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role || "operator",
+            tenantId: userData.tenant_id
+          }
+          setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
+        }
+      } else {
+        setUser(null)
+        localStorage.removeItem("axion_user")
+      }
+      setLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
 
   // Protect routes - redirect to login if not authenticated
   useEffect(() => {
@@ -56,20 +112,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, loading, pathname, router])
 
-  const signIn = async (email: string, _password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      // In demo mode, accept any login and create a user session
-      // The tRPC will validate against the database in real scenarios
-      const loggedUser: User = {
-        id: "00000000-0000-0000-0000-000000000001",
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        name: "Demo Usuário",
-        role: "owner",
-        tenantId: "00000000-0000-0000-0000-000000000001"
+        password
+      })
+
+      if (error) {
+        return { error: error }
       }
-      
-      localStorage.setItem("axion_user", JSON.stringify(loggedUser))
-      setUser(loggedUser)
+
+      if (data.user) {
+        // Get user data from our users table
+        const { data: userData } = await supabase
+          .from("users")
+          .select("id, email, name, role, tenant_id")
+          .eq("id", data.user.id)
+          .single()
+
+        if (userData) {
+          const appUser: AppUser = {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role || "operator",
+            tenantId: userData.tenant_id
+          }
+          setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
+        }
+      }
+
       router.push("/dashboard")
       return { error: null }
     } catch (error) {
@@ -77,19 +151,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, _password: string, name?: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
-      // In demo mode, treat sign up like sign in
-      const newUser: User = {
-        id: "00000000-0000-0000-0000-000000000001",
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name: name || email.split("@")[0],
-        role: "owner",
-        tenantId: "00000000-0000-0000-0000-000000000001"
+        password,
+        options: {
+          data: {
+            name: name || email.split("@")[0]
+          }
+        }
+      })
+
+      if (error) {
+        return { error: error }
       }
-      
-      localStorage.setItem("axion_user", JSON.stringify(newUser))
-      setUser(newUser)
+
+      if (data.user) {
+        // Create tenant for new user
+        const { data: tenantData } = await supabase
+          .from("tenants")
+          .insert({
+            name: name || email.split("@")[0],
+            slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "")
+          })
+          .select()
+          .single()
+
+        const tenantId = tenantData?.id || ""
+
+        // Create user in our users table
+        await supabase.from("users").insert({
+          id: data.user.id,
+          email: data.user.email,
+          name: name || email.split("@")[0],
+          role: "owner",
+          tenant_id: tenantId
+        })
+
+        const appUser: AppUser = {
+          id: data.user.id,
+          email: data.user.email!,
+          name: name || email.split("@")[0],
+          role: "owner",
+          tenantId
+        }
+        setUser(appUser)
+        localStorage.setItem("axion_user", JSON.stringify(appUser))
+      }
+
       router.push("/dashboard")
       return { error: null }
     } catch (error) {
@@ -98,9 +208,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    localStorage.removeItem("axion_user")
-    setUser(null)
-    router.push("/login")
+    try {
+      await supabase.auth.signOut()
+      localStorage.removeItem("axion_user")
+      setUser(null)
+      router.push("/login")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    }
   }
 
   return (

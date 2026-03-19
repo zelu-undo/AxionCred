@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TrendingUp } from "lucide-react"
 
 export default function RegisterPage() {
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -23,6 +24,12 @@ export default function RegisterPage() {
     setIsLoading(true)
     setError(null)
 
+    if (!name.trim()) {
+      setError("Por favor, insira seu nome")
+      setIsLoading(false)
+      return
+    }
+
     if (password !== confirmPassword) {
       setError("As senhas não coincidem")
       setIsLoading(false)
@@ -35,13 +42,12 @@ export default function RegisterPage() {
       return
     }
 
-    const { error } = await signUp(email, password)
+    const { error } = await signUp(email, password, name)
 
     if (error) {
       setError(error.message)
-      setIsLoading(false)
     }
-    // On success, signUp already redirects to dashboard
+    setIsLoading(false)
   }
 
   return (
@@ -67,6 +73,20 @@ export default function RegisterPage() {
                 </div>
               )}
               
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  Nome Completo
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Seu nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-gray-700">
                   E-mail

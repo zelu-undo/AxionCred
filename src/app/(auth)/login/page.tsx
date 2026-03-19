@@ -26,9 +26,8 @@ export default function LoginPage() {
 
     if (error) {
       setError(error.message)
-      setIsLoading(false)
     }
-    // On success, signIn already redirects
+    setIsLoading(false)
   }
 
   return (
