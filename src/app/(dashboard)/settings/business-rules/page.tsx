@@ -17,10 +17,15 @@ interface InterestRule {
 }
 
 interface SystemConfig {
+  // Multa de Atraso - opcional, cobra uma vez no primeiro dia de atraso
   lateFeeType: 'percentage' | 'fixed' | null;
   lateFeeValue: number;
-  lateInterestType: 'daily' | 'monthly';
+  
+  // Juros de Atraso - opcional, cobra continuamente (diário/semanal/mensal)
+  lateInterestType: 'percentage' | 'fixed' | null;
   lateInterestValue: number;
+  lateInterestChargeType: 'daily' | 'weekly' | 'monthly';
+  
   renegotiationInterestRate: number;
   renegotiationMaxInstallments: number;
 }
@@ -40,8 +45,9 @@ export default function BusinessRulesPage() {
   
   const [interestRules, setInterestRules] = useState<InterestRule[]>([])
   const [config, setConfig] = useState<SystemConfig>({
-    lateFeeType: 'percentage', lateFeeValue: 2,
-    lateInterestType: 'monthly', lateInterestValue: 1, renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
+    lateFeeType: null, lateFeeValue: 0,
+    lateInterestType: null, lateInterestValue: 0, lateInterestChargeType: 'daily',
+    renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -86,12 +92,18 @@ export default function BusinessRulesPage() {
         if (lateFeeData) {
           // Handle optional late fee (can be none)
           const hasLateFee = lateFeeData.percentage !== null || lateFeeData.fixed_fee !== null
+          // Handle optional late interest (can be none)
+          const hasLateInterest = lateFeeData.late_interest_value !== null && lateFeeData.late_interest_value > 0
+          
           setConfig(prev => ({
             ...prev,
+            // Multa de Atraso - uma vez no primeiro dia de atraso
             lateFeeType: hasLateFee ? (lateFeeData.percentage ? 'percentage' : 'fixed') : null,
             lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
-            lateInterestType: lateFeeData.monthly_interest ? 'monthly' : 'daily',
-            lateInterestValue: lateFeeData.monthly_interest || lateFeeData.daily_interest || 0
+            // Juros de Atraso - cobrado continuamente
+            lateInterestType: hasLateInterest ? (lateFeeData.late_interest_type === 'fixed' ? 'fixed' : 'percentage') : null,
+            lateInterestValue: lateFeeData.late_interest_value || 0,
+            lateInterestChargeType: lateFeeData.late_interest_charge_type || 'daily'
           }))
         }
       } catch (err: any) {
@@ -255,17 +267,22 @@ export default function BusinessRulesPage() {
         .eq("tenant_id", user?.tenantId)
         .single()
       
-      // Handle optional late fee
+      // Handle optional late fee (multa)
       const lateFeeEnabled = config.lateFeeType && config.lateFeeType !== 'none'
+      // Handle optional late interest (juros)
+      const lateInterestEnabled = config.lateInterestType && config.lateInterestType !== 'none'
       
       if (existing) {
         const { error: updateError } = await supabase
           .from("late_fee_config")
           .update({
+            // Multa de Atraso - uma vez no primeiro dia de atraso
             percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
             fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
-            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
-            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+            // Juros de Atraso - cobrado continuamente
+            late_interest_type: lateInterestEnabled ? config.lateInterestType : null,
+            late_interest_value: lateInterestEnabled ? config.lateInterestValue : null,
+            late_interest_charge_type: lateInterestEnabled ? config.lateInterestChargeType : null,
           })
           .eq("tenant_id", user?.tenantId)
         
@@ -275,10 +292,13 @@ export default function BusinessRulesPage() {
           .from("late_fee_config")
           .insert({
             tenant_id: user?.tenantId,
+            // Multa de Atraso - uma vez no primeiro dia de atraso
             percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
             fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
-            monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : null,
-            daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : null,
+            // Juros de Atraso - cobrado continuamente
+            late_interest_type: lateInterestEnabled ? config.lateInterestType : null,
+            late_interest_value: lateInterestEnabled ? config.lateInterestValue : null,
+            late_interest_charge_type: lateInterestEnabled ? config.lateInterestChargeType : null,
           })
         
         if (insertError) throw insertError
@@ -427,47 +447,77 @@ export default function BusinessRulesPage() {
       {/* Late Fee Section */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Configuração de Juros por Atraso</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Multa de Atraso - Opcional */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Multa de Atraso</label>
-            <Select value={config.lateFeeType || 'none'} onValueChange={(v: any) => setConfig({...config, lateFeeType: v === 'none' ? null : v, lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
-              <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma</SelectItem>
-                <SelectItem value="percentage">Percentual (%)</SelectItem>
-                <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Valor da Multa de Atraso</label>
-            <input 
-              type="number" 
-              className="border p-2 rounded w-full" 
-              value={config.lateFeeValue || ''} 
-              onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})}
-              placeholder={config.lateFeeType === 'percentage' ? "Ex: 10" : "Ex: 50,00"}
-              disabled={!config.lateFeeType || config.lateFeeType === 'none'}
-            />
-          </div>
-          {/* Juros por Atraso */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Juros por Atraso</label>
-            <Select value={config.lateInterestType} onValueChange={(v: any) => setConfig({...config, lateInterestType: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Diário</SelectItem>
-                <SelectItem value="monthly">Mensal</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Juros por Atraso (%)</label>
-            <input type="number" className="border p-2 rounded w-full" value={config.lateInterestValue} onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})} />
+        
+        {/* Multa de Atraso - Uma vez no primeiro dia de atraso */}
+        <div className="mb-6 pb-6 border-b">
+          <h3 className="text-lg font-medium mb-4">Multa de Atraso (cobrada uma vez)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tipo</label>
+              <Select value={config.lateFeeType || 'none'} onValueChange={(v: any) => setConfig({...config, lateFeeType: v === 'none' ? null : v, lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="percentage">Percentual (%)</SelectItem>
+                  <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Valor</label>
+              <input 
+                type="number" 
+                className="border p-2 rounded w-full" 
+                value={config.lateFeeValue || ''} 
+                onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})}
+                placeholder={config.lateFeeType === 'percentage' ? "Ex: 10" : "Ex: 50,00"}
+                disabled={!config.lateFeeType || config.lateFeeType === 'none'}
+              />
+            </div>
           </div>
         </div>
-        <button onClick={handleSaveLateFee} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
+
+        {/* Juros de Atraso - Cobrados continuamente */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Juros de Atraso (cobrados continuamente)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tipo</label>
+              <Select value={config.lateInterestType || 'none'} onValueChange={(v: any) => setConfig({...config, lateInterestType: v === 'none' ? null : v, lateInterestValue: v === 'none' ? 0 : config.lateInterestValue})}>
+                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  <SelectItem value="percentage">Percentual (%)</SelectItem>
+                  <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Valor</label>
+              <input 
+                type="number" 
+                className="border p-2 rounded w-full" 
+                value={config.lateInterestValue || ''} 
+                onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})}
+                placeholder={config.lateInterestType === 'percentage' ? "Ex: 1" : "Ex: 5,00"}
+                disabled={!config.lateInterestType || config.lateInterestType === 'none'}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Cobrar</label>
+              <Select value={config.lateInterestChargeType} onValueChange={(v: any) => setConfig({...config, lateInterestChargeType: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Diariamente</SelectItem>
+                  <SelectItem value="weekly">Semanalmente</SelectItem>
+                  <SelectItem value="monthly">Mensalmente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        
+        <button onClick={handleSaveLateFee} className="mt-6 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Salvar Configurações</button>
       </div>
     </div>
   );
