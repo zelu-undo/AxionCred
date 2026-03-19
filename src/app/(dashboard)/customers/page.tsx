@@ -307,7 +307,7 @@ export default function CustomersPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600" onClick={() => {
                                 if (confirm("Tem certeza que deseja excluir este cliente?")) {
-                                  deleteMutation.mutate(customer.id)
+                                  deleteMutation.mutate({ id: customer.id })
                                 }
                               }}>
                                 <Trash2 className="mr-2 h-4 w-4" />
