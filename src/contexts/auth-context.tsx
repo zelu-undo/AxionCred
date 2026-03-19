@@ -252,64 +252,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Get user data from our users table
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("id, email, name, role, tenant_id")
-          .eq("id", data.user.id)
-          .single()
-
-        // If users table doesn't exist or has error, create a basic user from Auth
-        if (userError || !userData) {
-          console.warn("Users table not available or user not found, using Auth data")
-          
-          const appUser: AppUser = {
-            id: data.user.id,
-            email: data.user.email!,
-            name: data.user.user_metadata?.name || email.split("@")[0],
-            role: "owner",
-            tenantId: "",
-            plan: "starter"
-          }
-          setUser(appUser)
-          localStorage.setItem("axion_user", JSON.stringify(appUser))
-          
-          if (typeof window !== "undefined") {
-            router.push("/dashboard")
-          }
-          return { error: null }
+        // Use user data from Supabase Auth directly
+        // The user_metadata contains the name provided during signup
+        const appUser: AppUser = {
+          id: data.user.id,
+          email: data.user.email!,
+          name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
+          role: "owner",
+          tenantId: "",
+          plan: "starter"
         }
-
-        if (userData) {
-          // Get tenant data for plan info
-          let plan = "starter"
-          if (userData.tenant_id) {
-            const { data: tenantData } = await supabase
-              .from("tenants")
-              .select("plan")
-              .eq("id", userData.tenant_id)
-              .single()
-            if (tenantData) {
-              plan = tenantData.plan || "starter"
-            }
-          }
-
-          const appUser: AppUser = {
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            role: userData.role || "operator",
-            tenantId: userData.tenant_id,
-            plan
-          }
-          setUser(appUser)
-          localStorage.setItem("axion_user", JSON.stringify(appUser))
-        }
+        
+        setUser(appUser)
+        localStorage.setItem("axion_user", JSON.stringify(appUser))
 
         if (typeof window !== "undefined") {
           router.push("/dashboard")
         }
-        return { error: null }
+      }
+
+      return { error: null }
     } catch (error) {
       return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
