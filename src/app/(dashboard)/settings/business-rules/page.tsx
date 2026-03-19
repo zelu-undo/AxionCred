@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trash2, Plus, Edit2, Save, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { trpc } from "@/trpc/client";
+import { useAuth } from "@/contexts/auth-context";
 
 interface InterestRule {
   id: string;
@@ -33,16 +35,100 @@ function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, exclude
 }
 
 export default function BusinessRulesPage() {
-  const [interestRules, setInterestRules] = useState<InterestRule[]>([
-    { id: '1', name: 'Curto Prazo', minInstallments: 1, maxInstallments: 5, interestRate: 50, interestType: 'monthly', isActive: true },
-    { id: '2', name: 'Médio Prazo', minInstallments: 6, maxInstallments: 10, interestRate: 80, interestType: 'monthly', isActive: true },
-    { id: '3', name: 'Longo Prazo', minInstallments: 11, maxInstallments: 24, interestRate: 100, interestType: 'monthly', isActive: true },
-  ]);
+  const { user, loading: authLoading } = useAuth()
+  const utils = trpc.useUtils()
   
+  // Fetch interest rules from database
+  const { data: interestRulesData, isLoading: rulesLoading } = trpc.businessRules.listInterestRules.useQuery(undefined, {
+    enabled: !!user
+  })
+  
+  // Fetch late fee config
+  const { data: lateFeeConfig } = trpc.businessRules.getLateFeeConfig.useQuery(undefined, {
+    enabled: !!user
+  })
+  
+  // Fetch loan config
+  const { data: loanConfig } = trpc.businessRules.getLoanConfig.useQuery(undefined, {
+    enabled: !!user
+  })
+  
+  // Mutations for CRUD operations
+  const createMutation = trpc.businessRules.createInterestRule.useMutation({
+    onSuccess: () => {
+      utils.businessRules.listInterestRules.invalidate()
+      setMessage({ type: 'success', text: 'Faixa adicionada com sucesso!' })
+      setTimeout(() => setMessage(null), 3000)
+    },
+    onError: (error) => {
+      setMessage({ type: 'error', text: error.message })
+    }
+  })
+  
+  const updateMutation = trpc.businessRules.updateInterestRule.useMutation({
+    onSuccess: () => {
+      utils.businessRules.listInterestRules.invalidate()
+      setMessage({ type: 'success', text: 'Faixa atualizada com sucesso!' })
+      setTimeout(() => setMessage(null), 3000)
+    },
+    onError: (error) => {
+      setMessage({ type: 'error', text: error.message })
+    }
+  })
+  
+  const deleteMutation = trpc.businessRules.deleteInterestRule.useMutation({
+    onSuccess: () => {
+      utils.businessRules.listInterestRules.invalidate()
+      setMessage({ type: 'success', text: 'Faixa excluída com sucesso!' })
+      setTimeout(() => setMessage(null), 3000)
+    },
+    onError: (error) => {
+      setMessage({ type: 'error', text: error.message })
+    }
+  })
+  
+  const updateLateFeeMutation = trpc.businessRules.updateLateFeeConfig.useMutation({
+    onSuccess: () => {
+      setMessage({ type: 'success', text: 'Configurações de multa salvas!' })
+      setTimeout(() => setMessage(null), 3000)
+    },
+    onError: (error) => {
+      setMessage({ type: 'error', text: error.message })
+    }
+  })
+
+  const [interestRules, setInterestRules] = useState<InterestRule[]>([])
   const [config, setConfig] = useState<SystemConfig>({
     lateFeeType: 'percentage', lateFeeValue: 2,
     lateInterestType: 'monthly', lateInterestValue: 1, renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
-  });
+  })
+
+  // Update local state when data is loaded from database
+  useEffect(() => {
+    if (interestRulesData) {
+      setInterestRules(interestRulesData.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        minInstallments: r.min_installments,
+        maxInstallments: r.max_installments,
+        interestRate: r.interest_rate,
+        interestType: r.interest_type || 'monthly',
+        isActive: r.is_active !== false
+      })))
+    }
+  }, [interestRulesData])
+
+  useEffect(() => {
+    if (lateFeeConfig) {
+      setConfig(prev => ({
+        ...prev,
+        lateFeeType: lateFeeConfig.percentage ? 'percentage' : 'fixed',
+        lateFeeValue: lateFeeConfig.percentage || lateFeeConfig.fixed_fee || 0,
+        lateInterestType: lateFeeConfig.monthly_interest ? 'monthly' : 'daily',
+        lateInterestValue: lateFeeConfig.monthly_interest || lateFeeConfig.daily_interest || 0
+      }))
+    }
+  }, [lateFeeConfig])
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -50,13 +136,13 @@ export default function BusinessRulesPage() {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newRule, setNewRule] = useState<Partial<InterestRule>>({});
 
-  const handleSave = () => {
-    for (const rule of interestRules) {
-      const error = validateNoOverlap(interestRules, rule, rule.id);
-      if (error) { setMessage({ type: 'error', text: error }); return; }
-    }
-    setMessage({ type: 'success', text: 'Configurações salvas!' });
-    setTimeout(() => setMessage(null), 3000);
+  const handleSaveLateFee = () => {
+    updateLateFeeMutation.mutate({
+      percentage: config.lateFeeType === 'percentage' ? config.lateFeeValue : undefined,
+      fixed_fee: config.lateFeeType === 'fixed' ? config.lateFeeValue : undefined,
+      monthly_interest: config.lateInterestType === 'monthly' ? config.lateInterestValue : undefined,
+      daily_interest: config.lateInterestType === 'daily' ? config.lateInterestValue : undefined,
+    })
   };
 
   const handleAddNew = () => {
@@ -74,12 +160,23 @@ export default function BusinessRulesPage() {
     };
     const error = validateNoOverlap(interestRules, ruleToAdd);
     if (error) { setMessage({ type: 'error', text: error }); return; }
-    setInterestRules([...interestRules, ruleToAdd]); setNewRule({}); setIsAddingNew(false);
-    setMessage({ type: 'success', text: 'Faixa adicionada!' }); setTimeout(() => setMessage(null), 3000);
+    
+    // Save to database
+    createMutation.mutate({
+      name: ruleToAdd.name,
+      min_installments: ruleToAdd.minInstallments,
+      max_installments: ruleToAdd.maxInstallments,
+      interest_rate: ruleToAdd.interestRate,
+      interest_type: ruleToAdd.interestType
+    })
+    
+    setNewRule({}); setIsAddingNew(false);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Excluir esta faixa?')) { setInterestRules(interestRules.filter(r => r.id !== id)); }
+    if (confirm('Excluir esta faixa?')) { 
+      deleteMutation.mutate({ id })
+    }
   };
 
   const handleEdit = (rule: InterestRule) => { setEditingId(rule.id); setEditingRule({ ...rule }); };
@@ -97,11 +194,36 @@ export default function BusinessRulesPage() {
     };
     const error = validateNoOverlap(interestRules, ruleToUpdate, editingId!);
     if (error) { setMessage({ type: 'error', text: error }); return; }
-    setInterestRules(interestRules.map(r => r.id === editingId ? ruleToUpdate : r)); setEditingId(null); setEditingRule({});
+    
+    // Update in database
+    updateMutation.mutate({
+      id: editingId!,
+      name: ruleToUpdate.name,
+      min_installments: ruleToUpdate.minInstallments,
+      max_installments: ruleToUpdate.maxInstallments,
+      interest_rate: ruleToUpdate.interestRate,
+      interest_type: ruleToUpdate.interestType,
+      is_active: ruleToUpdate.isActive
+    })
+    
+    setEditingId(null); setEditingRule({});
   };
 
   const handleCancelEdit = () => { setEditingId(null); setEditingRule({}); setIsAddingNew(false); setNewRule({}); };
-  const toggleRuleActive = (id: string) => { setInterestRules(interestRules.map(r => r.id === id ? { ...r, isActive: !r.isActive } : r)); };
+  const toggleRuleActive = (rule: InterestRule) => { 
+    updateMutation.mutate({
+      id: rule.id,
+      is_active: !rule.isActive
+    })
+  };
+
+  if (authLoading || rulesLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -165,7 +287,7 @@ export default function BusinessRulesPage() {
               <div className="text-sm text-gray-600">
                 {rule.interestType === 'fixed' ? 'Fixo' : rule.interestType === 'weekly' ? 'Semanal' : 'Mensal'}
               </div>
-              <div><button onClick={() => toggleRuleActive(rule.id)} className={`px-2 py-1 rounded text-xs ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button></div>
+              <div><button onClick={() => toggleRuleActive(rule)} className={`px-2 py-1 rounded text-xs ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200'}`}>{rule.isActive ? 'Ativo' : 'Inativo'}</button></div>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(rule)} className="p-1 text-blue-600"><Edit2 size={18} /></button>
                 <button onClick={() => handleDelete(rule.id)} className="p-1 text-red-600"><Trash2 size={18} /></button>
@@ -228,9 +350,11 @@ export default function BusinessRulesPage() {
         </div>
       </div>
 
-      <button onClick={handleSave} className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
-        Salvar Configurações
-      </button>
+      <div className="flex gap-4">
+        <button onClick={handleSaveLateFee} className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+          Salvar Multa por Atraso
+        </button>
+      </div>
     </div>
   );
 }
