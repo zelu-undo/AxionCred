@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface StaffMember {
   id: string;
@@ -20,6 +21,12 @@ export default function StaffManagementPage() {
   const handleAddStaff = () => {
     setStaff([...staff, { id: String(Date.now()), name: 'Novo Funcionário', email: 'email@empresa.com', role: 'operator', status: 'active' }]);
     setMessage('Funcionário adicionado!');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleUpdateRole = (id: string, newRole: string) => {
+    setStaff(staff.map(m => m.id === id ? { ...m, role: newRole } : m));
+    setMessage('Função atualizada!');
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -56,12 +63,17 @@ export default function StaffManagementPage() {
                 <td className="px-4 py-3">{member.name}</td>
                 <td className="px-4 py-3 text-gray-600">{member.email}</td>
                 <td className="px-4 py-3">
-                  <select defaultValue={member.role} className="px-2 py-1 border rounded text-sm">
-                    <option value="admin">Administrador</option>
-                    <option value="manager">Gerente</option>
-                    <option value="operator">Operador</option>
-                    <option value="viewer">Visualizador</option>
-                  </select>
+                  <Select defaultValue={member.role} onValueChange={(value) => handleUpdateRole(member.id, value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="manager">Gerente</SelectItem>
+                      <SelectItem value="operator">Operador</SelectItem>
+                      <SelectItem value="viewer">Visualizador</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-sm ${member.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

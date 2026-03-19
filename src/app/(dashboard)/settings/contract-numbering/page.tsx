@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ContractNumberingPage() {
   const [prefix, setPrefix] = useState('CX');
@@ -29,11 +30,16 @@ export default function ContractNumberingPage() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Dígitos</label>
-            <select value={digits} onChange={(e) => setDigits(parseInt(e.target.value))} className="w-full px-3 py-2 border rounded">
-              <option value={3}>3 dígitos</option>
-              <option value={4}>4 dígitos</option>
-              <option value={5}>5 dígitos</option>
-            </select>
+            <Select value={digits.toString()} onValueChange={(value) => setDigits(parseInt(value))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 dígitos</SelectItem>
+                <SelectItem value="4">4 dígitos</SelectItem>
+                <SelectItem value="5">5 dígitos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={includeYear} onChange={(e) => setIncludeYear(e.target.checked)} className="w-5 h-5" />

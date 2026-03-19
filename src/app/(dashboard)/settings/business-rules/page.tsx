@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Trash2, Plus, Edit2, Save, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface InterestRule {
   id: string;
@@ -158,10 +159,15 @@ export default function BusinessRulesPage() {
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-4">Multa por Atraso</h2>
         <div className="flex items-center gap-4">
-          <select value={config.lateFeeType} onChange={(e) => setConfig({...config, lateFeeType: e.target.value as 'percentage' | 'fixed'})} className="px-3 py-2 border rounded">
-            <option value="percentage">Percentual</option>
-            <option value="fixed">Valor Fixo (R$)</option>
-          </select>
+          <Select value={config.lateFeeType} onValueChange={(value: 'percentage' | 'fixed') => setConfig({...config, lateFeeType: value})}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentage">Percentual</SelectItem>
+              <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+            </SelectContent>
+          </Select>
           <input type="number" value={config.lateFeeValue} onChange={(e) => setConfig({...config, lateFeeValue: parseFloat(e.target.value) || 0})} className="w-32 px-3 py-2 border rounded" min={0} step={0.01} />
           <span>{config.lateFeeType === 'percentage' ? '%' : 'R$'}</span>
         </div>
@@ -170,10 +176,15 @@ export default function BusinessRulesPage() {
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-4">Juros por Atraso</h2>
         <div className="flex items-center gap-4">
-          <select value={config.lateInterestType} onChange={(e) => setConfig({...config, lateInterestType: e.target.value as 'daily' | 'monthly'})} className="px-3 py-2 border rounded">
-            <option value="daily">Diário</option>
-            <option value="monthly">Mensal</option>
-          </select>
+          <Select value={config.lateInterestType} onValueChange={(value: 'daily' | 'monthly') => setConfig({...config, lateInterestType: value})}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Diário</SelectItem>
+              <SelectItem value="monthly">Mensal</SelectItem>
+            </SelectContent>
+          </Select>
           <input type="number" value={config.lateInterestValue} onChange={(e) => setConfig({...config, lateInterestValue: parseFloat(e.target.value) || 0})} className="w-32 px-3 py-2 border rounded" min={0} step={0.01} />
           <span>% {config.lateInterestType === 'daily' ? 'ao dia' : 'ao mês'}</span>
         </div>

@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
-import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor } from "lucide-react"
 
 // CPF formatting
 function formatCpf(value: string): string {
@@ -59,6 +60,9 @@ export default function CustomerDetailPage() {
   const [cpfError, setCpfError] = useState("")
   const [cepError, setCepError] = useState("")
   const [isCheckingCpf, setIsCheckingCpf] = useState(false)
+  const [notesLength, setNotesLength] = useState(0)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const MAX_NOTES_LENGTH = 800
   
   const [formData, setFormData] = useState({
     name: "",
@@ -275,6 +279,25 @@ export default function CustomerDetailPage() {
     return new Date(date).toLocaleString("pt-BR")
   }
 
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = "auto"
+      textarea.style.height = Math.max(100, textarea.scrollHeight) + "px"
+    }
+  }
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    if (value.length <= MAX_NOTES_LENGTH) {
+      setFormData({ ...formData, notes: value })
+      setNotesLength(value.length)
+      // Adjust height after state update
+      setTimeout(adjustTextareaHeight, 0)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -403,16 +426,16 @@ export default function CustomerDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    className="w-full border rounded-md px-3 py-2"
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  >
-                    <option value="active">Ativo</option>
-                    <option value="inactive">Inativo</option>
-                    <option value="blocked">Bloqueado</option>
-                  </select>
+                  <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="inactive">Inativo</SelectItem>
+                      <SelectItem value="blocked">Bloqueado</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             ) : (
@@ -533,12 +556,22 @@ export default function CustomerDetailPage() {
           </CardHeader>
           <CardContent>
             {isEditing ? (
-              <textarea
-                className="w-full border rounded-md p-3 min-h-[100px]"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Adicione observações sobre o cliente..."
-              />
+              <div className="space-y-2">
+                <textarea
+                  ref={textareaRef}
+                  className="w-full border border-gray-300 rounded-md p-3 min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  value={formData.notes}
+                  onChange={handleNotesChange}
+                  placeholder="Adicione observações sobre o cliente..."
+                  onFocus={adjustTextareaHeight}
+                  onInput={adjustTextareaHeight}
+                />
+                <div className="flex justify-end">
+                  <span className={`text-xs ${notesLength >= MAX_NOTES_LENGTH ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                    {notesLength}/{MAX_NOTES_LENGTH}
+                  </span>
+                </div>
+              </div>
             ) : (
               <p className="text-gray-600">{customer.notes || "Nenhuma observação"}</p>
             )}
