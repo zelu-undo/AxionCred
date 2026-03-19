@@ -90,3 +90,7 @@ Import traces:
 ⚠ Fast Refresh had to perform a full reload when ./src/contexts/auth-context.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
 ✓ Compiled in 44ms
  GET /register 200 in 269ms (compile: 92ms, render: 176ms)
+⚠ Fast Refresh had to perform a full reload when ./src/contexts/auth-context.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+✓ Compiled in 39ms
+ GET /register 200 in 342ms (compile: 119ms, render: 223ms)
+✓ Compiled in 39ms

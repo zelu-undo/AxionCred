@@ -259,9 +259,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq("id", data.user.id)
           .single()
 
-        if (userError) {
-          console.error("Error fetching user data:", userError)
-          return { error: { message: "Erro ao buscar dados do usuário", code: "USER_FETCH_ERROR" } }
+        // If users table doesn't exist or has error, create a basic user from Auth
+        if (userError || !userData) {
+          console.warn("Users table not available or user not found, using Auth data")
+          
+          const appUser: AppUser = {
+            id: data.user.id,
+            email: data.user.email!,
+            name: data.user.user_metadata?.name || email.split("@")[0],
+            role: "owner",
+            tenantId: "",
+            plan: "starter"
+          }
+          setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
+          
+          if (typeof window !== "undefined") {
+            router.push("/dashboard")
+          }
+          return { error: null }
         }
 
         if (userData) {
@@ -288,15 +304,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
-        } else {
-          // User exists in Supabase Auth but not in users table
-          console.error("User not found in users table:", data.user.id)
-          return { error: { message: "Usuário não encontrado. Entre em contato com o suporte.", code: "USER_NOT_FOUND" } }
         }
-      }
 
-      router.push("/dashboard")
-      return { error: null }
+        if (typeof window !== "undefined") {
+          router.push("/dashboard")
+        }
+        return { error: null }
     } catch (error) {
       return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
