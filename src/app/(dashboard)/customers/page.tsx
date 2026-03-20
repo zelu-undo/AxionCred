@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin } from "lucide-react"
+import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin, Users } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ import {
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
+import { motion } from "framer-motion"
 
 interface Address {
   cep: string
@@ -275,16 +277,25 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("customers.title")}</h1>
           <p className="text-gray-500">{t("customers.subtitle")}</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("customers.newCustomer")}
-        </Button>
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <Button 
+            onClick={() => setIsCreateOpen(true)} 
+            className="bg-[#22C55E] hover:bg-[#4ADE80] w-full sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t("customers.newCustomer")}
+          </Button>
+        </motion.div>
       </div>
 
       <Card>
@@ -337,60 +348,70 @@ export default function CustomersPage() {
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("common.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
-                    {customers.map((customer) => (
-                      <tr key={customer.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium">{customer.name}</p>
+                  <tbody className="divide-y divide-gray-50">
+                    {customers.map((customer, index) => (
+                      <motion.tr 
+                        key={customer.id} 
+                        className="hover:bg-gradient-to-r hover:from-gray-50 hover:to-white transition-all duration-200 group cursor-pointer"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        whileHover={{ scale: 1.005 }}
+                      >
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#1E3A8A]/10 to-[#1E3A8A]/5 flex items-center justify-center text-[#1E3A8A] font-bold shadow-sm">
+                              {customer.name.charAt(0)}
+                            </div>
+                            <p className="font-semibold text-gray-900">{customer.name}</p>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Phone className="h-3 w-3" />
+                              <Phone className="h-3 w-3 text-[#22C55E]" />
                               {customer.phone}
                             </div>
                             {customer.email && (
                               <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Mail className="h-3 w-3" />
+                                <Mail className="h-3 w-3 text-blue-500" />
                                 {customer.email}
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                             customer.status === "active" 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-gray-100 text-gray-800"
+                              ? "bg-gradient-to-r from-green-100 to-green-50 text-green-700" 
+                              : "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700"
                           }`}>
                             {customer.status === "active" ? t("customers.active") : t("customers.inactive")}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-4 text-sm font-semibold text-gray-900">
                           {customer.credit_limit && customer.credit_limit > 0 
                             ? `R$ ${customer.credit_limit.toLocaleString("pt-BR")}`
                             : "-"
                           }
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-4 text-right">
                           <DropdownMenu open={openDropdown === customer.id} onOpenChange={(open) => setOpenDropdown(open ? customer.id : null)}>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => setOpenDropdown(customer.id)}>
+                              <Button variant="ghost" size="icon" className="hover:bg-gray-100 h-8 w-8 rounded-lg">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                {t("customers.viewDetails")}
+                            <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-lg border-gray-100">
+                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)} className="hover:bg-gray-50 rounded-lg cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4 text-blue-600" />
+                                <span className="text-gray-700">{t("customers.viewDetails")}</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}?edit=true`)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                {t("common.edit")}
+                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}?edit=true`)} className="hover:bg-gray-50 rounded-lg cursor-pointer">
+                                <Edit className="mr-2 h-4 w-4 text-[#22C55E]" />
+                                <span className="text-gray-700">{t("common.edit")}</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600" onClick={() => {
+                              <DropdownMenuItem className="text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" onClick={() => {
                                 if (confirm("Tem certeza que deseja excluir este cliente?")) {
                                   deleteMutation.mutate({ id: customer.id })
                                 }
@@ -401,16 +422,20 @@ export default function CustomersPage() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               
               {customers.length === 0 && (
-                <div className="py-8 text-center text-gray-500">
-                  {t("customers.noCustomersFound")}
-                </div>
+                <EmptyState
+                  icon={Users}
+                  title={t("customers.noCustomersFound")}
+                  description="Comece adicionando seu primeiro cliente para gerenciar seus empréstimos."
+                  actionLabel="Adicionar Cliente"
+                  onAction={() => setIsCreateOpen(true)}
+                />
               )}
 
               <div className="mt-4 text-sm text-gray-500">
@@ -586,6 +611,6 @@ export default function CustomersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   )
 }

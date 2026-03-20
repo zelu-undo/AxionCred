@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Calculator, CheckCircle, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, DollarSign, Calendar, AlertCircle, Info } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface InstallmentPreview {
   number: number
@@ -193,24 +194,64 @@ export default function NewLoanPage() {
 
   if (isSuccess) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Empréstimo Criado!</h2>
-            <p className="text-gray-500">O empréstimo foi criado com sucesso.</p>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex items-center justify-center min-h-[60vh]"
+      >
+        <Card className="w-full max-w-md border-2 border-green-200 shadow-xl shadow-green-100">
+          <CardContent className="pt-8 pb-8 text-center">
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-green-200 shadow-lg"
+            >
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </motion.div>
+            <motion.h2 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-2xl font-bold text-gray-900 mb-2"
+            >
+              Empréstimo Criado!
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-gray-500"
+            >
+              O empréstimo foi criado com sucesso.
+            </motion.p>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-4 text-sm text-green-600"
+            >
+              Redirecionando para lista de empréstimos...
+            </motion.div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-6"
+    >
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => router.back()}
+          className="hover:bg-gray-100 hover:scale-105 transition-all"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
@@ -220,18 +261,23 @@ export default function NewLoanPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Dados do Empréstimo</CardTitle>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="border-b border-gray-50">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-[#22C55E]/10">
+                <DollarSign className="h-5 w-5 text-[#22C55E]" />
+              </div>
+              Dados do Empréstimo
+            </CardTitle>
             <CardDescription>Preencha os dados do empréstimo</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Searchable Customer Select */}
               <div className="space-y-2">
-                <Label>Cliente *</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Label className="text-sm font-semibold text-gray-700">Cliente *</Label>
+                <div className="relative group">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#22C55E] transition-colors" />
                   <Input
                     placeholder="Buscar por nome ou CPF..."
                     value={customerSearch}
@@ -241,41 +287,61 @@ export default function NewLoanPage() {
                     }}
                     onFocus={() => setShowDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                    className="pl-9"
+                    className="pl-9 bg-gray-50/50 border-gray-100 focus:bg-white focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all"
                   />
                 </div>
                 {/* Show dropdown only when focused and has results */}
-                {showDropdown && customerSearch && customers.length > 0 && (
-                  <div className="border rounded-md max-h-48 overflow-y-auto absolute z-10 bg-white w-[calc(100%-2rem)]">
-                    {loadingCustomers ? (
-                      <div className="p-2 text-center text-gray-500">
-                        <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                        Carregando...
-                      </div>
-                    ) : (
-                      customers.map((customer: any) => (
-                        <div
-                          key={customer.id}
-                          className={`p-2 cursor-pointer hover:bg-[#22C55E]50 ${
-                            formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
-                          }`}
-                          onClick={() => {
-                            setFormData({ ...formData, customerId: customer.id })
-                            setCustomerSearch(customer.name)
-                            setShowDropdown(false)
-                          }}
-                        >
-                          <div className="font-medium">{customer.name}</div>
-                          <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                <AnimatePresence>
+                  {showDropdown && customerSearch && customers.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="border rounded-xl max-h-56 overflow-y-auto absolute z-20 bg-white w-full shadow-xl"
+                    >
+                      {loadingCustomers ? (
+                        <div className="p-4 text-center text-gray-500">
+                          <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+                          Carregando...
                         </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                      ) : (
+                        customers.map((customer: any) => (
+                          <motion.div
+                            key={customer.id}
+                            whileHover={{ backgroundColor: "rgba(34, 197, 94, 0.1)" }}
+                            className={`p-3 cursor-pointer border-b border-gray-50 last:border-0 transition-colors ${
+                              formData.customerId === customer.id ? "bg-[#22C55E]/5" : ""
+                            }`}
+                            onClick={() => {
+                              setFormData({ ...formData, customerId: customer.id })
+                              setCustomerSearch(customer.name)
+                              setShowDropdown(false)
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#1E3A8A]/10 to-[#1E3A8A]/5 flex items-center justify-center text-[#1E3A8A] font-bold">
+                                {customer.name.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-900">{customer.name}</div>
+                                <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {formData.customerId && !showDropdown && (
-                  <div className="flex items-center gap-2">
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-2"
+                  >
                     <div className="text-sm text-green-600 flex items-center gap-1">
-                      ✓ Cliente selecionado
+                      <CheckCircle className="h-4 w-4" />
+                      Cliente selecionado
                     </div>
                     <button 
                       type="button"
@@ -287,158 +353,225 @@ export default function NewLoanPage() {
                     >
                       (Alterar)
                     </button>
-                  </div>
+                  </motion.div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label>Valor Principal (R$) *</Label>
-                <Input
-                  type="text"
-                  placeholder="0,00"
-                  value={formData.principal}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9]/g, "")
-                    const formatted = value ? (parseInt(value) / 100).toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }) : ""
-                    setFormData({ ...formData, principal: formatted })
-                  }}
-                />
+                <Label className="text-sm font-semibold text-gray-700">Valor Principal (R$) *</Label>
+                <div className="relative group">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    R$
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="0,00"
+                    value={formData.principal}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "")
+                      const formatted = value ? (parseInt(value) / 100).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }) : ""
+                      setFormData({ ...formData, principal: formatted })
+                    }}
+                    className="pl-10 bg-gray-50/50 border-gray-100 focus:bg-white focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all text-lg font-semibold"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Número de Parcelas</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={formData.installments}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1
-                      setFormData({ ...formData, installments: String(value) })
-                    }}
-                    onBlur={() => {
-                      // Auto-adjust to nearest valid range
-                      const rules = businessRulesData?.interestRules || []
-                      const num = parseInt(formData.installments)
-                      
-                      if (rules.length > 0) {
-                        // Find ranges and adjust to nearest valid
-                        const ranges = rules.map((r: any) => ({
-                          min: r.min_installments,
-                          max: r.max_installments
-                        }))
+                  <Label className="text-sm font-semibold text-gray-700">Número de Parcelas</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.installments}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1
+                        setFormData({ ...formData, installments: String(value) })
+                      }}
+                      onBlur={() => {
+                        // Auto-adjust to nearest valid range
+                        const rules = businessRulesData?.interestRules || []
+                        const num = parseInt(formData.installments)
                         
-                        // Check if within any range
-                        const inRange = ranges.some(r => num >= r.min && num <= r.max)
-                        
-                        if (!inRange) {
-                          // Find nearest range
-                          let nearestMax = ranges[0].max
-                          let minDiff = Math.abs(num - ranges[0].max)
+                        if (rules.length > 0) {
+                          // Find ranges and adjust to nearest valid
+                          const ranges = rules.map((r: any) => ({
+                            min: r.min_installments,
+                            max: r.max_installments
+                          }))
                           
-                          for (const r of ranges) {
-                            const diff = Math.abs(num - r.max)
-                            if (diff < minDiff) {
-                              minDiff = diff
-                              nearestMax = r.max
+                          // Check if within any range
+                          const inRange = ranges.some(r => num >= r.min && num <= r.max)
+                          
+                          if (!inRange) {
+                            // Find nearest range
+                            let nearestMax = ranges[0].max
+                            let minDiff = Math.abs(num - ranges[0].max)
+                            
+                            for (const r of ranges) {
+                              const diff = Math.abs(num - r.max)
+                              if (diff < minDiff) {
+                                minDiff = diff
+                                nearestMax = r.max
+                              }
                             }
+                            setFormData({ ...formData, installments: String(nearestMax) })
                           }
-                          setFormData({ ...formData, installments: String(nearestMax) })
+                        } else if (num > 12) {
+                          // No rules, use default max of 12
+                          setFormData({ ...formData, installments: "12" })
                         }
-                      } else if (num > 12) {
-                        // No rules, use default max of 12
-                        setFormData({ ...formData, installments: "12" })
-                      }
-                    }}
-                  />
+                      }}
+                      className="bg-gray-50/50 border-gray-100 focus:bg-white focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      x
+                    </div>
+                  </div>
                   {/* Show available ranges */}
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <Info className="h-3 w-3" />
                     {businessRulesData?.interestRules?.length ? (
-                      <>Faixas disponíveis: {businessRulesData.interestRules.map((r: any) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
+                      <>Faixas: {businessRulesData.interestRules.map((r: any) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
                     ) : (
                       "Máximo: 12x"
                     )}
                   </p>
                   {currentInterestRate.rate > 0 && (
-                    <p className="text-xs text-green-600 font-medium">
+                    <p className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
                       Taxa: {currentInterestRate.rate}% {currentInterestRate.type === 'fixed' ? '(fixo)' : currentInterestRate.type === 'weekly' ? 'semanal' : 'ao mês'}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Data da Primeira Parcela</Label>
-                  <Input
-                    type="date"
-                    value={formData.firstPaymentDate}
-                    onChange={(e) => setFormData({ ...formData, firstPaymentDate: e.target.value })}
-                  />
+                  <Label className="text-sm font-semibold text-gray-700">Data da 1ª Parcela</Label>
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={formData.firstPaymentDate}
+                      onChange={(e) => setFormData({ ...formData, firstPaymentDate: e.target.value })}
+                      className="bg-gray-50/50 border-gray-100 focus:bg-white focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all"
+                    />
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando...
-                  </>
-                ) : "Criar Empréstimo"}
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <Button 
+                  type="submit" 
+                  className="w-full bg-[#22C55E] hover:bg-[#4ADE80] h-12 text-base font-semibold shadow-lg shadow-[#22C55E]/20 hover:shadow-[#22C55E]/40 transition-all"
+                  disabled={isSubmitting || !formData.customerId || !formData.principal}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Criando Empréstimo...
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="mr-2 h-5 w-5" />
+                      Criar Empréstimo
+                    </>
+                  )}
+                </Button>
+              </motion.div>
             </form>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="border-b border-gray-50">
             <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
+              <div className="p-2 rounded-lg bg-blue-50">
+                <Calculator className="h-5 w-5 text-blue-600" />
+              </div>
               Simulação
             </CardTitle>
             <CardDescription>Visualize o valor das parcelas</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             {preview ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Valor Principal</p>
-                    <p className="text-lg font-bold">{formatCurrency(parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100)}</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Total Juros</p>
-                    <p className="text-lg font-bold text-orange-600">{formatCurrency(preview.totalInterest)}</p>
-                  </div>
-                  <div className="text-center p-4 bg-[#22C55E]50 rounded-lg">
-                    <p className="text-sm text-[#22C55E]600">Total a Pagar</p>
-                    <p className="text-lg font-bold text-[#22C55E]600">{formatCurrency(preview.totalAmount)}</p>
-                  </div>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-3 gap-3">
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="text-center p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 shadow-sm"
+                  >
+                    <p className="text-xs text-gray-500 font-medium">Principal</p>
+                    <p className="text-sm font-bold text-gray-900 mt-1">{formatCurrency(parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100)}</p>
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="text-center p-4 bg-gradient-to-br from-orange-50 to-white rounded-xl border border-orange-100 shadow-sm"
+                  >
+                    <p className="text-xs text-orange-600 font-medium">Total Juros</p>
+                    <p className="text-sm font-bold text-orange-600 mt-1">{formatCurrency(preview.totalInterest)}</p>
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="text-center p-4 bg-gradient-to-br from-green-50 to-white rounded-xl border border-green-100 shadow-sm"
+                  >
+                    <p className="text-xs text-green-600 font-medium">Total a Pagar</p>
+                    <p className="text-sm font-bold text-green-600 mt-1">{formatCurrency(preview.totalAmount)}</p>
+                  </motion.div>
                 </div>
 
                 <div>
-                  <h4 className="font-medium mb-3">Parcelas ({formData.installments}x)</h4>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-[#22C55E]" />
+                    Parcelas ({formData.installments}x)
+                  </h4>
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
                     {preview.installments.map((inst) => (
-                      <div key={inst.number} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">#{inst.number}</span>
-                          <span className="text-xs text-gray-500">{formatDate(inst.dueDate)}</span>
+                      <motion.div 
+                        key={inst.number}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: inst.number * 0.02 }}
+                        whileHover={{ scale: 1.02 }}
+                        className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-[#22C55E]/30 hover:shadow-md transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E] font-bold text-sm">
+                            {inst.number}
+                          </div>
+                          <span className="text-sm text-gray-600 font-medium">{formatDate(inst.dueDate)}</span>
                         </div>
-                        <span className="font-medium">{formatCurrency(inst.amount)}</span>
-                      </div>
+                        <span className="font-bold text-gray-900">{formatCurrency(inst.amount)}</span>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                Preencha os dados para ver a simulação
-              </div>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12"
+              >
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Calculator className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">Preencha os dados para ver a simulação</p>
+                <p className="text-gray-400 text-sm mt-1">O valor das parcelas será calculado automaticamente</p>
+              </motion.div>
             )}
           </CardContent>
         </Card>
       </div>
-    </div>
+    </motion.div>
   )
 }

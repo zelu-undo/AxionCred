@@ -121,49 +121,56 @@ export default function DashboardPage() {
       {/* Cards Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         <motion.div variants={itemVariants}>
-          <Card className="h-full hover:shadow-lg transition-shadow duration-300">
+          <Card className="h-full hover:shadow-xl transition-all duration-300 group border border-gray-100 hover:border-[#22C55E]/30">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">{t("dashboard.recentLoans")}</CardTitle>
+              <CardTitle className="text-base font-medium group-hover:text-[#22C55E] transition-colors">{t("dashboard.recentLoans")}</CardTitle>
               <Button variant="ghost" size="sm" asChild className="text-[#22C55E] hover:text-[#4ADE80] hover:bg-[#22C55E]/5">
                 <Link href="/loans">
                   {t("common.seeAll")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[
                   { name: "João Silva", amount: 5000, installments: 6, status: "active" },
                   { name: "Maria Santos", amount: 2500, installments: 3, status: "paid" },
                   { name: "Pedro Costa", amount: 10000, installments: 12, status: "pending" },
                 ].map((loan, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50/80 transition-colors group">
+                  <motion.div 
+                    key={i} 
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50/80 transition-all duration-200 group/item cursor-pointer"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    whileHover={{ scale: 1.01, x: 4 }}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center font-medium text-sm ${
-                        loan.status === "paid" ? "bg-green-100 text-green-700" :
-                        loan.status === "active" ? "bg-blue-100 text-blue-700" :
-                        "bg-yellow-100 text-yellow-700"
+                      <div className={`h-11 w-11 rounded-xl flex items-center justify-center font-semibold text-sm shadow-sm ${
+                        loan.status === "paid" ? "bg-gradient-to-br from-green-100 to-green-200 text-green-700" :
+                        loan.status === "active" ? "bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700" :
+                        "bg-gradient-to-br from-yellow-100 to-yellow-200 text-yellow-700"
                       }`}>
                         {loan.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{loan.name}</p>
+                        <p className="font-semibold text-gray-900">{loan.name}</p>
                         <p className="text-sm text-gray-500">{loan.installments}x parcelas</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">R$ {loan.amount.toLocaleString("pt-BR")}</p>
-                      <span className={`text-xs inline-flex items-center gap-1 ${
-                        loan.status === "paid" ? "text-green-600" :
-                        loan.status === "active" ? "text-blue-600" :
-                        "text-yellow-600"
+                      <p className="font-bold text-gray-900">R$ {loan.amount.toLocaleString("pt-BR")}</p>
+                      <span className={`text-xs inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                        loan.status === "paid" ? "bg-green-100 text-green-700" :
+                        loan.status === "active" ? "bg-blue-100 text-blue-700" :
+                        "bg-yellow-100 text-yellow-700"
                       }`}>
                         {loan.status === "paid" ? t("loans.paidOut") :
                          loan.status === "active" ? t("loans.active") : t("loans.pending")}
                       </span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </CardContent>
@@ -171,40 +178,47 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="h-full hover:shadow-lg transition-shadow duration-300">
+          <Card className="h-full hover:shadow-xl transition-all duration-300 group border border-gray-100 hover:border-red-300/30">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">{t("dashboard.overdueCustomers")}</CardTitle>
+              <CardTitle className="text-base font-medium group-hover:text-red-600 transition-colors">{t("dashboard.overdueCustomers")}</CardTitle>
               <Button variant="ghost" size="sm" asChild className="text-red-500 hover:text-red-600 hover:bg-red-50">
                 <Link href="/collections">
                   Ver todos
-                  <ArrowUpRight className="ml-1 h-3 w-3" />
+                  <ArrowUpRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </Link>
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[
                   { name: "Carlos Oliveira", overdue: 2, amount: 1500 },
                   { name: "Ana Pereira", overdue: 1, amount: 750 },
                   { name: "Roberto Lima", overdue: 4, amount: 3200 },
                 ].map((customer, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-red-50/50 transition-colors group">
+                  <motion.div 
+                    key={i} 
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-red-50/50 transition-all duration-200 group/item cursor-pointer"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    whileHover={{ scale: 1.01, x: -4 }}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center font-medium text-sm text-red-700">
+                      <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center font-semibold text-sm text-red-700 shadow-sm">
                         {customer.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{customer.name}</p>
+                        <p className="font-semibold text-gray-900">{customer.name}</p>
                         <p className="text-sm text-red-500">{customer.overdue} {customer.overdue > 1 ? "parcelas" : "parcela"} atrasada{customer.overdue > 1 ? "s" : ""}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-red-600">R$ {customer.amount.toLocaleString("pt-BR")}</p>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="font-bold text-red-600">R$ {customer.amount.toLocaleString("pt-BR")}</p>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity">
                         Cobrar
                       </Button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </CardContent>

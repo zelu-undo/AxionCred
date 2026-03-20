@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Plus, Search, MoreVertical, Eye, Edit, Trash2, DollarSign, Calendar, Loader2 } from "lucide-react"
+import { Plus, Search, MoreVertical, Eye, Edit, Trash2, DollarSign, Calendar, Loader2, CreditCard } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,18 +43,26 @@ export default function LoansPage() {
   })
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "paid":
-        return <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">{t("loans.paidOut")}</span>
-      case "active":
-        return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">{t("loans.active")}</span>
-      case "pending":
-        return <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">{t("loans.pending")}</span>
-      case "cancelled":
-        return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">{t("loans.cancelled")}</span>
-      default:
-        return null
+    const statusConfig = {
+      paid: { bg: "bg-gradient-to-r from-green-100 to-green-50", text: "text-green-700", icon: "✓" },
+      active: { bg: "bg-gradient-to-r from-blue-100 to-blue-50", text: "text-blue-700", icon: "●" },
+      pending: { bg: "bg-gradient-to-r from-yellow-100 to-yellow-50", text: "text-yellow-700", icon: "◐" },
+      cancelled: { bg: "bg-gradient-to-r from-red-100 to-red-50", text: "text-red-700", icon: "✕" },
     }
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
+    const labels = {
+      paid: t("loans.paidOut"),
+      active: t("loans.active"),
+      pending: t("loans.pending"),
+      cancelled: t("loans.cancelled"),
+    }
+    
+    return (
+      <span className={`inline-flex items-center gap-1.5 rounded-full ${config.bg} px-3 py-1 text-xs font-semibold ${config.text}`}>
+        <span className="text-[8px]">{config.icon}</span>
+        {labels[status as keyof typeof labels] || status}
+      </span>
+    )
   }
 
   const handleViewDetails = (loanId: string) => {
@@ -85,14 +94,14 @@ export default function LoansPage() {
         </Button>
       </div>
 
-      <Card className="hover:shadow-lg transition-shadow duration-300">
-        <CardHeader className="pb-4">
+      <Card className="hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <CardHeader className="pb-4 border-b border-gray-50">
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#22C55E] transition-colors" />
               <Input
                 placeholder={t("loans.searchLoans")}
-                className="pl-9"
+                className="pl-9 bg-gray-50/50 border-gray-100 focus:bg-white focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -114,93 +123,110 @@ export default function LoansPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50/80">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("loans.customer")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("loans.principal")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("loans.installments")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("loans.paid")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("loans.remaining")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.status")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.date")}</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredLoans.map((loan: any, index: number) => (
-                      <motion.tr 
-                        key={loan.id} 
-                        className="hover:bg-gray-50/80 transition-colors"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.03 }}
-                      >
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-gray-900">{loan.customer?.name || "-"}</p>
-                          <p className="text-sm text-gray-500">{loan.customer?.phone || "-"}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium">{formatCurrency(loan.principal_amount)}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-gray-400" />
-                            <span>{loan.paid_installments}/{loan.installments_count}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-green-600 font-medium">{formatCurrency(loan.paid_amount)}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={Number(loan.remaining_amount) > 0 ? "text-orange-600 font-medium" : "text-gray-400"}>
-                            {formatCurrency(loan.remaining_amount)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {getStatusBadge(loan.status)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {formatDate(loan.created_at)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <DropdownMenu open={openDropdown === loan.id} onOpenChange={(open) => {
-                            setOpenDropdown(open ? loan.id : null)
-                          }}>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem onClick={() => handleViewDetails(loan.id)} className="hover:bg-gray-50">
-                                <Eye className="mr-2 h-4 w-4" />
-                                {t("loans.viewDetails")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600 hover:bg-red-50" onClick={() => handleDelete(loan.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t("common.delete")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("loans.customer")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("loans.principal")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("loans.installments")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("loans.paid")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("loans.remaining")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("common.status")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("common.date")}</th>
+                        <th className="px-5 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">{t("common.actions")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredLoans.map((loan: any, index: number) => (
+                        <motion.tr 
+                          key={loan.id} 
+                          className="hover:bg-gradient-to-r hover:from-gray-50 hover:to-white transition-all duration-200 group cursor-pointer"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          whileHover={{ scale: 1.005 }}
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#1E3A8A]/10 to-[#1E3A8A]/5 flex items-center justify-center text-[#1E3A8A] font-bold shadow-sm">
+                                {loan.customer?.name?.charAt(0) || "?"}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">{loan.customer?.name || "-"}</p>
+                                <p className="text-sm text-gray-500">{loan.customer?.phone || "-"}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-green-50">
+                                <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                              </div>
+                              <span className="font-semibold text-gray-900">{formatCurrency(loan.principal_amount)}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-blue-50">
+                                <Calendar className="h-3.5 w-3.5 text-blue-600" />
+                              </div>
+                              <span className="font-medium text-gray-700">{loan.paid_installments}/{loan.installments_count}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className="text-green-600 font-bold">{formatCurrency(loan.paid_amount)}</span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className={Number(loan.remaining_amount) > 0 ? "text-orange-600 font-bold" : "text-gray-400 font-medium"}>
+                              {formatCurrency(loan.remaining_amount)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            {getStatusBadge(loan.status)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className="text-sm text-gray-500 font-medium">
+                              {formatDate(loan.created_at)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <DropdownMenu open={openDropdown === loan.id} onOpenChange={(open) => {
+                              setOpenDropdown(open ? loan.id : null)
+                            }}>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="hover:bg-gray-100 h-8 w-8 rounded-lg">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-lg border-gray-100">
+                                <DropdownMenuItem onClick={() => handleViewDetails(loan.id)} className="hover:bg-gray-50 rounded-lg cursor-pointer">
+                                  <Eye className="mr-2 h-4 w-4 text-blue-600" />
+                                  <span className="text-gray-700">{t("loans.viewDetails")}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" onClick={() => handleDelete(loan.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {t("common.delete")}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               
               {filteredLoans.length === 0 && (
-                <div className="py-12 text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                    <DollarSign className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500">{t("loans.noLoansFound")}</p>
-                </div>
+                <EmptyState
+                  icon={CreditCard}
+                  title={t("loans.noLoansFound")}
+                  description="Comece criando seu primeiro empréstimo para gerenciar seus clientes."
+                  actionLabel="Criar Empréstimo"
+                  onAction={() => router.push("/loans/new")}
+                />
               )}
             </>
           )}
