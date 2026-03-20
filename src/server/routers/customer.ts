@@ -58,24 +58,41 @@ export const customerRouter = router({
         .range(offset, offset + limit - 1)
 
       if (search) {
-        // Otimização: Remove acentos e pontuação para busca
+        // Normalize search: remove accents and punctuation for flexible matching
         const cleanSearch = search
           .toLowerCase()
           .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-          .replace(/[^a-z0-9]/g, "") // Remove pontuação
+          .replace(/[\u0300-\u036f]/g, "") // Remove accents
+          .replace(/[^a-z0-9]/g, "") // Remove punctuation
         
-        if (cleanSearch.length > 0) {
-          // Busca por nome (com normalização) ou documento (apenas números)
-          const docSearch = search.replace(/\D/g, "") // Apenas dígitos para CPF
-          
-          if (docSearch.length >= 3) {
-            // Busca por documento (CPF) - mais específico
-            query = query.or(`document.ilike.%${docSearch}%`)
-          }
-          
-          // Busca por nome (ignora acentos)
-          query = query.or(`name.ilike.%${search}%,name.ilike.%${cleanSearch}%`)
+        // Extract only digits for CPF search
+        const docSearch = search.replace(/\D/g, "")
+        
+        // Build search conditions
+        const searchConditions: string[] = []
+        
+        // 1. Search by name (original with wildcards)
+        if (search.length >= 2) {
+          searchConditions.push(`name.ilike.%${search}%`)
+        }
+        
+        // 2. Search by normalized name (without accents)
+        if (cleanSearch.length >= 2) {
+          searchConditions.push(`name.ilike.%${cleanSearch}%`)
+        }
+        
+        // 3. Search by document (CPF) - digits only
+        if (docSearch.length >= 3) {
+          searchConditions.push(`document.ilike.%${docSearch}%`)
+        }
+        
+        // 4. Search by email
+        if (search.includes('@')) {
+          searchConditions.push(`email.ilike.%${search}%`)
+        }
+        
+        if (searchConditions.length > 0) {
+          query = query.or(searchConditions.join(","))
         }
       }
 

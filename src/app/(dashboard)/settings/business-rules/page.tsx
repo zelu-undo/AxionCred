@@ -60,9 +60,17 @@ export default function BusinessRulesPage() {
 
   // Fetch data directly from Supabase
   useEffect(() => {
+    // Don't wait indefinitely - use timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        setLoading(false)
+      }
+    }, 10000) // 10 second timeout
+    
     async function fetchData() {
       if (!user?.tenantId) {
         setLoading(false)
+        clearTimeout(timeoutId)
         return
       }
       
@@ -117,10 +125,13 @@ export default function BusinessRulesPage() {
         setError(err.message)
       } finally {
         setLoading(false)
+        clearTimeout(timeoutId)
       }
     }
     
     fetchData()
+    
+    return () => clearTimeout(timeoutId)
   }, [user?.tenantId])
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);

@@ -39,7 +39,32 @@ export const usersRouter = router({
         .range(offset, offset + limit - 1)
 
       if (search) {
-        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+        // Normalize search: remove accents and punctuation
+        const cleanSearch = search
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, "")
+        
+        // Build search conditions
+        const searchConditions: string[] = []
+        
+        // 1. Search by name (original)
+        if (search.length >= 2) {
+          searchConditions.push(`name.ilike.%${search}%`)
+        }
+        
+        // 2. Search by normalized name (without accents)
+        if (cleanSearch.length >= 2) {
+          searchConditions.push(`name.ilike.%${cleanSearch}%`)
+        }
+        
+        // 3. Search by email
+        searchConditions.push(`email.ilike.%${search}%`)
+        
+        if (searchConditions.length > 0) {
+          query = query.or(searchConditions.join(","))
+        }
       }
 
       if (role) {

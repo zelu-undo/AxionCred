@@ -90,7 +90,10 @@ export default function NewLoanPage() {
   const [adjustedInstallments, setAdjustedInstallments] = useState<number | null>(null)
 
   // Calculate loan preview using business rules
-  const { data: businessRulesData } = trpc.businessRules.get.useQuery()
+  const { data: businessRulesData } = trpc.businessRules.get.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+  })
 
   const calculateLoan = () => {
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
@@ -227,13 +230,19 @@ export default function NewLoanPage() {
   // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments)
-    if (!businessRulesData?.interestRules) return null
     
+    // Wait for business rules to load
+    if (!businessRulesData || !businessRulesData.interestRules) {
+      return null
+    }
+    
+    // Find matching rule
     const rule = businessRulesData.interestRules.find(
       (r: any) => 
         numInstallments >= (r.min_installments || 0) && 
         numInstallments <= (r.max_installments || 999)
     )
+    
     return rule ? { 
       rate: rule.interest_rate, 
       type: rule.interest_type 
@@ -376,8 +385,14 @@ export default function NewLoanPage() {
                     value={formData.installments}
                     onChange={(e) => {
                       const value = parseInt(e.target.value) || 1
+                      setFormData({ ...formData, installments: String(value) })
+                      // Clear adjustment message on change
+                      setAdjustedInstallments(null)
+                    }}
+                    onBlur={(e) => {
+                      const value = parseInt(e.target.value) || 1
                       
-                      // Auto-adjust to nearest valid range in real-time
+                      // Auto-adjust to nearest valid range when leaving field
                       const rules = businessRulesData?.interestRules || []
                       let adjustedValue = value
                       
@@ -396,27 +411,37 @@ export default function NewLoanPage() {
                           let nearestMin = ranges[0].min
                           
                           for (const r of ranges) {
-                            const diff = Math.abs(adjustedValue - r.max)
-                            if (diff < minDiff) {
-                              minDiff = diff
-                              nearestMax = r.max
-                              nearestMin = r.min
+                            // Calculate distance to the nearest value in range
+                            if (adjustedValue < r.min) {
+                              const diff = r.min - adjustedValue
+                              if (diff < minDiff) {
+                                minDiff = diff
+                                nearestMax = r.min
+                                nearestMin = r.min
+                              }
+                            } else if (adjustedValue > r.max) {
+                              const diff = adjustedValue - r.max
+                              if (diff < minDiff) {
+                                minDiff = diff
+                                nearestMax = r.max
+                                nearestMin = r.min
+                              }
                             }
                           }
                           adjustedValue = nearestMax
                           // Set adjusted value to show message
                           setAdjustedInstallments(adjustedValue)
+                          setFormData({ ...formData, installments: String(adjustedValue) })
                         } else {
                           setAdjustedInstallments(null)
                         }
                       } else if (adjustedValue > 12) {
                         adjustedValue = 12
                         setAdjustedInstallments(adjustedValue)
+                        setFormData({ ...formData, installments: String(adjustedValue) })
                       } else {
                         setAdjustedInstallments(null)
                       }
-                      
-                      setFormData({ ...formData, installments: String(adjustedValue) })
                     }}
                   />
                   {/* Show available ranges */}
