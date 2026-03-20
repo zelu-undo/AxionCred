@@ -4,9 +4,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 
-// Criar cliente supabase apenas uma vez
-const supabaseClient = createClient()
-
 type AppUser = {
   id: string
   email: string
@@ -86,52 +83,98 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
+// Função para buscar tenant_id do banco
+async function fetchTenantId(supabase: any, userId: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("tenant_id")
+      .eq("id", userId)
+      .single()
+    
+    if (error || !data) return ""
+    return data.tenant_id || ""
+  } catch {
+    return ""
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = supabaseClient
+  const supabase = createClient()
 
-  // Initial session check
+  // Carregar usuário do localStorage primeiro (instantâneo)
+  useEffect(() => {
+    const stored = localStorage.getItem("axion_user")
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed.id && parsed.email) {
+          setUser(parsed)
+        }
+      } catch {
+        localStorage.removeItem("axion_user")
+      }
+    }
+  }, [])
+
+  // Verificar sessão atual
   useEffect(() => {
     let mounted = true
+    let isInitialCheck = true
 
-    const initAuth = async () => {
+    const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         
-        if (mounted && session?.user) {
-          // Buscar tenant_id do banco de dados
-          let tenantId = ""
-          try {
-            const { data: userData } = await supabase
-              .from("users")
-              .select("tenant_id")
-              .eq("id", session.user.id)
-              .single()
-            
-            if (userData) {
-              tenantId = userData.tenant_id || ""
-            }
-          } catch (err) {
-            console.log("[Auth] Using fallback tenant_id")
+        if (!mounted) return
+
+        if (session?.user) {
+          // Primeiro usa dados do localStorage se disponíveis
+          const stored = localStorage.getItem("axion_user")
+          let appUser: AppUser | null = null
+          
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored)
+              if (parsed.id === session.user.id) {
+                appUser = parsed
+              }
+            } catch {}
           }
 
-          const appUser: AppUser = {
-            id: session.user.id,
-            email: session.user.email || "",
-            name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-            role: "owner",
-            tenantId: tenantId,
-            plan: "starter"
+          // Se não tem no localStorage ou é outro usuário, busca do banco
+          if (!appUser) {
+            const tenantId = await fetchTenantId(supabase, session.user.id)
+            appUser = {
+              id: session.user.id,
+              email: session.user.email || "",
+              name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+              role: "owner",
+              tenantId: tenantId,
+              plan: "starter"
+            }
+            localStorage.setItem("axion_user", JSON.stringify(appUser))
           }
+          
           setUser(appUser)
-          localStorage.setItem("axion_user", JSON.stringify(appUser))
+        } else {
+          setUser(null)
+          localStorage.removeItem("axion_user")
         }
       } catch (err) {
         console.error("[Auth] Session check error:", err)
+        // Em caso de erro, tenta usar localStorage
+        const stored = localStorage.getItem("axion_user")
+        if (stored) {
+          try {
+            setUser(JSON.parse(stored))
+          } catch {}
+        }
       } finally {
         if (mounted) {
           setLoading(false)
@@ -140,53 +183,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    initAuth()
+    checkSession()
 
-    return () => {
-      mounted = false
-    }
-  }, [])
+    // Listener para mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return
 
-  // Listen for auth changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Só processa se não for o evento inicial (já tratado pelo getSession)
+      if (isInitialCheck) {
+        isInitialCheck = false
+        return
+      }
+
       if (session?.user) {
-        // Buscar tenant_id do banco de dados
-        let tenantId = ""
-        try {
-          const { data: userData } = await supabase
-            .from("users")
-            .select("tenant_id")
-            .eq("id", session.user.id)
-            .single()
-          
-          if (userData) {
-            tenantId = userData.tenant_id || ""
-          }
-        } catch (err) {
-          console.log("[Auth] Using fallback tenant_id")
-        }
-
+        // Usa dados do evento diretamente para速度
         const appUser: AppUser = {
           id: session.user.id,
           email: session.user.email || "",
           name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
           role: "owner",
-          tenantId: tenantId,
+          tenantId: session.user.user_metadata?.tenant_id || "",
           plan: "starter"
         }
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
+        
+        // Atualiza tenantId em background
+        fetchTenantId(supabase, session.user.id).then(tenantId => {
+          if (mounted && tenantId) {
+            const updatedUser = { ...appUser, tenantId }
+            setUser(updatedUser)
+            localStorage.setItem("axion_user", JSON.stringify(updatedUser))
+          }
+        })
       } else {
         setUser(null)
         localStorage.removeItem("axion_user")
       }
-      // Always set initialized to true when we get auth state
-      setInitialized(true)
       setLoading(false)
+      setInitialized(true)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Redirect if not authenticated
@@ -214,21 +255,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user && data.session) {
-        // Buscar tenant_id do banco de dados
-        let tenantId = ""
-        try {
-          const { data: userData } = await supabase
-            .from("users")
-            .select("tenant_id, role")
-            .eq("id", data.user.id)
-            .single()
-          
-          if (userData) {
-            tenantId = userData.tenant_id || ""
-          }
-        } catch (err) {
-          console.log("[Auth] Using fallback tenant_id")
-        }
+        // Buscar tenant_id do banco
+        const tenantId = await fetchTenantId(supabase, data.user.id)
 
         const appUser: AppUser = {
           id: data.user.id,
@@ -238,8 +266,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tenantId: tenantId,
           plan: "starter"
         }
-        setUser(appUser)
+        
+        // Salvar no localStorage ANTES de redirecionar
         localStorage.setItem("axion_user", JSON.stringify(appUser))
+        setUser(appUser)
+        
+        // Redirecionar
         router.push("/dashboard")
       }
 
@@ -272,21 +304,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Buscar tenant_id do banco de dados
-      let tenantId = ""
-      try {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("tenant_id")
-          .eq("id", data.user!.id)
-          .single()
-        
-        if (userData) {
-          tenantId = userData.tenant_id || ""
-        }
-      } catch (err) {
-        console.log("[Auth] Using fallback tenant_id")
-      }
+      // Buscar tenant_id do banco
+      const tenantId = await fetchTenantId(supabase, data.user!.id)
 
       const appUser: AppUser = {
         id: data.user!.id,
@@ -295,8 +314,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: "owner",
         tenantId: tenantId
       }
-      setUser(appUser)
+      
       localStorage.setItem("axion_user", JSON.stringify(appUser))
+      setUser(appUser)
       router.push("/dashboard")
 
       return { error: null }
