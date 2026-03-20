@@ -171,6 +171,24 @@ function LoginForm() {
                 <div>
                   <p className="font-medium text-red-400">Não foi possível fazer login</p>
                   <p className="text-sm text-red-300/80 mt-1">{error}</p>
+                  {error.includes('Timeout') && (
+                    <p className="text-xs text-red-300/60 mt-2">
+                      Dica: Verifique sua conexão de internet ou tente novamente.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Indicador de progresso durante login */}
+          {isLoading && (
+            <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4 animate-fade-in-up">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-400 border-t-transparent"></div>
+                <div>
+                  <p className="font-medium text-blue-400">Conectando...</p>
+                  <p className="text-sm text-blue-300/80">Aguarde enquanto verificamos suas credenciais</p>
                 </div>
               </div>
             </div>
