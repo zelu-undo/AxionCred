@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { Session } from "@supabase/supabase-js"
@@ -145,7 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<string>("pt")
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+  // Criar supabase apenas uma vez com useRef para evitar recriações
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   // Get locale from localStorage
   useEffect(() => {
@@ -156,35 +158,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // Check current session with timeout
+    // Check current session
     const checkSession = async () => {
       console.log("[Auth] Starting session check...")
       
       try {
-        // Simple timeout without AbortController (getSession doesn't support abort)
-        const timeoutMs = 5000 // 5 seconds timeout
-        
-        // Start session check
-        const sessionPromise = supabase.auth.getSession()
-        
-        // Add timeout wrapper
-        const sessionResult = await new Promise<{ data: { session: any }; error: any }>((resolve) => {
-          const timeout = setTimeout(() => {
-            // If timeout, try to use cached user but it will be limited
-            console.log("[Auth] Session check timed out")
-            resolve({ data: { session: null }, error: new Error("timeout") })
-          }, timeoutMs)
-          
-          sessionPromise.then(result => {
-            clearTimeout(timeout)
-            resolve(result)
-          }).catch(err => {
-            clearTimeout(timeout)
-            resolve({ data: { session: null }, error: err })
-          })
-        })
-        
-        const { data: { session }, error: sessionError } = sessionResult
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         console.log("[Auth] getSession result:", sessionError ? sessionError.message : "success", session ? "has session" : "no session")
         
@@ -310,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   // Protect routes - redirect to login if not authenticated
   useEffect(() => {
@@ -585,7 +564,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshSession = async () => {
     console.log("[Auth] Force refreshing session")
     // Force a session check by getting a new session
-    const { data: { session }, error } = await supabase.auth.getSession()
+    const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
       let appUser: AppUser | null = null
       

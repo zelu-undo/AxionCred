@@ -62,7 +62,7 @@ export function FloatingParticles({
     })
 
     // Conexões com distância maior - otimizado com verificação rápida
-    const maxDistance = 180
+    const maxDistance = 120
     const maxDistanceSq = maxDistance * maxDistance // Usar distância quadrada para evitar sqrt
     const particles = particlesRef.current
     const len = particles.length
