@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
+import { motion } from "framer-motion";
 
 interface InterestRule {
   id: string;
@@ -352,16 +353,29 @@ export default function BusinessRulesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Regras de Negócio</h1>
         <p className="text-gray-500 mt-1">Configure as taxas de juros e multas</p>
       </div>
 
       {message && (
-        <div className={`px-4 py-2 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`px-4 py-3 rounded-lg ${
+            message.type === 'success' 
+              ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border border-emerald-200' 
+              : 'bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200'
+          }`}
+        >
           {message.text}
-        </div>
+        </motion.div>
       )}
 
       {/* Interest Rules Section */}
@@ -638,6 +652,6 @@ export default function BusinessRulesPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

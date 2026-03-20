@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin } from "lucide-react"
+import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin, User, CreditCard, FileText } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -274,8 +275,45 @@ export default function CustomersPage() {
     return `${digits.slice(0, 5)}-${digits.slice(5)}`
   }
 
+  // Enhanced status badge with gradient
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      active: { 
+        bg: "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200", 
+        text: "text-emerald-700",
+        dot: "bg-emerald-500",
+        label: t("customers.active")
+      },
+      inactive: { 
+        bg: "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200", 
+        text: "text-gray-700",
+        dot: "bg-gray-400",
+        label: t("customers.inactive")
+      },
+    }
+    
+    const config = statusConfig[status as keyof typeof statusConfig]
+    if (!config) return null
+    
+    return (
+      <span className={`
+        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
+        text-xs font-medium border
+        ${config.bg} ${config.text}
+      `}>
+        <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+        {config.label}
+      </span>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("customers.title")}</h1>
@@ -335,90 +373,171 @@ export default function CustomersPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("customers.name")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("customers.phone")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("common.status")}</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("customers.creditLimit")}</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("common.actions")}</th>
+                  <thead>
+                    <tr className="
+                      bg-gradient-to-r from-gray-50 to-white
+                      border-b border-gray-100
+                    ">
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5" />
+                          {t("customers.name")}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5" />
+                          {t("customers.phone")}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-3.5 w-3.5" />
+                          {t("common.status")}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-3.5 w-3.5" />
+                          {t("customers.creditLimit")}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("common.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
-                    {customers.map((customer) => (
-                      <tr key={customer.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium">{customer.name}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Phone className="h-3 w-3" />
-                              {customer.phone}
-                            </div>
-                            {customer.email && (
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Mail className="h-3 w-3" />
-                                {customer.email}
+                  <tbody className="divide-y divide-gray-50">
+                    <AnimatePresence>
+                      {customers.map((customer, index) => (
+                        <motion.tr 
+                          key={customer.id} 
+                          className="
+                            hover:bg-gradient-to-r hover:from-emerald-50/30 hover:to-transparent
+                            transition-all duration-200
+                            group
+                          "
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.03, duration: 0.3 }}
+                        >
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="
+                                h-10 w-10 rounded-full 
+                                bg-gradient-to-br from-gray-100 to-gray-200
+                                flex items-center justify-center
+                                text-gray-600 font-semibold
+                                ring-2 ring-white shadow-sm
+                                group-hover:ring-emerald-100 group-hover:scale-105
+                                transition-all duration-200
+                              ">
+                                {customer.name?.charAt(0)?.toUpperCase() || "?"}
                               </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            customer.status === "active" 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-gray-100 text-gray-800"
-                          }`}>
-                            {customer.status === "active" ? t("customers.active") : t("customers.inactive")}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {customer.credit_limit && customer.credit_limit > 0 
-                            ? `R$ ${customer.credit_limit.toLocaleString("pt-BR")}`
-                            : "-"
-                          }
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <DropdownMenu open={openDropdown === customer.id} onOpenChange={(open) => setOpenDropdown(open ? customer.id : null)}>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => setOpenDropdown(customer.id)}>
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                {t("customers.viewDetails")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}?edit=true`)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                {t("common.edit")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600" onClick={() => {
-                                if (confirm("Tem certeza que deseja excluir este cliente?")) {
-                                  deleteMutation.mutate({ id: customer.id })
-                                }
-                              }}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t("common.delete")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
+                              <div>
+                                <p className="font-semibold text-gray-900">{customer.name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Phone className="h-3 w-3" />
+                                {customer.phone}
+                              </div>
+                              {customer.email && (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <Mail className="h-3 w-3" />
+                                  <span className="truncate max-w-[200px]">{customer.email}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            {getStatusBadge(customer.status)}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="font-medium text-gray-900">
+                              {customer.credit_limit && customer.credit_limit > 0 
+                                ? `R$ ${customer.credit_limit.toLocaleString("pt-BR")}`
+                                : "-"
+                              }
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <DropdownMenu open={openDropdown === customer.id} onOpenChange={(open) => setOpenDropdown(open ? customer.id : null)}>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="
+                                    hover:bg-gray-100 
+                                    opacity-0 group-hover:opacity-100
+                                    transition-all duration-200
+                                  "
+                                >
+                                  <MoreVertical className="h-4 w-4 text-gray-500" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent 
+                                align="end" 
+                                className="w-44 p-1.5 border-gray-100 shadow-lg shadow-gray-200/50"
+                              >
+                                <DropdownMenuItem 
+                                  onClick={() => router.push(`/customers/${customer.id}`)} 
+                                  className="
+                                    hover:bg-gray-50 rounded-md px-3 py-2 
+                                    cursor-pointer transition-colors
+                                  "
+                                >
+                                  <Eye className="mr-2 h-4 w-4 text-gray-500" />
+                                  <span className="text-sm">{t("customers.viewDetails")}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => router.push(`/customers/${customer.id}?edit=true`)}
+                                  className="
+                                    hover:bg-gray-50 rounded-md px-3 py-2 
+                                    cursor-pointer transition-colors
+                                  "
+                                >
+                                  <Edit className="mr-2 h-4 w-4 text-gray-500" />
+                                  <span className="text-sm">{t("common.edit")}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="
+                                    text-red-600 hover:bg-red-50 rounded-md px-3 py-2 
+                                    cursor-pointer transition-colors
+                                  " 
+                                  onClick={() => {
+                                    if (confirm("Tem certeza que deseja excluir este cliente?")) {
+                                      deleteMutation.mutate({ id: customer.id })
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span className="text-sm">{t("common.delete")}</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
                   </tbody>
                 </table>
               </div>
               
               {customers.length === 0 && (
-                <div className="py-8 text-center text-gray-500">
-                  {t("customers.noCustomersFound")}
+                <div className="py-16 text-center">
+                  <div className="
+                    inline-flex items-center justify-center w-20 h-20 
+                    rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200
+                    mb-4 shadow-inner
+                  ">
+                    <User className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">{t("customers.noCustomersFound")}</p>
+                  <p className="text-gray-400 text-sm mt-1">Comece adicionando um novo cliente</p>
                 </div>
               )}
 
@@ -429,6 +548,7 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+    </motion.div>
 
       {/* Create Customer Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={handleDialogOpenChange}>
@@ -595,6 +715,6 @@ export default function CustomersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   )
 }

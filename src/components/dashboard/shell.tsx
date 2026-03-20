@@ -74,7 +74,7 @@ function NavigationItems() {
     { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
     { name: "📄 Relatórios", href: "/reports", icon: Receipt, permission: "reports" },
     { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
-    { name: "📊 Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
+    { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
   ]
 
   const pathname = usePathname()
