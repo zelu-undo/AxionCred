@@ -42,7 +42,7 @@ export const customerRouter = router({
       z.object({
         search: z.string().optional(),
         status: z.enum(["active", "inactive", "blocked"]).optional(),
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
       })
     )
@@ -53,17 +53,29 @@ export const customerRouter = router({
         .from("customers")
         .select("*", { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
-        .neq("status", "deleted") // Exclude soft-deleted customers
+        .neq("status", "deleted")
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)
 
       if (search) {
-        // Remove punctuation and accents for search
-        const cleanSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        // Otimização: Remove acentos e pontuação para busca
+        const cleanSearch = search
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+          .replace(/[^a-z0-9]/g, "") // Remove pontuação
         
         if (cleanSearch.length > 0) {
-          // Use lowercase for case-insensitive search
-          query = query.or(`name.ilike.%${search}%,document.ilike.%${search.replace(/[^0-9]/g, '')}%`)
+          // Busca por nome (com normalização) ou documento (apenas números)
+          const docSearch = search.replace(/\D/g, "") // Apenas dígitos para CPF
+          
+          if (docSearch.length >= 3) {
+            // Busca por documento (CPF) - mais específico
+            query = query.or(`document.ilike.%${docSearch}%`)
+          }
+          
+          // Busca por nome (ignora acentos)
+          query = query.or(`name.ilike.%${search}%,name.ilike.%${cleanSearch}%`)
         }
       }
 

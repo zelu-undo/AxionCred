@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin } from "lucide-react"
+import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin, ChevronLeft, ChevronRight, Filter } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,9 @@ export default function CustomersPage() {
   const { t } = useI18n()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [showFilters, setShowFilters] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isLoadingCep, setIsLoadingCep] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -58,6 +61,13 @@ export default function CustomersPage() {
     city: "",
     state: "",
   })
+  
+  const LIMIT = 20
+  
+  // Reset page when search or filters change
+  useEffect(() => {
+    setCurrentPage(0)
+  }, [searchQuery, statusFilter])
   
   // Reset form when modal closes
   const handleDialogOpenChange = (open: boolean) => {
@@ -80,11 +90,12 @@ export default function CustomersPage() {
     }
   }
   
-  // Fetch customers from database
+  // Fetch customers from database with pagination and filters
   const { data, isLoading, error, refetch } = trpc.customer.list.useQuery({
     search: searchQuery || undefined,
-    limit: 50,
-    offset: 0,
+    status: statusFilter as "active" | "inactive" | "blocked" | undefined,
+    limit: LIMIT,
+    offset: currentPage * LIMIT,
   }, {
     retry: 1,
     refetchOnWindowFocus: false,
@@ -289,16 +300,63 @@ export default function CustomersPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder={t("customers.searchCustomers")}
+                placeholder="Buscar por nome ou CPF..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <DropdownMenu open={showFilters} onOpenChange={setShowFilters}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {statusFilter && <span className="ml-1 bg-[#22C55E] text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">1</span>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => setStatusFilter(undefined)}
+                  className={!statusFilter ? "bg-[#22C55E]10 font-medium" : ""}
+                >
+                  Todos
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setStatusFilter("active")}
+                  className={statusFilter === "active" ? "bg-[#22C55E]10 font-medium" : ""}
+                >
+                  Ativo
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setStatusFilter("inactive")}
+                  className={statusFilter === "inactive" ? "bg-[#22C55E]10 font-medium" : ""}
+                >
+                  Inativo
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setStatusFilter("blocked")}
+                  className={statusFilter === "blocked" ? "bg-[#22C55E]10 font-medium" : ""}
+                >
+                  Bloqueado
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {(searchQuery || statusFilter) && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setSearchQuery("")
+                  setStatusFilter(undefined)
+                }}
+              >
+                Limpar filtros
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -413,8 +471,33 @@ export default function CustomersPage() {
                 </div>
               )}
 
-              <div className="mt-4 text-sm text-gray-500">
-                Total de {total} clientes
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  Total de {total} clientes
+                </div>
+                {total > LIMIT && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                      disabled={currentPage === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Página {currentPage + 1} de {Math.ceil(total / LIMIT)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => p + 1)}
+                      disabled={(currentPage + 1) * LIMIT >= total}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
