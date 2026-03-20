@@ -27,31 +27,12 @@ type AuthContextType = {
   signOut: () => Promise<void>
 }
 
-function mapAuthError(error: any): AuthError {
-  if (!error) {
-    return { message: "Ocorreu um erro inesperado", code: "EMPTY_ERROR" }
-  }
-  
-  const msg = (error.message || "").toLowerCase()
-  
-  if (msg.includes("invalid")) {
-    return { message: "E-mail ou senha incorretos", code: "INVALID_CREDENTIALS" }
-  }
-  if (msg.includes("email")) {
-    return { message: "Verifique seu e-mail", code: "EMAIL_ISSUE" }
-  }
-  if (msg.includes("network") || msg.includes("fetch")) {
-    return { message: "Erro de conexão", code: "NETWORK_ERROR" }
-  }
-  
-  return { message: error.message, code: "UNKNOWN" }
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
 function createSupabaseClient() {
+  console.log("[Auth] Creating Supabase client")
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -65,16 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
+  console.log("[Auth] Provider render - loading:", loading, "initialized:", initialized, "user:", user?.email)
+
   // Carregar do localStorage imediatamente
   useEffect(() => {
+    console.log("[Auth] localStorage effect running")
     const stored = localStorage.getItem("axion_user")
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
         if (parsed.id && parsed.email) {
+          console.log("[Auth] Loaded from localStorage:", parsed.email)
           setUser(parsed)
         }
-      } catch {
+      } catch (e) {
+        console.error("[Auth] Error parsing localStorage:", e)
         localStorage.removeItem("axion_user")
       }
     }
@@ -82,16 +68,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar sessão
   useEffect(() => {
+    console.log("[Auth] Session check effect running")
     const supabase = createSupabaseClient()
     let mounted = true
 
     const checkSession = async () => {
+      console.log("[Auth] checkSession - starting")
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        console.log("[Auth] Calling getSession...")
+        const result = await supabase.auth.getSession()
+        console.log("[Auth] getSession result:", result)
         
-        if (!mounted) return
+        const { data: { session }, error } = result
+        
+        if (error) {
+          console.error("[Auth] Session error:", error)
+        }
+        
+        if (!mounted) {
+          console.log("[Auth] Component unmounted, stopping")
+          return
+        }
 
         if (session?.user) {
+          console.log("[Auth] Session found for:", session.user.email)
+          
           // Buscar tenant_id
           let tenantId = ""
           try {
@@ -101,7 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .eq("id", session.user.id)
               .single()
             if (data) tenantId = data.tenant_id || ""
-          } catch {}
+            console.log("[Auth] tenantId fetched:", tenantId)
+          } catch (e) {
+            console.log("[Auth] Error fetching tenantId:", e)
+          }
 
           const appUser: AppUser = {
             id: session.user.id,
@@ -113,14 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
+          console.log("[Auth] User set:", appUser.email)
         } else {
+          console.log("[Auth] No session found")
           setUser(null)
           localStorage.removeItem("axion_user")
         }
       } catch (err) {
-        console.error("[Auth] Session error:", err)
+        console.error("[Auth] Session check exception:", err)
       } finally {
         if (mounted) {
+          console.log("[Auth] Setting loading=false, initialized=true")
           setLoading(false)
           setInitialized(true)
         }
@@ -129,31 +136,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkSession()
 
-    return () => { mounted = false }
+    return () => { 
+      console.log("[Auth] Session check effect cleanup")
+      mounted = false 
+    }
   }, [])
 
   // Redirect
   useEffect(() => {
-    if (!initialized || loading) return
+    console.log("[Auth] Redirect effect - loading:", loading, "initialized:", initialized, "pathname:", pathname)
+    
+    if (!initialized || loading) {
+      console.log("[Auth] Skipping redirect - not ready")
+      return
+    }
     
     const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + "/"))
+    console.log("[Auth] Redirect check - isPublic:", isPublic, "hasUser:", !!user)
     
     if (!user && !isPublic) {
+      console.log("[Auth] Redirecting to /login")
       router.push("/login")
     }
   }, [user, loading, initialized, pathname, router])
 
   const signIn = async (email: string, password: string) => {
+    console.log("[Auth] signIn called for:", email)
     const supabase = createSupabaseClient()
     
     try {
+      console.log("[Auth] Calling signInWithPassword...")
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      console.log("[Auth] signIn result - error:", error, "data:", data ? "user exists" : "no data")
 
       if (error) {
-        return { error: mapAuthError(error) }
+        console.error("[Auth] signIn error:", error)
+        return { error: { message: error.message, code: error.code } }
       }
 
       if (data.user) {
+        console.log("[Auth] signIn success, user:", data.user.email)
+
         let tenantId = ""
         try {
           const { data: u } = await supabase
@@ -162,7 +185,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq("id", data.user.id)
             .single()
           if (u) tenantId = u.tenant_id || ""
-        } catch {}
+        } catch (e) {
+          console.log("[Auth] Error fetching tenantId:", e)
+        }
 
         const appUser: AppUser = {
           id: data.user.id,
@@ -173,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: "starter"
         }
         
+        console.log("[Auth] Setting user and redirecting...")
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
         router.push("/dashboard")
@@ -180,11 +206,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null }
     } catch (error: any) {
-      return { error: mapAuthError(error) }
+      console.error("[Auth] signIn exception:", error)
+      return { error: { message: error.message || "Erro desconhecido", code: "EXCEPTION" } }
     }
   }
 
   const signUp = async (email: string, password: string, name?: string) => {
+    console.log("[Auth] signUp called")
     const supabase = createSupabaseClient()
     
     try {
@@ -195,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) {
-        return { error: mapAuthError(error) }
+        return { error: { message: error.message, code: error.code } }
       }
 
       if (!data.session) {
@@ -227,12 +255,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    console.log("[Auth] signOut called")
     const supabase = createSupabaseClient()
     setUser(null)
     localStorage.removeItem("axion_user")
     await supabase.auth.signOut()
     router.push("/login")
   }
+
+  console.log("[Auth] Provider rendering with - loading:", loading, "initialized:", initialized, "user:", user?.email)
 
   return (
     <AuthContext.Provider value={{ user, loading, isInitialized: initialized, signIn, signUp, signOut }}>
