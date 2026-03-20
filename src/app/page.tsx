@@ -63,7 +63,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-28 bg-[#0B1F3A]">
+      <section className="py-20 md:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto animate-fade-in-up-delay-200">
             {/* Badge */}
@@ -156,7 +156,7 @@ export default function LandingPage() {
 
       {/* Problema */}
       <FadeInUp>
-        <section className="py-20 bg-[#0d2240]">
+        <section className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               Você vende… mas não recebe como deveria
@@ -189,7 +189,7 @@ export default function LandingPage() {
 
       {/* Solução */}
       <FadeInUp>
-        <section className="py-20 bg-[#0B1F3A]">
+        <section className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               O AXION organiza tudo pra você
@@ -203,7 +203,7 @@ export default function LandingPage() {
 
       {/* Features */}
       <FadeInUp delay={100}>
-        <section id="como-funciona" className="py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
+        <section id="como-funciona" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="bg-white/5 border border-white/10 hover:border-[#22C55E]/50 hover:shadow-lg hover:shadow-[#22C55E]/10 transition-all duration-300 hover:-translate-y-1">
@@ -284,7 +284,7 @@ export default function LandingPage() {
 
       {/* Benefícios */}
       <FadeInUp delay={200}>
-        <section id="beneficios" className="py-20 bg-gradient-to-b from-[#0d2240] to-[#0B1F3A]">
+        <section id="beneficios" className="py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Por que usar o AXION?
@@ -329,7 +329,7 @@ export default function LandingPage() {
 
       {/* Planos */}
       <FadeInUp delay={300}>
-        <section id="planos" className="py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
+        <section id="planos" className="py-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Escolha seu plano
@@ -473,7 +473,7 @@ export default function LandingPage() {
 
       {/* Confiança */}
       <FadeInUp delay={600}>
-        <section className="py-12 bg-[#0B1F3A]">
+        <section className="py-12">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="flex items-center justify-center gap-3 text-white/60">
               <Shield className="h-6 w-6 text-[#22C55E]" />
@@ -485,7 +485,7 @@ export default function LandingPage() {
 
       {/* CTA Final + Footer - same trigger */}
       <FadeInUp delay={700}>
-        <section className="py-20 bg-gradient-to-r from-[#0B1F3A] to-[#22C55E]">
+        <section className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Pare de perder dinheiro no fiado
