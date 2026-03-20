@@ -268,9 +268,9 @@ export default function BusinessRulesPage() {
         .single()
       
       // Handle optional late fee (multa)
-      const lateFeeEnabled = config.lateFeeType && config.lateFeeType !== 'none'
+      const lateFeeEnabled = config.lateFeeType !== null
       // Handle optional late interest (juros)
-      const lateInterestEnabled = config.lateInterestType && config.lateInterestType !== 'none'
+      const lateInterestEnabled = config.lateInterestType !== null
       
       if (existing) {
         const { error: updateError } = await supabase
