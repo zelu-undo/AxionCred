@@ -35,7 +35,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative overflow-y-scroll">
       {/* Floating Particles Background */}
-      <FloatingParticles particleCount={300} className="z-[1]" />
+      <FloatingParticles particleCount={540} className="z-[1]" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
@@ -498,9 +498,9 @@ export default function LandingPage() {
       </section>
       </FadeInUp>
 
-      {/* Footer */}
+      {/* Footer - Hide particles by using higher z-index */}
       <FadeInUp delay={800}>
-        <footer className="bg-[#0a1829] text-white py-12">
+        <footer className="bg-[#0a1829] text-white py-12 relative z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
