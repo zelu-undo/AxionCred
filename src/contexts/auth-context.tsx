@@ -232,6 +232,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[AUTH] onAuthStateChange event:", event, { hasSession: !!session?.user })
+      
       if (session?.user) {
         // Check if email is confirmed
         if (!session.user.email_confirmed_at) {
@@ -295,12 +297,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Protect routes - redirect to login if not authenticated
   useEffect(() => {
+    console.log("[AUTH] Route protection check:", { loading, hasUser: !!user, pathname })
     if (!loading) {
       const isPublicRoute = publicRoutes.some(route => 
         pathname === route || pathname.startsWith(route + "/")
       )
       
       if (!user && !isPublicRoute) {
+        console.log("[AUTH] No user, redirecting to /login")
         router.push("/login")
       }
     }
