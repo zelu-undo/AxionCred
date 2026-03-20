@@ -13,11 +13,21 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    domains: ['ogtbegrzbuzophdcdpjm.supabase.co'],
   },
   
   // Enable experimental features for better performance
   experimental: {
-    optimizePackageImports: ['@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-dialog'],
+    optimizePackageImports: [
+      '@radix-ui/react-dropdown-menu', 
+      '@radix-ui/react-select', 
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-slot',
+      'lucide-react',
+    ],
+    // Optimize CSS
+    optimizeCss: true,
   },
   
   // Compiler optimizations
@@ -27,6 +37,20 @@ const nextConfig: NextConfig = {
   
   // React optimization
   reactStrictMode: true,
+  
+  // Enable server components
+  serverExternalPackages: ['@supabase/supabase-js'],
+  
+  // Redirects for better UX
+  async redirects() {
+    return [
+      {
+        source: '/home',
+        destination: '/dashboard',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default withNextIntl(nextConfig)
