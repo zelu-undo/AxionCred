@@ -122,67 +122,67 @@
 ## 🎯 MVP - Funcionalidades Pendentes (Fases 6-13)
 
 ### Fase 6: Mensagens por Cliente
-- [ ] **Mensagem sugerida** baseada na situação
-- [ ] **Envio direto** (WhatsApp)
-- [ ] **Validação de telefone**
+- [x] **Mensagem sugerida** baseada na situação (frontend)
+- [x] **Envio direto** (WhatsApp) (frontend)
+- [x] **Validação de telefone** (frontend)
   - Sugerir cadastro se não houver
 
 ### Fase 7: Status e Prioridade
-- [ ] **Status automático**
+- [x] **Status automático** (frontend)
   - Em dia
   - Atrasado
   - Inadimplente
-- [ ] **Prioridade de recebimento**
+- [x] **Prioridade de recebimento** (frontend)
   - Baseado em valor e tempo
 
 ### Fase 8: Limite de Crédito
-- [ ] **Definição manual**
-- [ ] **Regras automáticas**
+- [x] **Definição manual** (frontend)
+- [x] **Regras automáticas** (frontend)
   - % do caixa por cliente
   - Limite total emprestado
 
 ### Fase 9: Numeração de Contratos
-- [ ] **Modelo por cliente**
-- [ ] **Modelo por empresa**
-- [ ] **Modelo global**
+- [x] **Modelo por cliente** (frontend)
+- [x] **Modelo por empresa** (frontend)
+- [x] **Modelo global** (frontend)
 
 ### Fase 10: Logs e Auditoria
-- [ ] **Registro de ações**
+- [x] **Registro de ações** (frontend)
   - Quem fez
   - O que fez
   - Quando fez
-- [ ] **Análise por funcionário**
-- [ ] **Histórico completo**
+- [x] **Análise por funcionário** (frontend)
+- [x] **Histórico completo** (frontend)
 
 ### Fase 11: Geração de PDF
-- [ ] **Extrato por cliente**
+- [x] **Extrato por cliente** (frontend)
   - Histórico completo
   - Total devido
   - Pagamentos realizados
-- [ ] **Extrato por empréstimo**
+- [x] **Extrato por empréstimo** (frontend)
   - Dados do cliente
   - Parcelas
   - Quem deu baixa
-- [ ] **Auditoria no PDF**
+- [x] **Auditoria no PDF** (frontend)
   - Quem gerou
   - Data de geração
 
 ### Fase 12: Modo Venda Rápida
-- [ ] **Criação rápida**
+- [x] **Criação rápida** (frontend)
   - Selecionar cliente
   - Inserir valor
-- [ ] **Estruturação correta** dos dados
+- [x] **Estruturação correta** dos dados (frontend)
 
 ### Fase 13: Alertas Inteligentes
-- [ ] **Alertas de crédito**
+- [x] **Alertas de crédito** (frontend)
   - Parcela vencida
   - Parcela vencendo
   - Cliente inadimplente
   - Cliente próximo do limite
-- [ ] **Alertas operacionais**
+- [x] **Alertas operacionais** (frontend)
   - Pagamento registrado
   - Empréstimo criado
-- [ ] **Alertas estratégicos**
+- [x] **Alertas estratégicos** (frontend)
   - Aumento de inadimplência
   - Queda de recebimentos
 
@@ -190,33 +190,51 @@
 
 ## 📋 Resumo - O que falta para o MVP
 
-| Fase | Funcionalidade | Status |
-|------|---------------|--------|
-| 1 | Regras de Negócio (Juros) | ✅ |
-| 2 | Gestão de Funcionários | ✅ |
-| 3 | Painel Super Admin | ✅ |
-| 4 | Notificações Avançadas | ✅ |
-| 5 | Templates de Mensagem | ✅ |
-| 6 | Mensagens por Cliente | ❌ |
-| 7 | Status e Prioridade | ❌ |
-| 8 | Limite de Crédito | ❌ |
-| 9 | Numeração de Contratos | ❌ |
-| 10 | Logs e Auditoria | ❌ |
-| 11 | Geração de PDF | ❌ |
-| 12 | Modo Venda Rápida | ❌ |
-| 13 | Alertas Inteligentes | ❌ |
+| Fase | Funcionalidade | Frontend | Backend |
+|------|---------------|----------|---------|
+| 1 | Regras de Negócio (Juros) | ✅ | ✅ |
+| 2 | Gestão de Funcionários | ✅ | ✅ |
+| 3 | Painel Super Admin | ✅ | ✅ |
+| 4 | Notificações Avançadas | ✅ | ✅ |
+| 5 | Templates de Mensagem | ✅ | ✅ |
+| 6 | Mensagens por Cliente | ✅ | ❌ |
+| 7 | Status e Prioridade | ✅ | ❌ |
+| 8 | Limite de Crédito | ✅ | ❌ |
+| 9 | Numeração de Contratos | ✅ | ❌ |
+| 10 | Logs e Auditoria | ✅ | ❌ |
+| 11 | Geração de PDF | ✅ | ❌ |
+| 12 | Modo Venda Rápida | ✅ | ❌ |
+| 13 | Alertas Inteligentes | ✅ | ❌ |
 
-**Total: 8 fases faltando para completar o MVP completo**
-
----
-
-## 🎯 Próximas Prioridades
-
-1. **Fase 6 - Mensagens por Cliente**: Interface para envio direto de mensagens via WhatsApp
-2. **Fase 7 - Status e Prioridade**: Status automático e cálculo de prioridade
-3. **Fase 8 - Limite de Crédito**: Regras automáticas de limite
-4. **Fase 11 - Geração de PDF**: Extratos e contratos
+**Frontend: ✅ Completo (todas as 13 fases)**
+**Backend: ❌ Faltando 8 fases (6-13)**
 
 ---
 
-*Última atualização: 2026-03-18*
+## 🎯 Próximas Prioridades (Backend)
+
+1. **Fase 6 - Mensagens por Cliente**: API para envio de mensagens via WhatsApp
+2. **Fase 7 - Status e Prioridade**: Cálculo automático de status e prioridade
+3. **Fase 8 - Limite de Crédito**: Regras automáticas e API de limites
+4. **Fase 11 - Geração de PDF**: Geração real de PDF no backend
+
+---
+
+## ✅ Frontend Completo
+
+Todas as 13 fases do MVP possuem interface frontend implementada:
+
+| Fase | Página | Localização |
+|------|--------|-------------|
+| 6 | Mensagens por Cliente | `/customers/[id]/messages` |
+| 7 | Status e Prioridade | `/customers/status` |
+| 8 | Limite de Crédito | `/settings/credit-limit` |
+| 9 | Numeração de Contratos | `/settings/contract-numbering` |
+| 10 | Logs e Auditoria | `/settings/audit-logs` |
+| 11 | Geração de PDF | `/reports` |
+| 12 | Venda Rápida | `/quick-sale` |
+| 13 | Alertas Inteligentes | `/alerts` |
+
+---
+
+*Última atualização: 2026-03-20*

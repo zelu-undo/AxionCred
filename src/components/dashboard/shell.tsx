@@ -70,11 +70,13 @@ function NavigationItems() {
     { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
     { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
     { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
-    { name: "⚡ Venda Rápida", href: "/loans/quick", icon: TrendingUp, permission: "quick-sale" },
+    { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
     { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
     { name: "📄 Relatórios", href: "/reports", icon: Receipt, permission: "reports" },
     { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
     { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
+    { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
+    { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
   ]
 
   const pathname = usePathname()

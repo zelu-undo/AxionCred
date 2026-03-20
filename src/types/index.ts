@@ -235,3 +235,40 @@ export interface DashboardStats {
   overdue_amount: number
   overdue_count: number
 }
+
+// Staff and Roles types
+export type InvitationStatus = "pending" | "accepted" | "expired" | "cancelled"
+
+export interface StaffMember {
+  id: string
+  owner_id: string
+  name: string
+  email: string
+  role_id?: string
+  role_name?: string
+  status: "active" | "inactive"
+  invitation_status: InvitationStatus
+  invitation_sent_at?: string
+  invitation_accepted_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RolePermission {
+  module: string
+  view: boolean
+  create: boolean
+  edit: boolean
+  delete: boolean
+}
+
+export interface CustomRole {
+  id: string
+  owner_id: string
+  name: string
+  description?: string
+  permissions: RolePermission[]
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
