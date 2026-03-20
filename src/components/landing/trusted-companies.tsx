@@ -6,17 +6,19 @@ interface Company {
   name: string
   type: string
   color: string
+  location: string
+  years: string
 }
 
 const companies: Company[] = [
-  { name: "Mercado Central", type: "Supermercado", color: "from-amber-500 to-orange-600" },
-  { name: "Farmácia Saúde", type: "Farmácia", color: "from-green-500 to-emerald-600" },
-  { name: "Restaurante Sabor", type: "Restaurante", color: "from-red-500 to-rose-600" },
-  { name: "Loja Mode", type: "Moda", color: "from-purple-500 to-violet-600" },
-  { name: "Atelier Costura", type: "Confecção", color: "from-pink-500 to-rose-500" },
-  { name: "Auto Peças", type: "Automotivo", color: "from-slate-500 to-zinc-600" },
-  { name: "Pet Shop Amigo", type: "Petshop", color: "from-teal-500 to-cyan-600" },
-  { name: "Padaria Pão", type: "Padaria", color: "from-yellow-500 to-amber-600" },
+  { name: "Supermercado Kyoto", type: "Supermercado", color: "from-amber-500 to-orange-600", location: "São Paulo, SP", years: "3 anos" },
+  { name: "Drogaria Santa Marta", type: "Farmácia", color: "from-green-500 to-emerald-600", location: "Curitiba, PR", years: "2 anos" },
+  { name: "Restaurante Tempero & Sabor", type: "Restaurante", color: "from-red-500 to-rose-600", location: "Belo Horizonte, MG", years: "4 anos" },
+  { name: "Ateliê Costura Fina", type: "Confecção", color: "from-pink-500 to-rose-500", location: "Rio de Janeiro, RJ", years: "2 anos" },
+  { name: "Auto Center Rodas & Pneus", type: "Automotivo", color: "from-slate-500 to-zinc-600", location: "Campinas, SP", years: "5 anos" },
+  { name: "Pet Shop Patudo & Mia", type: "Petshop", color: "from-teal-500 to-cyan-600", location: "Porto Alegre, RS", years: "1 ano" },
+  { name: "Padaria Artesanal do Bairro", type: "Padaria", color: "from-yellow-500 to-amber-600", location: "Recife, PE", years: "6 anos" },
+  { name: "Loja de Roupas Essenza", type: "Moda", color: "from-purple-500 to-violet-600", location: "Salvador, BA", years: "2 anos" },
 ]
 
 function CompanyLogo({ company, index }: { company: Company; index: number }) {
@@ -24,7 +26,7 @@ function CompanyLogo({ company, index }: { company: Company; index: number }) {
   
   return (
     <div 
-      className="group relative bg-white/5 border border-white/10 rounded-xl p-4 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#22C55E]/10"
+      className="group relative bg-white/5 border border-white/10 rounded-xl p-4 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#22C55E]/10 animate-fade-in-up"
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <div className="flex items-center gap-3">
@@ -44,12 +46,20 @@ function CompanyLogo({ company, index }: { company: Company; index: number }) {
         </div>
       </div>
       
-      {/* Status Badge */}
-      <div className="absolute -top-2 -right-2 bg-[#22C55E] text-white text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-        Ativo
+      {/* Credibility Badges */}
+      <div className="mt-3 flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1 text-xs text-white/40">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+          </svg>
+          {company.location}
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs text-[#22C55E]">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          Cliente há {company.years}
+        </span>
       </div>
     </div>
   )

@@ -17,6 +17,15 @@ const FloatingParticles = dynamic(
 const WHATSAPP_NUMBER = "5544999152226"
 const WHATSAPP_FORMATTED = "44 99915-2226"
 
+// Dynamic WhatsApp messages for different contexts
+const WHATSAPP_MESSAGES = {
+  hero: "Olá! Vim pelo site e quero começar a cobrar agora com o AXION. Pode me ajudar?",
+  cta: "Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais rápido.",
+  footer: "Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?",
+  planStarter: "Olá! Quero contratar o Plano Starter do AXION (R$29/mês). Preciso gerenciar até 50 clientes. Como funciona?",
+  planPro: "Olá! Quero contratar o Plano Pro do AXION (R$49/mês). Quero clientes ilimitados e relatórios. Pode me ajudar?",
+}
+
 function getWhatsAppUrl(message: string): string {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
 }
@@ -25,7 +34,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative overflow-x-hidden">
       {/* Floating Particles Background */}
-      <FloatingParticles particleCount={25} className="z-0" />
+      <FloatingParticles particleCount={250} className="z-0" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
@@ -76,7 +85,7 @@ export default function LandingPage() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up-delay-300">
               <a 
-                href={getWhatsAppUrl("Olá! Quero começar a cobrar agora com o AXION.")}
+                href={getWhatsAppUrl(WHATSAPP_MESSAGES.hero)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#22C55E] hover:bg-[#4ADE80] text-white h-11 rounded-md px-8 text-lg btn-cta"
@@ -344,13 +353,18 @@ export default function LandingPage() {
                 </ul>
                 
                 <a 
-                  href={getWhatsAppUrl("Olá! Quero saber mais sobre o Plano Starter (R$29/mês) do AXION. Preciso de até 50 clientes.")}
+                  href={getWhatsAppUrl(WHATSAPP_MESSAGES.planStarter)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full"
+                  className="block w-full group"
                 >
-                  <Button className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold">
-                    Escolher Starter
+                  <Button className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-[#22C55E]/30">
+                    <span className="flex items-center justify-center gap-2">
+                      Escolher Starter
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
                   </Button>
                 </a>
               </CardContent>
@@ -394,13 +408,18 @@ export default function LandingPage() {
                 </ul>
                 
                 <a 
-                  href={getWhatsAppUrl("Olá! Quero saber mais sobre o Plano Pro (R$49/mês) do AXION. Quero clientes ilimitados e relatórios.")}
+                  href={getWhatsAppUrl(WHATSAPP_MESSAGES.planPro)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full"
+                  className="block w-full group"
                 >
-                  <Button className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold">
-                    Escolher Pro
+                  <Button className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-[#22C55E]/30">
+                    <span className="flex items-center justify-center gap-2">
+                      Escolher Pro
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
                   </Button>
                 </a>
               </CardContent>
@@ -449,7 +468,7 @@ export default function LandingPage() {
             Comece agora e tenha controle total dos seus recebimentos.
           </p>
           <a 
-            href={getWhatsAppUrl("Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais.")}
+            href={getWhatsAppUrl(WHATSAPP_MESSAGES.cta)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-[#0B1F3A] hover:bg-gray-100 h-11 rounded-md px-8 text-lg"
@@ -499,7 +518,7 @@ export default function LandingPage() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
             <a 
-              href={getWhatsAppUrl("Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?")} 
+              href={getWhatsAppUrl(WHATSAPP_MESSAGES.footer)} 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-all duration-300 hover:-translate-y-1"

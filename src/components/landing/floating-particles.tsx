@@ -33,7 +33,7 @@ export function FloatingParticles({
         vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.3,
         size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.3 + 0.1,
+        opacity: Math.random() * 0.4 + 0.15, // 15% increase for better visibility
       })
     }
     return particles
@@ -61,16 +61,21 @@ export function FloatingParticles({
       ctx.fill()
     })
 
-    // Draw connections (lines between nearby particles)
-    const maxDistance = 150
-    particlesRef.current.forEach((p1, i) => {
-      particlesRef.current.slice(i + 1).forEach((p2) => {
+    // Optimized: Draw connections only for nearby particles (reduced distance for performance)
+    const maxDistance = 80
+    const particleCount = particlesRef.current.length
+    
+    // Only check a subset of particles for connections (every 3rd particle) to maintain performance
+    for (let i = 0; i < particleCount; i += 3) {
+      const p1 = particlesRef.current[i]
+      for (let j = i + 1; j < particleCount; j += 3) {
+        const p2 = particlesRef.current[j]
         const dx = p1.x - p2.x
         const dy = p1.y - p2.y
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         if (distance < maxDistance) {
-          const opacity = (1 - distance / maxDistance) * 0.15
+          const opacity = (1 - distance / maxDistance) * 0.12
           ctx.beginPath()
           ctx.moveTo(p1.x, p1.y)
           ctx.lineTo(p2.x, p2.y)
@@ -78,8 +83,8 @@ export function FloatingParticles({
           ctx.lineWidth = 0.5
           ctx.stroke()
         }
-      })
-    })
+      }
+    }
   }, [])
 
   useEffect(() => {
