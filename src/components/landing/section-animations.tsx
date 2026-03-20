@@ -33,7 +33,7 @@ export function FadeInUp({ children, className = "", delay = 0 }: ScrollAnimatio
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${
+      className={`transition-all duration-700 ease-out overflow-hidden w-full ${
         isVisible 
           ? "opacity-100 translate-y-0" 
           : "opacity-0 translate-y-8"
