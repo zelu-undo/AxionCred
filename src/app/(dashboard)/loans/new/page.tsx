@@ -299,7 +299,7 @@ export default function NewLoanPage() {
                   )}
                   {/* Show dropdown when has input or has results */}
                   {showDropdown && (searchInput.length >= MIN_SEARCH_CHARS) && (
-                    <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg">
+                    <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg mt-1 left-0 right-0">
                       {loadingCustomers ? (
                         <div className="p-3 text-center text-gray-500">
                           <Loader2 className="h-4 w-4 animate-spin inline mr-2" />

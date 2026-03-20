@@ -1,3 +1,4 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -22,13 +23,13 @@ const bypassRoutes = [
 export async function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
   
-  // Skip RSC requests - these are internal Next.js requests
+  // Skip RSC requests
   const isRSC = searchParams.get('_rsc')
   if (isRSC) {
     return NextResponse.next()
   }
 
-  // Skip static files and other assets
+  // Skip static files
   if (
     pathname.startsWith('/_next/static') ||
     pathname.startsWith('/_next/image') ||
@@ -53,40 +54,82 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Simple cookie check - just verify if auth cookies exist
-  // Let the client-side handle actual session validation
-  const allCookies = req.cookies.getAll()
-  
-  // Debug: log cookie names
-  console.log("All cookies:", allCookies.map(c => c.name))
-  
-  // Check for ANY Supabase cookies (they start with sb-)
-  // This is more permissive to avoid logout issues
-  const hasSupabaseCookie = allCookies.some(c => c.name.startsWith('sb-'))
+  // Create response for cookie handling
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
 
-  // If no Supabase cookies, redirect to login
-  if (!hasSupabaseCookie) {
-    console.log("No Supabase cookies found, redirecting to login")
+  // Create Supabase client for session validation
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Check if auth cookies exist first
+  const allCookies = req.cookies.getAll()
+  const hasAuthCookies = allCookies.some(c => c.name.startsWith('sb-'))
+  
+  if (!hasAuthCookies) {
+    // No auth cookies - redirect to login
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
+
+  // Try to validate session with timeout
+  let session = null
+  let sessionCheckTimeout = false
   
-  console.log("Supabase cookies found, allowing access")
+  try {
+    const sessionPromise = supabase.auth.getSession()
+    
+    // 3 second timeout for session validation
+    const timeoutPromise = new Promise<{ data: { session: any }; error: any }>((resolve) => 
+      setTimeout(() => {
+        sessionCheckTimeout = true
+        resolve({ data: { session: null }, error: null })
+      }, 3000)
+    )
+    
+    const result = await Promise.race([sessionPromise, timeoutPromise]) as any
+    
+    if (result?.data?.session) {
+      session = result.data.session
+    }
+  } catch (err) {
+    // Session check failed - will allow temporary access
+  }
+
+  if (!session) {
+    // Timeout or error - allow temporary access but set header for client revalidation
+    response.headers.set('x-session-pending', 'true')
+  }
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (['/login', '/register'].includes(pathname)) {
+  if (['/login', '/register'].includes(pathname) && session) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  // Create response and pass through
-  const response = NextResponse.next()
-  
-  // Copy headers
-  req.headers.forEach((value, key) => {
-    response.headers.set(key, value)
-  })
-  
   return response
 }
 
@@ -98,8 +141,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
-     * - paths with extensions (images, etc)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|.*\\.).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*$).*)',
   ],
 }

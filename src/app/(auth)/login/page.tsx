@@ -31,13 +31,10 @@ function LoginForm() {
     setIsLoading(true)
     setError(null)
 
-    console.log("handleSubmit: Calling signIn...")
-    const result = await signIn(email, password)
-    console.log("handleSubmit: signIn returned", result)
+    const { error } = await signIn(email, password)
 
-    if (result.error) {
-      console.log("handleSubmit: Error from signIn", result.error.message)
-      setError(result.error.message)
+    if (error) {
+      setError(error.message)
     }
     setIsLoading(false)
   }
