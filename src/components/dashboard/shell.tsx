@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LanguageSelector } from "@/components/ui/language-selector"
+import { motion } from "framer-motion"
 
 function NavigationItems() {
   const { t } = useI18n()
@@ -195,35 +196,60 @@ export function Header() {
   const userInitial = user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "?")
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-white px-6">
-      <div className="flex items-center gap-4 lg:hidden">
+    <header className="flex h-16 items-center justify-between border-b bg-white/95 backdrop-blur-sm px-4 sm:px-6 sticky top-0 z-50">
+      <div className="flex items-center gap-3 lg:hidden">
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative overflow-hidden group"
+            >
+              <motion.div
+                animate={mobileMenuOpen ? { rotate: 90 } : { rotate: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Menu className="h-5 w-5" />
+              </motion.div>
+              <span className="absolute inset-0 bg-[#22C55E]/10 scale-0 group-hover:scale-100 rounded-lg transition-transform duration-200" />
             </Button>
           </SheetTrigger>
-          <SheetContent className="w-64 p-0">
-            <Sidebar className="border-r" />
+          <SheetContent 
+            className="w-72 p-0 border-r-0 bg-[#1E3A8A]"
+          >
+            <Sidebar className="border-r-0 bg-transparent" />
           </SheetContent>
         </Sheet>
-        <span className="text-xl font-bold text-[#1E3A8A]">AXION</span>
+        <span className="text-xl font-bold text-[#1E3A8A]">AXI</span>
+        <span className="text-xl font-bold text-[#22C55E]">ON</span>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <LanguageSelector />
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative hover:bg-[#22C55E]/5 transition-colors"
+            >
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Bell className="h-5 w-5" />
+              </motion.div>
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>{t("notifications.title")}</DropdownMenuLabel>
+            <DropdownMenuLabel className="font-semibold">{t("notifications.title")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <div className="py-4 text-center text-sm text-gray-500">
+            <div className="py-6 text-center text-sm text-gray-500">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <Bell className="h-6 w-6 text-gray-400" />
+              </div>
               {t("notifications.noNotifications")}
             </div>
           </DropdownMenuContent>
@@ -231,21 +257,29 @@ export function Header() {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <div className="h-8 w-8 rounded-full bg-[#22C55E] flex items-center justify-center text-white text-sm font-medium">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 hover:bg-[#22C55E/5] transition-colors"
+            >
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="h-8 w-8 rounded-full bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center text-white text-sm font-medium shadow-md"
+              >
                 {userInitial}
-              </div>
+              </motion.div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t("navigation.profile")}</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="font-semibold">{t("navigation.profile")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">
               <Settings className="mr-2 h-4 w-4" />
               {t("navigation.settings")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
+            <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               {t("navigation.logout")}
             </DropdownMenuItem>
