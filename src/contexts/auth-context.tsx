@@ -154,31 +154,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Then check current session with timeout
     const checkSession = async () => {
       try {
-        // Simple timeout without AbortController (getSession doesn't support abort)
-        const timeoutMs = 5000 // 5 seconds timeout
+        // First, try to restore session from cookies (this is important for SSR)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        // Start session check
-        const sessionPromise = supabase.auth.getSession()
-        
-        // Add timeout wrapper
-        const sessionResult = await new Promise<{ data: { session: any }; error: any }>((resolve) => {
-          const timeout = setTimeout(() => {
-            // If timeout, keep using cached user
-            resolve({ data: { session: null }, error: new Error("timeout") })
-          }, timeoutMs)
-          
-          sessionPromise.then(result => {
-            clearTimeout(timeout)
-            resolve(result)
-          }).catch(err => {
-            clearTimeout(timeout)
-            resolve({ data: { session: null }, error: err })
-          })
-        })
-        
-        const { data: { session }, error: sessionError } = sessionResult
-        
-        if (session?.user) {
+        // If we have a valid session, set the user
+        if (session?.user && !sessionError) {
           let appUser: AppUser | null = null
           
           // Try to get user data from our users table
@@ -218,10 +198,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
+        } else if (!cachedUser) {
+          // No session and no cached user - user is not authenticated
+          setUser(null)
+          localStorage.removeItem("axion_user")
         }
-        // Note: If session check fails/times out, we keep the cached user from localStorage
+        // Note: If session check fails but we have cached user, we keep the cached user
       } catch (error) {
-        // Non-blocking - keep cached user
+        // Non-blocking - keep cached user if exists
+        console.error("Session check error:", error)
       } finally {
         // Always set loading to false - critical to avoid infinite loading
         setLoading(false)
@@ -374,9 +359,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Start background sync but don't wait
         syncUserData()
         
-        // Set user and redirect immediately
+        // Set user immediately for UI responsiveness
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
+
+        // Wait for the session to be fully established and cookies to be set
+        // This is critical for the middleware to see the auth state
+        await new Promise<void>((resolve) => {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+              subscription.unsubscribe()
+              resolve()
+            }
+          })
+
+          // Fallback timeout if onAuthStateChange doesn't fire
+          setTimeout(() => {
+            subscription.unsubscribe()
+            resolve()
+          }, 2000)
+        })
+
+        // Small additional delay to ensure cookies are set
+        await new Promise(resolve => setTimeout(resolve, 500))
 
         // Use window.location for reliable redirect (must be last)
         window.location.href = "/dashboard"
