@@ -141,6 +141,7 @@ const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/d
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isInitialized, setIsInitialized] = useState(false)
   const [locale, setLocaleState] = useState<string>("pt")
   const router = useRouter()
   const pathname = usePathname()
@@ -241,6 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Always set loading to false - critical to avoid infinite loading
         console.log("[Auth] Setting loading to false")
         setLoading(false)
+        setIsInitialized(true)
       }
     }
 
@@ -302,6 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("axion_user")
       }
       setLoading(false)
+      setIsInitialized(true)
     })
 
     return () => {
@@ -577,6 +580,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("axion_user")
       router.push("/login")
     }
+  }
+
+  const refreshSession = async () => {
+    console.log("[Auth] Force refreshing session")
+    // Force a session check by getting a new session
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (session?.user) {
+      let appUser: AppUser | null = null
+      
+      try {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("id, email, name, role, tenant_id")
+          .eq("id", session.user.id)
+          .single()
+
+        if (userData) {
+          appUser = {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role || "owner",
+            tenantId: userData.tenant_id || ""
+          }
+        }
+      } catch (err) {
+        console.log("Using Supabase Auth data directly")
+      }
+
+      if (!appUser) {
+        appUser = {
+          id: session.user.id,
+          email: session.user.email || "",
+          name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+          role: "owner",
+          tenantId: session.user.user_metadata?.tenant_id || ""
+        }
+      }
+
+      setUser(appUser)
+      localStorage.setItem("axion_user", JSON.stringify(appUser))
+    } else {
+      setUser(null)
+      localStorage.removeItem("axion_user")
+    }
+    setLoading(false)
+    setIsInitialized(true)
   }
 
   return (
