@@ -33,7 +33,7 @@ export function FloatingParticles({
         vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.3,
         size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.31 + 0.10, // 20% decrease for subtler visibility
+        opacity: Math.random() * 0.29 + 0.09, // 25% decrease for subtler visibility
       })
     }
     return particles
@@ -75,7 +75,7 @@ export function FloatingParticles({
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         if (distance < maxDistance) {
-          const opacity = (1 - distance / maxDistance) * 0.25
+          const opacity = (1 - distance / maxDistance) * 0.23
           ctx.beginPath()
           ctx.moveTo(p1.x, p1.y)
           ctx.lineTo(p2.x, p2.y)
