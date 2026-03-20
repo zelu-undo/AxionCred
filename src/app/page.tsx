@@ -43,7 +43,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-white">AXI</span>
-              <span className="text-2xl font-bold text-[#22C55E] animate-gentle-bounce inline-block">ON</span>
+              <span className="text-2xl font-bold text-[#22C55E] animate-gentle-bounce animate-subtle-glow inline-block">ON</span>
             </div>
             <nav className="hidden md:flex items-center gap-8">
               <a href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Como Funciona</a>
@@ -512,7 +512,7 @@ export default function LandingPage() {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xl font-bold text-white">AXI</span>
-                  <span className="text-xl font-bold text-[#22C55E] animate-gentle-bounce inline-block">ON</span>
+                  <span className="text-xl font-bold text-[#22C55E] animate-gentle-bounce animate-subtle-glow inline-block">ON</span>
                 </div>
                 <p className="text-white/50 text-sm">
                   Sistema simples para controlar quem te deve.
