@@ -17,7 +17,7 @@ interface FloatingParticlesProps {
 }
 
 export function FloatingParticles({ 
-  particleCount = 30, 
+  particleCount = 60, 
   className = "" 
 }: FloatingParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -30,10 +30,10 @@ export function FloatingParticles({
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 2 + 1,
-        opacity: 0.3, // Uniform opacity for particles
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.2,
+        size: Math.random() * 2.5 + 1.5,
+        opacity: 0.5,
       })
     }
     return particles
@@ -61,26 +61,32 @@ export function FloatingParticles({
       ctx.fill()
     })
 
-    // Optimized: Draw connections only for nearby particles (reduced distance for performance)
-    const maxDistance = 80
-    const particleCount = particlesRef.current.length
+    // Conexões com distância maior - otimizado com verificação rápida
+    const maxDistance = 180
+    const maxDistanceSq = maxDistance * maxDistance // Usar distância quadrada para evitar sqrt
+    const particles = particlesRef.current
+    const len = particles.length
     
-    // Only check a subset of particles for connections (every 3rd particle) to maintain performance
-    for (let i = 0; i < particleCount; i += 3) {
-      const p1 = particlesRef.current[i]
-      for (let j = i + 1; j < particleCount; j += 3) {
-        const p2 = particlesRef.current[j]
+    // Verificar todas as partículas para conexões
+    for (let i = 0; i < len; i++) {
+      const p1 = particles[i]
+      // Começar j de i+1 para evitar verificar duas vezes a mesma conexão
+      for (let j = i + 1; j < len; j++) {
+        const p2 = particles[j]
+        
+        // Verificação rápida usando distância quadrada
         const dx = p1.x - p2.x
         const dy = p1.y - p2.y
-        const distance = Math.sqrt(dx * dx + dy * dy)
+        const distanceSq = dx * dx + dy * dy
 
-        if (distance < maxDistance) {
-          const opacity = (1 - distance / maxDistance) * 0.3
+        if (distanceSq < maxDistanceSq) {
+          const distance = Math.sqrt(distanceSq)
+          const opacity = (1 - distance / maxDistance) * 0.25
           ctx.beginPath()
           ctx.moveTo(p1.x, p1.y)
           ctx.lineTo(p2.x, p2.y)
           ctx.strokeStyle = `rgba(34, 197, 94, ${opacity})`
-          ctx.lineWidth = 0.5
+          ctx.lineWidth = 0.8
           ctx.stroke()
         }
       }
