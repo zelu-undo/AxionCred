@@ -22,18 +22,15 @@ CREATE INDEX IF NOT EXISTS idx_loan_installments_loan_id ON loan_installments(lo
 CREATE INDEX IF NOT EXISTS idx_loan_installments_status ON loan_installments(status);
 CREATE INDEX IF NOT EXISTS idx_loan_installments_due_date ON loan_installments(due_date);
 
--- Payments: índices
-CREATE INDEX IF NOT EXISTS idx_payments_tenant_id ON payments(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_payments_loan_id ON payments(loan_id);
-CREATE INDEX IF NOT EXISTS idx_payments_installment_id ON payments(installment_id);
-CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at DESC);
+-- Payment transactions: índices
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_tenant_id ON payment_transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_loan_id ON payment_transactions(loan_id);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_status ON payment_transactions(status);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_created_at ON payment_transactions(created_at DESC);
 
 -- Interest rules: índices
 CREATE INDEX IF NOT EXISTS idx_interest_rules_tenant_id ON interest_rules(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_interest_rules_is_active ON interest_rules(is_active);
-
--- System config: índices
-CREATE INDEX IF NOT EXISTS idx_system_config_tenant_id ON system_config(tenant_id);
 
 -- Indexes for auth (RLS)
 CREATE INDEX IF NOT EXISTS idx_customers_tenant_id_status ON customers(tenant_id, status);
