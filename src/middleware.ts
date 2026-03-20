@@ -57,21 +57,22 @@ export async function middleware(req: NextRequest) {
   // Let the client-side handle actual session validation
   const allCookies = req.cookies.getAll()
   
-  // Check for Supabase auth tokens (access-token or refresh-token)
-  const hasAuthCookie = allCookies.some(c => 
-    c.name.includes('sb-') && (
-      c.name.includes('access-token') || 
-      c.name.includes('refresh-token') ||
-      c.name.includes('auth')
-    )
-  )
+  // Debug: log cookie names
+  console.log("All cookies:", allCookies.map(c => c.name))
+  
+  // Check for ANY Supabase cookies (they start with sb-)
+  // This is more permissive to avoid logout issues
+  const hasSupabaseCookie = allCookies.some(c => c.name.startsWith('sb-'))
 
-  // If no auth indicators, redirect to login
-  if (!hasAuthCookie) {
+  // If no Supabase cookies, redirect to login
+  if (!hasSupabaseCookie) {
+    console.log("No Supabase cookies found, redirecting to login")
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
+  
+  console.log("Supabase cookies found, allowing access")
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
   if (['/login', '/register'].includes(pathname)) {
