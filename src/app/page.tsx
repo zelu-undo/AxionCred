@@ -16,16 +16,16 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-[#22C55E]">ON</span>
             </div>
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-colors">Como Funciona</a>
-              <a href="#beneficios" className="text-white/70 hover:text-white font-medium transition-colors">Benefícios</a>
-              <a href="#planos" className="text-white/70 hover:text-white font-medium transition-colors">Planos</a>
+              <a href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Como Funciona</a>
+              <a href="#beneficios" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Benefícios</a>
+              <a href="#planos" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Planos</a>
             </nav>
             <div className="flex items-center gap-4">
               <Link href="/login">
                 <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Entrar</Button>
               </Link>
               <Link href="/register">
-                <Button className="bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold px-6">Começar Agora</Button>
+                <Button className="bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold px-6 btn-cta">Começar Agora</Button>
               </Link>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function LandingPage() {
                 href="https://wa.me/5544999915226?text=Olá! Quero começar a cobrar agora com o AXION."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#22C55E] hover:bg-[#4ADE80] text-white h-11 rounded-md px-8 text-lg"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#22C55E] hover:bg-[#4ADE80] text-white h-11 rounded-md px-8 text-lg btn-cta"
               >
                 Começar a cobrar agora
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -160,10 +160,10 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section id="como-funciona" className="animate-fade-in py-20 bg-[#0d2240]">
+      <section id="como-funciona" className="animate-fade-in-up py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+            <Card className="bg-white/5 border border-white/10 hover:border-[#22C55E]/50 hover:shadow-lg hover:shadow-[#22C55E]/10 transition-all duration-300 hover:-translate-y-1">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-[#22C55E]" />
@@ -175,7 +175,7 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
                   <CreditCard className="h-6 w-6 text-[#22C55E]" />
@@ -187,7 +187,7 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
                   <MessageCircle className="h-6 w-6 text-[#22C55E]" />
@@ -199,7 +199,7 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 bg-red-500/20 rounded-lg flex items-center justify-center mb-4">
                   <AlertTriangle className="h-6 w-6 text-red-400" />
@@ -211,7 +211,7 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
                   <BarChart3 className="h-6 w-6 text-[#22C55E]" />
@@ -223,7 +223,7 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-colors">
+            <Card className="bg-white/5 border-white/10 hover:border-[#22C55E]/50 transition-all duration-300 hover:-translate-y-1">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 bg-[#22C55E]/20 rounded-lg flex items-center justify-center mb-4">
                   <Wallet className="h-6 w-6 text-[#22C55E]" />
@@ -239,7 +239,7 @@ export default function LandingPage() {
       </section>
 
       {/* Benefícios */}
-      <section id="beneficios" className="animate-fade-in py-20 bg-[#0B1F3A]">
+      <section id="beneficios" className="animate-fade-in-up py-20 bg-gradient-to-b from-[#0d2240] to-[#0B1F3A]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Por que usar o AXION?
@@ -282,7 +282,7 @@ export default function LandingPage() {
       </section>
 
       {/* Planos */}
-      <section id="planos" className="animate-fade-in py-20 bg-[#0d2240]">
+      <section id="planos" className="animate-fade-in-up py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Escolha seu plano
@@ -453,23 +453,23 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-white mb-4">Produto</h4>
               <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-colors">Como Funciona</a></li>
-                <li><a href="#beneficios" className="hover:text-[#22C55E] transition-colors">Benefícios</a></li>
-                <li><a href="#planos" className="hover:text-[#22C55E] transition-colors">Planos</a></li>
+                <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Como Funciona</a></li>
+                <li><a href="#beneficios" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Benefícios</a></li>
+                <li><a href="#planos" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Planos</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Empresa</h4>
               <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#" className="hover:text-[#22C55E] transition-colors">Sobre</a></li>
-                <li><a href="#" className="hover:text-[#22C55E] transition-colors">Contato</a></li>
+                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Sobre</a></li>
+                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Contato</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#" className="hover:text-[#22C55E] transition-colors">Termos de Uso</a></li>
-                <li><a href="#" className="hover:text-[#22C55E] transition-colors">Privacidade</a></li>
+                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Termos de Uso</a></li>
+                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Privacidade</a></li>
               </ul>
             </div>
           </div>
@@ -479,7 +479,7 @@ export default function LandingPage() {
               href="https://wa.me/5544999915226?text=Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-colors"
+              className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-all duration-300 hover:-translate-y-1"
             >
               <MessageCircle className="h-5 w-5" />
               Falar no WhatsApp

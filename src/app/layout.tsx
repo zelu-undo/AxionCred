@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "AXION - Gestão de Crédito",
   description: "Plataforma de infraestrutura de crédito e confiança digital",
   icons: {
-    icon: "/logo-axion.png",
+    icon: "/favicon.ico",
     apple: "/logo-axion.png",
   },
 }
