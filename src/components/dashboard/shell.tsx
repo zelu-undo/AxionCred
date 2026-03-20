@@ -239,7 +239,7 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent 
-            className="w-72 p-0 border-r-0 bg-[#1E3A8A]"
+            className="w-64 p-0 border-r-0 bg-[#1E3A8A]"
           >
             <Sidebar className="border-r-0 bg-transparent" />
           </SheetContent>
