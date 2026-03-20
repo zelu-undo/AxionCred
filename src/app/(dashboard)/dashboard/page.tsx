@@ -171,8 +171,8 @@ export default function DashboardPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || "#8884d8"} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => [value, "Empréstimos"]} />
-                  <Legend formatter={(value: string) => STATUS_LABELS[value] || value} />
+                  <Tooltip formatter={(value) => [value ?? 0, "Empréstimos"]} />
+                  <Legend formatter={(value) => STATUS_LABELS[value as string] || value} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -193,7 +193,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, "Receita"]} />
+                  <Tooltip formatter={(value) => [`R$ ${Number(value ?? 0).toLocaleString("pt-BR")}`, "Receita"]} />
                   <Bar dataKey="revenue" fill="#22C55E" name="Receita" />
                 </BarChart>
               </ResponsiveContainer>
