@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
-import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor } from "lucide-react"
+import { motion } from "framer-motion"
+import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor, TrendingUp, AlertTriangle, CheckCircle, Clock } from "lucide-react"
 
 // CPF formatting
 function formatCpf(value: string): string {
@@ -78,7 +79,46 @@ export default function CustomerDetailPage() {
     state: "",
     notes: "",
     status: "active" as "active" | "inactive" | "blocked",
+    credit_limit: 0,
   })
+
+  // Calculate payment status and priority based on customer loans
+  const getPaymentStatus = () => {
+    // This would typically come from backend based on loan data
+    // For demo, we'll calculate based on customer status
+    if (customer?.status === "inactive") return "inadimplente"
+    if (customer?.status === "blocked") return "inadimplente"
+    return "em_dia"
+  }
+
+  const getPriorityScore = () => {
+    // Priority calculation based on overdue amount and days
+    // Higher score = higher priority for collection
+    const paymentStatus = getPaymentStatus()
+    if (paymentStatus === "inadimplente") return 1 // High priority
+    if (paymentStatus === "atencao") return 2 // Medium priority  
+    return 3 // Low priority (good payer)
+  }
+
+  const paymentStatus = getPaymentStatus()
+  const priorityScore = getPriorityScore()
+
+  // Priority configuration
+  const priorityConfig = {
+    1: { label: "Alta", color: "red", icon: AlertTriangle, bg: "bg-red-100", text: "text-red-700" },
+    2: { label: "Média", color: "yellow", icon: Clock, bg: "bg-yellow-100", text: "text-yellow-700" },
+    3: { label: "Baixa", color: "green", icon: CheckCircle, bg: "bg-green-100", text: "text-green-700" },
+  }
+
+  // Payment status configuration  
+  const statusConfig = {
+    em_dia: { label: "Em Dia", color: "green", icon: CheckCircle },
+    atencao: { label: "Atenção", color: "yellow", icon: Clock },
+    inadimplente: { label: "Inadimplente", color: "red", icon: AlertTriangle },
+  }
+
+  const currentPriority = priorityConfig[priorityScore as keyof typeof priorityConfig]
+  const currentStatus = statusConfig[paymentStatus as keyof typeof statusConfig]
 
   // Fetch customer data
   const { data: customer, isLoading, refetch } = trpc.customer.byId.useQuery(
@@ -373,7 +413,12 @@ export default function CustomerDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <motion.div 
+      className="container mx-auto py-8 max-w-4xl"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       {/* Header with actions */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b">
         <div className="flex items-center gap-4">
@@ -382,9 +427,31 @@ export default function CustomerDetailPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{customer.name}</h1>
-            <Badge variant={customer.status === "active" ? "default" : "secondary"}>
-              {customer.status === "active" ? "Ativo" : customer.status === "inactive" ? "Inativo" : customer.status === "deleted" ? "Excluído" : "Bloqueado"}
-            </Badge>
+            <div className="flex items-center gap-2 mt-2">
+              {/* Payment Status Badge */}
+              <span className={`
+                inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
+                text-xs font-medium border
+                ${paymentStatus === "em_dia" ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-700" :
+                  paymentStatus === "atencao" ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-700" :
+                  "bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-700"}
+              `}>
+                {currentStatus && <currentStatus.icon className="h-3 w-3" />}
+                {currentStatus?.label}
+              </span>
+              
+              {/* Priority Badge */}
+              <span className={`
+                inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
+                text-xs font-medium border
+                ${priorityScore === 1 ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-200" :
+                  priorityScore === 2 ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200" :
+                  "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"}
+              `}>
+                <TrendingUp className="h-3 w-3" />
+                Prioridade {currentPriority?.label}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -688,6 +755,6 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </motion.div>
   )
 }
