@@ -737,13 +737,12 @@ BEGIN
         r.late_fee_percentage,
         r.late_interest_type,
         r.late_interest_percentage,
-        r.priority
-    FROM loan_interest_rules r
+        0 as priority
+    FROM interest_rules r
     WHERE r.tenant_id = p_tenant_id
       AND r.is_active = true
-      AND p_installments >= r.installments_min 
-      AND p_installments <= r.installments_max
-    ORDER BY r.priority DESC
+      AND p_installments >= r.min_installments 
+      AND p_installments <= r.max_installments
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
