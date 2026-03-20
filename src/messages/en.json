@@ -135,7 +135,14 @@
     "recentLoans": "Recent Loans",
     "overdueCustomers": "Overdue Customers",
     "viewCustomers": "View Customers",
-    "newLoan": "New Loan"
+    "newLoan": "New Loan",
+    "noLoans": "No loans found",
+    "noOverdue": "No overdue customers",
+    "loanStatus": "Loan Status",
+    "monthlyRevenue": "Monthly Revenue",
+    "newLoansAndCustomers": "New Loans and Customers",
+    "loans": "Loans",
+    "revenue": "Revenue"
   },
   "customers": {
     "title": "Customers",
@@ -169,6 +176,7 @@
     "paidOut": "Paid Out",
     "active": "Active",
     "cancelled": "Cancelled",
+    "renegotiated": "Renegotiated",
     "viewDetails": "View details",
     "noLoansFound": "No loans found"
   },

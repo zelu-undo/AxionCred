@@ -135,7 +135,14 @@
     "recentLoans": "Préstamos Recientes",
     "overdueCustomers": "Clientes Morosos",
     "viewCustomers": "Ver Clientes",
-    "newLoan": "Nuevo Préstamo"
+    "newLoan": "Nuevo Préstamo",
+    "noLoans": "No se encontraron préstamos",
+    "noOverdue": "No hay clientes morosos",
+    "loanStatus": "Estado de Préstamos",
+    "monthlyRevenue": "Ingresos Mensuales",
+    "newLoansAndCustomers": "Nuevos Préstamos y Clientes",
+    "loans": "Préstamos",
+    "revenue": "Ingresos"
   },
   "customers": {
     "title": "Clientes",
@@ -169,6 +176,7 @@
     "paidOut": "Pagado",
     "active": "Activo",
     "cancelled": "Cancelado",
+    "renegotiated": "Renegociado",
     "viewDetails": "Ver detalles",
     "noLoansFound": "No se encontraron préstamos"
   },

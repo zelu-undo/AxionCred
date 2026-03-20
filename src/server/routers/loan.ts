@@ -391,4 +391,225 @@ export const loanRouter = router({
       overdue_count: overdueCount,
     }
   }),
+
+  recentLoans: protectedProcedure.query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
+      .from("loans")
+      .select(`
+        id,
+        principal_amount,
+        total_amount,
+        installments_count,
+        paid_installments,
+        status,
+        created_at,
+        customer:customers(name)
+      `)
+      .eq("tenant_id", ctx.tenantId!)
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      })
+    }
+
+    return data || []
+  }),
+
+  overdueCustomers: protectedProcedure.query(async ({ ctx }) => {
+    const today = new Date().toISOString().split("T")[0]
+
+    // Get installments that are overdue
+    const { data: installments, error } = await ctx.supabase
+      .from("loan_installments")
+      .select(`
+        id,
+        amount,
+        due_date,
+        status,
+        loan:loans(
+          id,
+          customer_id,
+          customer:customers(name)
+        )
+      `)
+      .eq("status", "late")
+      .lt("due_date", today)
+      .limit(50)
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      })
+    }
+
+    // Group by customer
+    const customerMap = new Map()
+    for (const inst of installments || []) {
+      const customerId = inst.loan?.customer_id
+      if (!customerId) continue
+
+      if (!customerMap.has(customerId)) {
+        customerMap.set(customerId, {
+          customer_id: customerId,
+          customer_name: inst.loan?.customer?.name || "Unknown",
+          overdue_amount: 0,
+          overdue_count: 0,
+        })
+      }
+      const customer = customerMap.get(customerId)
+      customer.overdue_amount += Number(inst.amount)
+      customer.overdue_count += 1
+    }
+
+    // Return top 5 overdue customers
+    return Array.from(customerMap.values())
+      .sort((a, b) => b.overdue_amount - a.overdue_amount)
+      .slice(0, 5)
+  }),
+
+  loanStatusDistribution: protectedProcedure.query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
+      .from("loans")
+      .select("status")
+      .eq("tenant_id", ctx.tenantId!)
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      })
+    }
+
+    const distribution = {
+      pending: 0,
+      active: 0,
+      paid: 0,
+      cancelled: 0,
+      renegotiated: 0,
+    }
+
+    for (const loan of data || []) {
+      if (loan.status in distribution) {
+        distribution[loan.status as keyof typeof distribution]++
+      }
+    }
+
+    return distribution
+  }),
+
+  monthlyRevenue: protectedProcedure.query(async ({ ctx }) => {
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    sixMonthsAgo.setDate(1)
+    sixMonthsAgo.setHours(0, 0, 0, 0)
+
+    const { data, error } = await ctx.supabase
+      .from("payment_transactions")
+      .select("amount, created_at")
+      .eq("tenant_id", ctx.tenantId!)
+      .eq("status", "completed")
+      .gte("created_at", sixMonthsAgo.toISOString())
+      .order("created_at", { ascending: true })
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      })
+    }
+
+    // Group by month
+    const monthlyRevenue: Record<string, number> = {}
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      months.push(key)
+      monthlyRevenue[key] = 0
+    }
+
+    for (const payment of data || []) {
+      const date = new Date(payment.created_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+      if (key in monthlyRevenue) {
+        monthlyRevenue[key] += Number(payment.amount)
+      }
+    }
+
+    return months.map((month) => ({
+      month,
+      revenue: monthlyRevenue[month],
+    }))
+  }),
+
+  monthlyNewData: protectedProcedure.query(async ({ ctx }) => {
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    sixMonthsAgo.setDate(1)
+    sixMonthsAgo.setHours(0, 0, 0, 0)
+
+    // Get new customers per month
+    const { data: customers, error: customerError } = await ctx.supabase
+      .from("customers")
+      .select("created_at")
+      .eq("tenant_id", ctx.tenantId!)
+      .gte("created_at", sixMonthsAgo.toISOString())
+
+    if (customerError) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: customerError.message,
+      })
+    }
+
+    // Get new loans per month
+    const { data: loans, error: loanError } = await ctx.supabase
+      .from("loans")
+      .select("created_at")
+      .eq("tenant_id", ctx.tenantId!)
+      .gte("created_at", sixMonthsAgo.toISOString())
+
+    if (loanError) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: loanError.message,
+      })
+    }
+
+    // Generate last 6 months
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      months.push({
+        month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        customers: 0,
+        loans: 0,
+      })
+    }
+
+    // Count customers by month
+    for (const c of customers || []) {
+      const date = new Date(c.created_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+      const monthData = months.find((m) => m.month === key)
+      if (monthData) monthData.customers++
+    }
+
+    // Count loans by month
+    for (const l of loans || []) {
+      const date = new Date(l.created_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+      const monthData = months.find((m) => m.month === key)
+      if (monthData) monthData.loans++
+    }
+
+    return months
+  }),
 })

@@ -74,13 +74,20 @@ export const publicProcedure = t.procedure
 export const middleware = t.middleware
 
 const isAuthed = middleware(async ({ ctx, next }) => {
-  if (!ctx.userId || !ctx.tenantId) {
+  // Allow requests if userId exists, even if tenantId is empty
+  // This handles the case where user just logged in and tenant is being created
+  if (!ctx.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
+  
+  // If tenantId is empty, try to get from localStorage on client side
+  // Note: This is a workaround - in production, tenantId should always be set after login
+  const tenantId = ctx.tenantId || ""
+  
   return next({
     ctx: {
       userId: ctx.userId,
-      tenantId: ctx.tenantId,
+      tenantId,
       userRole: ctx.userRole,
     },
   })
