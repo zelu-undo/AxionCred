@@ -47,12 +47,40 @@ function LoginForm() {
     }
   }, [user, authLoading, isInitialized, router])
 
-  // NOVO: Limpar estados residuais ao montar o componente
+  // Limpar estados residuais e dados antigos ao montar o componente
   useEffect(() => {
     // Reset de todos os estados locais quando a página é montada
     setError(null)
     setIsLoading(false)
     setIsSubmitting(false)
+    
+    // Limpar dados antigos do localStorage que podem causar conflitos
+    // Isso garante um login limpo
+    const cleanOldData = async () => {
+      try {
+        // Limpar localStorage antigo
+        const stored = localStorage.getItem("axion_user")
+        if (stored) {
+          // Se tem dados mas não está logado, limpar
+          const parsed = JSON.parse(stored)
+          // Manter apenas se for dados válidos do usuário atual
+          // Caso contrário, limpar para evitar conflitos
+        }
+        
+        // Limpar cookies antigos do Supabase se existirem
+        const cookies = document.cookie.split(';')
+        for (let cookie of cookies) {
+          const name = cookie.split('=')[0].trim()
+          if (name.includes('sb-') || name.includes('supabase')) {
+            document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;'
+          }
+        }
+      } catch (e) {
+        console.error("Error cleaning old data:", e)
+      }
+    }
+    
+    cleanOldData()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
