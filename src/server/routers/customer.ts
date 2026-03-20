@@ -58,13 +58,12 @@ export const customerRouter = router({
         .range(offset, offset + limit - 1)
 
       if (search) {
-        // Remove punctuation for CPF search and search both name and document
-        const cleanSearch = search.replace(/[^0-9]/g, '')
-        if (cleanSearch.length >= 3) {
-          // Search by CPF (only numbers)
-          query = query.or(`name.ilike.%${search}%,document.ilike.%${cleanSearch}%`)
-        } else {
-          query = query.ilike("name", `%${search}%`)
+        // Remove punctuation and accents for search
+        const cleanSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        
+        if (cleanSearch.length > 0) {
+          // Use lowercase for case-insensitive search
+          query = query.or(`name.ilike.%${search}%,document.ilike.%${search.replace(/[^0-9]/g, '')}%`)
         }
       }
 

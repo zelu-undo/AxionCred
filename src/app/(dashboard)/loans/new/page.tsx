@@ -22,9 +22,13 @@ export default function NewLoanPage() {
   
   // Get customers with search
   const [customerSearch, setCustomerSearch] = useState("")
+  const [showDropdown, setShowDropdown] = useState(false)
+  
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
     limit: 100,
     search: customerSearch || undefined
+  }, {
+    enabled: customerSearch.length > 0 // Only fetch when searching
   })
   const customers = customersData?.customers || []
 
@@ -62,7 +66,12 @@ export default function NewLoanPage() {
   const { data: businessRulesData } = trpc.businessRules.get.useQuery()
 
   const calculateLoan = () => {
-    const principal = parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100
+    // Parse principal - Brazilian format: 1.234,56 = 1234.56
+    const principalStr = formData.principal.replace(/[^0-9]/g, "")
+    const principal = principalStr.length > 2 
+      ? parseFloat(principalStr.slice(0, -2) + "." + principalStr.slice(-2))
+      : parseFloat(principalStr) / 100
+    
     const numInstallments = parseInt(formData.installments)
     
     if (!principal || !numInstallments) return
@@ -79,6 +88,9 @@ export default function NewLoanPage() {
     let monthlyPayment: number
     let totalAmount: number
     let totalInterest: number
+    
+    // Debug log
+    console.log("Calculation:", { principal, numInstallments, interestRate, interestType })
     
     if (interestRate === 0 || interestType === 'fixed') {
       // Sem juros ou juros fixos
@@ -141,7 +153,11 @@ export default function NewLoanPage() {
     e.preventDefault()
     setIsSubmitting(true)
     
-    const principal = parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100
+    // Parse principal - Brazilian format
+    const principalStr = formData.principal.replace(/[^0-9]/g, "")
+    const principal = principalStr.length > 2 
+      ? parseFloat(principalStr.slice(0, -2) + "." + principalStr.slice(-2))
+      : parseFloat(principalStr) / 100
     
     createMutation.mutate({
       customer_id: formData.customerId,
@@ -219,20 +235,23 @@ export default function NewLoanPage() {
                   <Input
                     placeholder="Buscar por nome ou CPF..."
                     value={customerSearch}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value)
+                      setShowDropdown(true)
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                     className="pl-9"
                   />
                 </div>
-                {/* Show dropdown when searching or when customer is not selected */}
-                {(customerSearch || !formData.customerId) && customers.length > 0 && (
-                  <div className="border rounded-md max-h-48 overflow-y-auto">
+                {/* Show dropdown only when focused and has results */}
+                {showDropdown && customerSearch && customers.length > 0 && (
+                  <div className="border rounded-md max-h-48 overflow-y-auto absolute z-10 bg-white w-[calc(100%-2rem)]">
                     {loadingCustomers ? (
                       <div className="p-2 text-center text-gray-500">
                         <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
                         Carregando...
                       </div>
-                    ) : customers.length === 0 ? (
-                      <div className="p-2 text-center text-gray-500">Nenhum cliente encontrado</div>
                     ) : (
                       customers.map((customer: any) => (
                         <div
@@ -243,6 +262,7 @@ export default function NewLoanPage() {
                           onClick={() => {
                             setFormData({ ...formData, customerId: customer.id })
                             setCustomerSearch(customer.name)
+                            setShowDropdown(false)
                           }}
                         >
                           <div className="font-medium">{customer.name}</div>
@@ -252,7 +272,7 @@ export default function NewLoanPage() {
                     )}
                   </div>
                 )}
-                {formData.customerId && (
+                {formData.customerId && !showDropdown && (
                   <div className="flex items-center gap-2">
                     <div className="text-sm text-green-600 flex items-center gap-1">
                       ✓ Cliente selecionado
@@ -300,26 +320,37 @@ export default function NewLoanPage() {
                       setFormData({ ...formData, installments: String(value) })
                     }}
                     onBlur={() => {
-                      // Auto-adjust to valid range
+                      // Auto-adjust to nearest valid range
                       const rules = businessRulesData?.interestRules || []
                       const num = parseInt(formData.installments)
                       
-                      if (rules.length === 0) {
+                      if (rules.length > 0) {
+                        // Find ranges and adjust to nearest valid
+                        const ranges = rules.map((r: any) => ({
+                          min: r.min_installments,
+                          max: r.max_installments
+                        }))
+                        
+                        // Check if within any range
+                        const inRange = ranges.some(r => num >= r.min && num <= r.max)
+                        
+                        if (!inRange) {
+                          // Find nearest range
+                          let nearestMax = ranges[0].max
+                          let minDiff = Math.abs(num - ranges[0].max)
+                          
+                          for (const r of ranges) {
+                            const diff = Math.abs(num - r.max)
+                            if (diff < minDiff) {
+                              minDiff = diff
+                              nearestMax = r.max
+                            }
+                          }
+                          setFormData({ ...formData, installments: String(nearestMax) })
+                        }
+                      } else if (num > 12) {
                         // No rules, use default max of 12
-                        if (num > 12) {
-                          setFormData({ ...formData, installments: "12" })
-                        }
-                      } else {
-                        // Find max installments from rules
-                        const maxInstallments = Math.max(...rules.map((r: any) => r.max_installments))
-                        if (num > maxInstallments) {
-                          setFormData({ ...formData, installments: String(maxInstallments) })
-                        }
-                        // Find min installments from rules
-                        const minInstallments = Math.min(...rules.map((r: any) => r.min_installments))
-                        if (num < minInstallments) {
-                          setFormData({ ...formData, installments: String(minInstallments) })
-                        }
+                        setFormData({ ...formData, installments: "12" })
                       }
                     }}
                   />
