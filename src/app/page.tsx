@@ -6,6 +6,7 @@ import { CheckCircle, ArrowRight, Users, Clock, AlertTriangle, Shield, MessageCi
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrustedCompanies } from "@/components/landing/trusted-companies"
+import { FadeInUp, FadeIn, SlideInLeft, SlideInRight, ScaleIn } from "@/components/landing/section-animations"
 
 // Dynamic import for particles (client-side only for performance)
 const FloatingParticles = dynamic(
@@ -34,7 +35,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative overflow-x-hidden">
       {/* Floating Particles Background */}
-      <FloatingParticles particleCount={250} className="z-0" />
+      <FloatingParticles particleCount={300} className="z-0" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
@@ -146,50 +147,55 @@ export default function LandingPage() {
       </section>
 
       {/* Problema */}
-      <section className="py-20 bg-[#0d2240]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Você vende… mas não recebe como deveria
-          </h2>
-          <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto animate-fade-in-up-delay-200">
-            Anotar no papel, esquecer cobranças e não saber quem está devendo faz você perder dinheiro todos os meses.
-          </p>
-          
-          <div className="grid md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto animate-fade-in-up-delay-200">
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
-              <p className="text-white/80">Esquece quem já pagou</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
-              <Clock className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-              <p className="text-white/80">Não sabe quem está atrasado</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
-              <Users className="h-5 w-5 text-white/60 mt-0.5 flex-shrink-0" />
-              <p className="text-white/80">Fica sem jeito de cobrar</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3">
-              <DollarSign className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
-              <p className="text-white/80">Perde dinheiro no fiado</p>
+      <FadeInUp>
+        <section className="py-20 bg-[#0d2240]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              Você vende… mas não recebe como deveria
+            </h2>
+            <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto">
+              Anotar no papel, esquecer cobranças e não saber quem está devendo faz você perder dinheiro todos os meses.
+            </p>
+            
+            <div className="grid md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3 hover:border-[#22C55E]/30 transition-all duration-300 hover:-translate-y-1">
+                <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-white/80">Esquece quem já pagou</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3 hover:border-[#22C55E]/30 transition-all duration-300 hover:-translate-y-1">
+                <Clock className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                <p className="text-white/80">Não sabe quem está atrasado</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3 hover:border-[#22C55E]/30 transition-all duration-300 hover:-translate-y-1">
+                <Users className="h-5 w-5 text-white/60 mt-0.5 flex-shrink-0" />
+                <p className="text-white/80">Fica sem jeito de cobrar</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-3 hover:border-[#22C55E]/30 transition-all duration-300 hover:-translate-y-1">
+                <DollarSign className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-white/80">Perde dinheiro no fiado</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </FadeInUp>
 
       {/* Solução */}
-      <section className="py-20 bg-[#0B1F3A]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            O AXION organiza tudo pra você
-          </h2>
-          <p className="text-lg text-white/70 max-w-2xl mx-auto animate-fade-in-up-delay-200">
-            Tenha controle total dos seus recebimentos e saiba exatamente quem cobrar e quando.
-          </p>
-        </div>
-      </section>
+      <FadeInUp>
+        <section className="py-20 bg-[#0B1F3A]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              O AXION organiza tudo pra você
+            </h2>
+            <p className="text-lg text-white/70 max-w-2xl mx-auto">
+              Tenha controle total dos seus recebimentos e sabia exatamente quem cobrar e quando.
+            </p>
+          </div>
+        </section>
+      </FadeInUp>
 
       {/* Features */}
-      <section id="como-funciona" className="animate-fade-in-up py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
+      <FadeInUp delay={100}>
+        <section id="como-funciona" className="py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="bg-white/5 border border-white/10 hover:border-[#22C55E]/50 hover:shadow-lg hover:shadow-[#22C55E]/10 transition-all duration-300 hover:-translate-y-1">
@@ -266,9 +272,11 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Benefícios */}
-      <section id="beneficios" className="animate-fade-in-up py-20 bg-gradient-to-b from-[#0d2240] to-[#0B1F3A]">
+      <FadeInUp delay={200}>
+        <section id="beneficios" className="py-20 bg-gradient-to-b from-[#0d2240] to-[#0B1F3A]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Por que usar o AXION?
@@ -309,9 +317,11 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Planos */}
-      <section id="planos" className="animate-fade-in-up py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
+      <FadeInUp delay={300}>
+        <section id="planos" className="py-20 bg-gradient-to-b from-[#0B1F3A] to-[#0d2240]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">
             Escolha seu plano
@@ -427,11 +437,13 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Prova Social */}
-      <section className="py-20 bg-[#0d2240]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-2xl mx-auto animate-fade-in-up-delay-200">
+      <FadeInUp delay={400}>
+        <section className="py-20 bg-[#0d2240]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-2xl mx-auto hover:border-[#22C55E]/30 transition-all duration-300">
             <div className="h-16 w-16 bg-[#22C55E]/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <Users className="h-8 w-8 text-[#22C55E]" />
             </div>
@@ -444,22 +456,28 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Trusted Companies */}
-      <TrustedCompanies />
+      <FadeInUp delay={500}>
+        <TrustedCompanies />
+      </FadeInUp>
 
       {/* Confiança */}
-      <section className="py-12 bg-[#0B1F3A]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center gap-3 text-white/60">
-            <Shield className="h-6 w-6 text-[#22C55E]" />
-            <span>Seus dados protegidos com segurança</span>
+      <FadeInUp delay={600}>
+        <section className="py-12 bg-[#0B1F3A]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="flex items-center justify-center gap-3 text-white/60">
+              <Shield className="h-6 w-6 text-[#22C55E]" />
+              <span>Seus dados protegidos com segurança</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </FadeInUp>
 
       {/* CTA Final */}
-      <section className="py-20 bg-gradient-to-r from-[#0B1F3A] to-[#22C55E]">
+      <FadeInUp delay={700}>
+        <section className="py-20 bg-gradient-to-r from-[#0B1F3A] to-[#22C55E]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Pare de perder dinheiro no fiado
@@ -478,9 +496,11 @@ export default function LandingPage() {
           </a>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Footer */}
-      <footer className="bg-[#0a1829] text-white py-12">
+      <FadeInUp delay={800}>
+        <footer className="bg-[#0a1829] text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
@@ -530,6 +550,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      </FadeInUp>
     </div>
   )
 }
