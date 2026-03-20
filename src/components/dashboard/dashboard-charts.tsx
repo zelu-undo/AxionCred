@@ -137,7 +137,6 @@ export function DashboardCharts({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [value, t("dashboard.loans")]}
                   contentStyle={{
                     backgroundColor: "white",
                     border: "1px solid #e5e7eb",
@@ -172,19 +171,11 @@ export function DashboardCharts({
                   }
                 />
                 <Tooltip
-                  formatter={(value: number) => [
-                    `R$ ${value.toLocaleString("pt-BR")}`,
-                    t("dashboard.revenue"),
-                  ]}
                   contentStyle={{
                     backgroundColor: "white",
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
                   }}
-                  formatter={(value: number) => [
-                    `R$ ${value.toLocaleString("pt-BR")}`,
-                    t("dashboard.revenue"),
-                  ]}
                 />
                 <Bar dataKey="revenue" fill="#22C55E" radius={[4, 4, 0, 0]} />
               </BarChart>
