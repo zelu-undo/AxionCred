@@ -149,11 +149,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null)
         localStorage.removeItem("axion_user")
       }
+      // Always set initialized to true when we get auth state
+      setInitialized(true)
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [])
 
   // Redirect if not authenticated
   useEffect(() => {
