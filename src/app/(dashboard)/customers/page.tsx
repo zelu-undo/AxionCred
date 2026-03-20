@@ -484,21 +484,21 @@ export default function CustomersPage() {
                                 className="w-44 p-1.5 border-gray-100 shadow-lg shadow-gray-200/50"
                               >
                                 <DropdownMenuItem 
-                                  onClick={() => router.push(`/customers/${customer.id}`)} 
                                   className="
                                     hover:bg-gray-50 rounded-md px-3 py-2 
                                     cursor-pointer transition-colors
                                   "
+                                  onClick={() => router.push(`/customers/${customer.id}`)}
                                 >
                                   <Eye className="mr-2 h-4 w-4 text-gray-500" />
                                   <span className="text-sm">{t("customers.viewDetails")}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => router.push(`/customers/${customer.id}?edit=true`)}
                                   className="
                                     hover:bg-gray-50 rounded-md px-3 py-2 
                                     cursor-pointer transition-colors
                                   "
+                                  onClick={() => router.push(`/customers/${customer.id}?edit=true`)}
                                 >
                                   <Edit className="mr-2 h-4 w-4 text-gray-500" />
                                   <span className="text-sm">{t("common.edit")}</span>
@@ -507,7 +507,7 @@ export default function CustomersPage() {
                                   className="
                                     text-red-600 hover:bg-red-50 rounded-md px-3 py-2 
                                     cursor-pointer transition-colors
-                                  " 
+                                  "
                                   onClick={() => {
                                     if (confirm("Tem certeza que deseja excluir este cliente?")) {
                                       deleteMutation.mutate({ id: customer.id })
@@ -548,7 +548,6 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
-    </motion.div>
 
       {/* Create Customer Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={handleDialogOpenChange}>

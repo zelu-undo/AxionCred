@@ -107,8 +107,8 @@ export default function CustomerDetailPage() {
     // Higher score = higher priority for collection
     const paymentStatus = getPaymentStatus()
     if (paymentStatus === "inadimplente") return 1 // High priority
-    if (paymentStatus === "atencao") return 2 // Medium priority  
-    return 3 // Low priority (good payer)
+    if (paymentStatus === "em_dia") return 3 // Low priority (good payer)
+    return 2 // Medium priority
   }
 
   const paymentStatus = getPaymentStatus()
@@ -241,6 +241,7 @@ export default function CustomerDetailPage() {
         state,
         notes: customer.notes || "",
         status: customer.status || "active",
+        credit_limit: customer.credit_limit || 0,
       })
     }
   }, [customer])
@@ -444,7 +445,6 @@ export default function CustomerDetailPage() {
                 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
                 text-xs font-medium border
                 ${paymentStatus === "em_dia" ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-700" :
-                  paymentStatus === "atencao" ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-700" :
                   "bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-700"}
               `}>
                 {currentStatus && <currentStatus.icon className="h-3 w-3" />}
