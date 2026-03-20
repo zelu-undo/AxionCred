@@ -139,7 +139,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // Check current session with timeout
+    // IMMEDIATELY check localStorage before any async operations
+    // This prevents flash to login on page refresh
+    const cachedUser = localStorage.getItem("axion_user")
+    if (cachedUser) {
+      try {
+        const parsed = JSON.parse(cachedUser)
+        setUser(parsed)
+      } catch {
+        // Invalid JSON - ignore
+      }
+    }
+    
+    // Then check current session with timeout
     const checkSession = async () => {
       try {
         // Simple timeout without AbortController (getSession doesn't support abort)
@@ -151,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Add timeout wrapper
         const sessionResult = await new Promise<{ data: { session: any }; error: any }>((resolve) => {
           const timeout = setTimeout(() => {
-            // If timeout, try to use cached user but it will be limited
+            // If timeout, keep using cached user
             resolve({ data: { session: null }, error: new Error("timeout") })
           }, timeoutMs)
           
@@ -206,20 +218,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
-        } else if (sessionError?.message === "timeout" || !sessionError) {
-          // If timeout or no error, check localStorage as fallback
-          const cachedUser = localStorage.getItem("axion_user")
-          if (cachedUser) {
-            try {
-              const parsed = JSON.parse(cachedUser)
-              setUser(parsed)
-            } catch {
-              // Invalid JSON - ignore
-            }
-          }
         }
+        // Note: If session check fails/times out, we keep the cached user from localStorage
       } catch (error) {
-        // Non-blocking - ignore errors
+        // Non-blocking - keep cached user
       } finally {
         // Always set loading to false - critical to avoid infinite loading
         setLoading(false)
@@ -293,15 +295,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Protect routes - redirect to login if not authenticated
   useEffect(() => {
-    if (!loading) {
+    if (loading) return // Wait for session check to complete
+    
+    // Small delay to allow session to restore from localStorage
+    const timer = setTimeout(() => {
       const isPublicRoute = publicRoutes.some(route => 
         pathname === route || pathname.startsWith(route + "/")
       )
       
       if (!user && !isPublicRoute) {
-        router.push("/login")
+        router.replace("/login")
       }
-    }
+    }, 100)
+    
+    return () => clearTimeout(timer)
   }, [user, loading, pathname, router])
 
   const signIn = async (email: string, password: string) => {
@@ -371,10 +378,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
 
-        // Redirect to dashboard using router
-        router.replace("/dashboard")
-        
-        return { error: null }
+        // Use window.location for reliable redirect (must be last)
+        window.location.href = "/dashboard"
+        return { error: null } // This won't execute due to redirect
       }
 
       return { error: { message: "Login failed", code: "UNKNOWN" } }

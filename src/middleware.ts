@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -54,36 +53,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Create response for cookie handling
+  // Create response
   let response = NextResponse.next({
     request: {
       headers: req.headers,
     },
   })
-
-  // Create Supabase client for session validation
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
 
   // Check if auth cookies exist first
   const allCookies = req.cookies.getAll()
@@ -96,37 +71,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Try to validate session with timeout
-  let session = null
-  let sessionCheckTimeout = false
-  
-  try {
-    const sessionPromise = supabase.auth.getSession()
-    
-    // 3 second timeout for session validation
-    const timeoutPromise = new Promise<{ data: { session: any }; error: any }>((resolve) => 
-      setTimeout(() => {
-        sessionCheckTimeout = true
-        resolve({ data: { session: null }, error: null })
-      }, 3000)
-    )
-    
-    const result = await Promise.race([sessionPromise, timeoutPromise]) as any
-    
-    if (result?.data?.session) {
-      session = result.data.session
-    }
-  } catch (err) {
-    // Session check failed - will allow temporary access
-  }
-
-  if (!session) {
-    // Timeout or error - allow temporary access but set header for client revalidation
-    response.headers.set('x-session-pending', 'true')
-  }
+  // Auth cookies exist - allow access
+  // Client-side will handle actual session validation
+  // Set header to indicate session needs validation on client
+  response.headers.set('x-session-pending', 'true')
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (['/login', '/register'].includes(pathname) && session) {
+  if (['/login', '/register'].includes(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
