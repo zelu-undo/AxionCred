@@ -188,6 +188,36 @@
 
 ---
 
+## ✅ Novas Funcionalidades (v1.2 - 2026-03)
+
+### Financial Reports (`/reports/financial`)
+- [x] Dashboard de fluxo de caixa (receita, despesas, lucro)
+- [x] Projeção de fluxo de caixa baseada em parcelas a receber
+- [x] Relatório de inadimplência por período
+- [x] Relatório de performance da equipe de cobrança
+
+### Fiadores e Garantias (`/guarantors`)
+- [x] Gestão de fiadores (pessoa física/jurídica)
+- [x] Cadastro de garantias (imóvel, veículo, fiador)
+- [x] Vinculação de garantias a empréstimos
+- [x] Status: ativo, inativo, verificado, pendente
+
+### Renegociação de Dívidas (`/renegotiations`)
+- [x] Criação de renegociação com novas condições
+- [x] Histórico do empréstimo original
+- [x] Workflow de aprovação/rejeição
+- [x] Simulação de novas parcelas
+
+### Busca Global
+- [x] Campo de busca no header
+- [x] Atalho Cmd+K
+
+### Notificações em Tempo Real
+- [x] UI de notificações no header
+- [x] Tipos: pagamento, vencimento, alerta
+
+---
+
 ## 📋 Resumo - O que falta para o MVP
 
 | Fase | Funcionalidade | Frontend | Backend |
@@ -205,9 +235,14 @@
 | 11 | Geração de PDF | ✅ | ❌ |
 | 12 | Modo Venda Rápida | ✅ | ❌ |
 | 13 | Alertas Inteligentes | ✅ | ❌ |
+| N/A | Relatórios Financeiros | ✅ | ❌ |
+| N/A | Fiadores e Garantias | ✅ | ❌ |
+| N/A | Renegociação de Dívidas | ✅ | ❌ |
+| N/A | Busca Global | ✅ | ❌ |
+| N/A | Notificações Realtime | ✅ | ❌ |
 
-**Frontend: ✅ Completo (todas as 13 fases)**
-**Backend: ❌ Faltando 8 fases (6-13)**
+**Frontend: ✅ Completo (todas as fases + novas funcionalidades)**
+**Backend: ❌ Faltando implementação**
 
 ---
 
@@ -234,6 +269,21 @@ Todas as 13 fases do MVP possuem interface frontend implementada:
 | 11 | Geração de PDF | `/reports` |
 | 12 | Venda Rápida | `/quick-sale` |
 | 13 | Alertas Inteligentes | `/alerts` |
+
+---
+
+## 📋 Nova Versão - v1.2 Features (Março 2026)
+
+| Funcionalidade | Página | Status |
+|----------------|--------|--------|
+| Relatórios Financeiros | `/reports/financial` | ✅ Frontend |
+| Fiadores e Garantias | `/guarantors` | ✅ Frontend |
+| Renegociação de Dívidas | `/renegotiations` | ✅ Frontend |
+| Busca Global | Header | ✅ Frontend |
+| Notificações Realtime | Header | ✅ Frontend |
+
+**Frontend: ✅ Completo**
+**Backend: ❌ Necessário implementar APIs e banco**
 
 ---
 

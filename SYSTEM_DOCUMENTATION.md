@@ -250,6 +250,7 @@ interface RolePermission {
 /register                  → Cadastro
 /demo                      → Demo mode
 /dashboard                 → Dashboard principal
+/dashboard/advanced        → Dashboard avançado
 /customers                 → Lista de clientes
 /customers/[id]            → Detalhes do cliente
 /customers/[id]/messages   → Mensagens WhatsApp
@@ -257,17 +258,23 @@ interface RolePermission {
 /loans                     → Lista de empréstimos
 /loans/new                 → Novo empréstimo
 /loans/[id]                → Detalhes do empréstimo
+/loans/quick              → Venda rápida
 /collections               → Cobranças
 /quick-sale               → Venda Rápida
 /alerts                   → Alertas Inteligentes
 /reports                  → Relatórios/PDF
+/reports/financial        → Relatórios Financeiros Avançados
+/guarantors               → Fiadores e Garantias
+/renegotiations           → Renegociação de Dívidas
 /settings                 → Configurações gerais
 /settings/business-rules   → Regras de Juros
 /settings/staff           → Gestão de Funcionários
 /settings/roles           → Funções e Permissões
-/settings/credit-limit    → Limite de Crédito
+/settings/credit-limit   → Limite de Crédito
 /settings/contract-numbering → Numeração de Contratos
-/settings/audit-logs      → Logs de Auditoria
+/settings/audit-logs     → Logs de Auditoria
+/settings/notifications  → Configurações de Notificações
+/settings/message-templates → Templates de Mensagem
 ```
 
 ---
@@ -309,7 +316,37 @@ Cores baseadas na identidade visual AXION:
 
 ---
 
-## 11. Funcionalidades Pendentes (Backend)
+## 11. Funcionalidades do Frontend (Implementadas)
+
+### Relatórios Financeiros (`/reports/financial`)
+- Dashboard de fluxo de caixa (receita, despesas, lucro)
+- Projeção de fluxo de caixa baseada em parcelas a receber
+- Relatório de inadimplência por período
+- Relatório de performance da equipe de cobrança
+
+### Fiadores e Garantias (`/guarantors`)
+- Gestão de fiadores (pessoa física/jurídica)
+- Cadastro de garantias (imóvel, veículo, fiador)
+- Vinculação de garantias a empréstimos
+- Status: ativo, inativo, verificado, pendente
+
+### Renegociação de Dívidas (`/renegotiations`)
+- Criação de renegociação com novas condições
+- Histórico do empréstimo original
+- Workflow de aprovação/rejeição
+- Simulação de novas parcelas
+
+### Busca Global
+- Campo de busca no header com atalho Cmd+K
+- Pesquisa em clientes, empréstimos, parcelas
+
+### Notificações em Tempo Real
+- Dropdown de notificações no header
+- Tipos: pagamento, vencimento, alerta
+
+---
+
+## 12. Funcionalidades Pendentes (Backend)
 
 ### Fase 6: Mensagens por Cliente
 - [ ] API para envio real via WhatsApp

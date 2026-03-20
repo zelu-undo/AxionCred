@@ -139,10 +139,29 @@ O sistema possui um **modo demo** que funciona sem necessidade de configurar o S
 | `/dashboard` | Dashboard principal com KPIs |
 | `/dashboard/advanced` | Dashboard avançado com gráficos |
 | `/customers` | Gestão de clientes |
+| `/customers/[id]` | Detalhes do cliente |
+| `/customers/[id]/messages` | Mensagens WhatsApp |
+| `/customers/status` | Status e prioridade |
 | `/loans` | Lista de empréstimos |
 | `/loans/new` | Criar novo empréstimo |
+| `/loans/[id]` | Detalhes do empréstimo |
+| `/loans/quick` | Venda rápida |
 | `/collections` | Gerenciamento de cobranças |
+| `/quick-sale` | Venda rápida simplificada |
+| `/alerts` | Alertas e notificações |
+| `/reports` | Geração de relatórios |
+| `/reports/financial` | Relatórios financeiros avançados |
+| `/guarantors` | Gestão de fiadores e garantias |
+| `/renegotiations` | Renegociação de dívidas |
 | `/settings` | Configurações do usuário |
+| `/settings/business-rules` | Regras de juros |
+| `/settings/staff` | Gestão de funcionários |
+| `/settings/roles` | Funções e permissões |
+| `/settings/credit-limit` | Limite de crédito |
+| `/settings/contract-numbering` | Numeração de contratos |
+| `/settings/audit-logs` | Logs de auditoria |
+| `/settings/notifications` | Configurações de notificações |
+| `/settings/message-templates` | Templates de mensagem |
 
 ## 🌐 Internacionalização
 
