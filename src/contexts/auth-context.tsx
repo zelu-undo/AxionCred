@@ -321,21 +321,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[Auth] Attempting signIn for:", email)
       
-      // Add a timeout to the signIn process
-      const signInPromise = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
-
-      const timeoutMs = 15000 // 15 seconds for login
-      const result = await Promise.race([
-        signInPromise,
-        new Promise<any>((_, reject) => 
-          setTimeout(() => reject(new Error("timeout")), timeoutMs)
-        )
-      ])
-
-      const { data, error } = result
 
       if (error) {
         console.error("[Auth] signIn error:", error)
@@ -376,10 +365,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .select("id")
             .limit(1)
 
-          if (tenantError) {
-            // Tables don't exist or no access - skip sync
-            console.log("Skipping DB sync - tables not available")
-          } else {
+          if (!tenantError) {
             // Tables exist - try to sync user
             const { data: dbUser } = await supabase
               .from("users")
@@ -446,19 +432,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }
     } catch (error: any) {
       console.error("[Auth] signIn exception:", error)
-      
-      // Handle timeout specifically
-      if (error.message === "timeout") {
-        return {
-          error: {
-            message: locale === "en" ? "Login timed out. Please check your connection and try again." : 
-                    locale === "es" ? "Tiempo de espera agotado. Revisa tu conexión." : 
-                    "Tempo de login esgotado. Verifique sua conexão e tente novamente.",
-            code: "TIMEOUT"
-          }
-        }
-      }
-      
       return { error: mapAuthError(error, locale) }
     }
   }
