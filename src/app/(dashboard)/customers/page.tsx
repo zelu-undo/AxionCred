@@ -472,7 +472,6 @@ export default function CustomersPage() {
                                   size="icon" 
                                   className="
                                     hover:bg-gray-100 
-                                    opacity-0 group-hover:opacity-100
                                     transition-all duration-200
                                   "
                                 >
