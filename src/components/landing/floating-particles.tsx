@@ -94,33 +94,46 @@ export function FloatingParticles({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const resizeCanvas = () => {
+    const updateCanvasSize = () => {
       const dpr = window.devicePixelRatio || 1
-      const rect = canvas.getBoundingClientRect()
-      canvas.width = rect.width * dpr
-      canvas.height = rect.height * dpr
+      // Use full document size, not just viewport
+      const width = Math.max(document.documentElement.scrollWidth, window.innerWidth)
+      const height = Math.max(document.documentElement.scrollHeight, window.innerHeight)
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
       ctx.scale(dpr, dpr)
       
-      particlesRef.current = initParticles(rect.width, rect.height)
+      // Reinitialize particles to cover full document
+      particlesRef.current = initParticles(width, height)
     }
 
     const animate = () => {
-      const rect = canvas.getBoundingClientRect()
-      drawParticles(ctx, rect.width, rect.height)
+      const width = parseFloat(canvas.style.width) || window.innerWidth
+      const height = parseFloat(canvas.style.height) || window.innerHeight
+      drawParticles(ctx, width, height)
       animationRef.current = requestAnimationFrame(animate)
     }
 
-    resizeCanvas()
+    updateCanvasSize()
     animate()
 
     const handleResize = () => {
-      resizeCanvas()
+      updateCanvasSize()
+    }
+
+    // Handle scroll to reinitialize particles in new visible areas
+    const handleScroll = () => {
+      updateCanvasSize()
     }
 
     window.addEventListener("resize", handleResize)
+    window.addEventListener("scroll", handleScroll)
 
     return () => {
       window.removeEventListener("resize", handleResize)
+      window.removeEventListener("scroll", handleScroll)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
