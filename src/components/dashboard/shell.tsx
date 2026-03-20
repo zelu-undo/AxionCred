@@ -74,6 +74,7 @@ function NavigationItems() {
     { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
     { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
     { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
+    { name: "💰 Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
     { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
     { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
     { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },

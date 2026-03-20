@@ -18,6 +18,42 @@
 
 ---
 
+## 🎯 NOVA TELA: Registro de Pagamentos
+
+### Frontend Implementado ✅
+- Página `/payments` criada com design completo
+- Lista de pagamentos com todos os campos necessários:
+  - Nome do cliente, CPF
+  - Número do contrato, parcela
+  - Valor da parcela, valor pago
+  - Data de vencimento, data de pagamento
+  - Status (pago, pendente, atrasado, parcial)
+- Ordenação por: data vencimento, data pagamento, valor
+- Filtros: status, período, hoje, atrasados
+- Paginação (20 itens por página)
+- Modal de registro de pagamento:
+  - Valor pago, data, método (dinheiro, PIX, transferência, cartão)
+  - Observações
+- Modal de detalhes do pagamento
+- Modal de estorno com confirmação
+- Destaque visual para parcelas atrasadas
+- Indicação de pagamento parcial
+- Skeletons de loading
+
+### Backend Necessário ❌
+- CRUD de pagamentos (`payment_transactions`)
+- Endpoint para listar parcelas com pagamentos
+- Registro de pagamento:
+  - Atualizar `paid_amount` da parcela
+  - Atualizar status da parcela (partial/paid)
+  - Atualizar saldo restante do empréstimo
+  - Marcar empréstimo como `paid` quando todas parcelas quitadas
+- Validação: não permitir pagamento > saldo
+- Estorno com histórico de auditoria
+- Busca e filtros no backend (otimização)
+
+---
+
 ## 🚧 FUNCIONALIDADES QUE PRECISAM IMPLEMENTAÇÃO BACKEND
 
 ### 1. Relatórios Financeiros

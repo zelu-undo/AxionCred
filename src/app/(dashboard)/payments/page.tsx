@@ -1,0 +1,932 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { 
+  Search, DollarSign, Calendar, CheckCircle, Clock, AlertCircle, 
+  MoreVertical, Eye, Edit, RotateCcw, Plus, Filter, X,
+  ArrowUpDown, ArrowUp, ArrowDown, CreditCard, FileText, User,
+  Loader2, AlertTriangle, Check
+} from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { formatCurrency, formatDate } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
+import { trpc } from "@/trpc/client"
+
+// Payment method type
+type PaymentMethod = "cash" | "pix" | "transfer" | "card"
+type InstallmentStatus = "paid" | "pending" | "late" | "partial"
+
+interface PaymentRecord {
+  id: string
+  customer_name: string
+  customer_document: string
+  loan_id: string
+  loan_contract_number: string
+  installment_number: number
+  installment_total: number
+  amount_paid: number
+  due_date: string
+  paid_date: string | null
+  status: InstallmentStatus
+  payment_method: PaymentMethod | null
+  notes: string | null
+}
+
+interface Installment {
+  id: string
+  installment_number: number
+  amount: number
+  paid_amount: number
+  due_date: string
+  paid_date: string | null
+  status: InstallmentStatus
+}
+
+interface LoanDetails {
+  id: string
+  contract_number: string
+  principal_amount: number
+  total_amount: number
+  paid_amount: number
+  remaining_amount: number
+  installments_count: number
+  paid_installments: number
+  customer: {
+    id: string
+    name: string
+    document: string
+    phone: string
+    email: string
+  }
+  installments: Installment[]
+}
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+}
+
+export default function PaymentsPage() {
+  const { t } = useI18n()
+  const router = useRouter()
+  
+  // Filters state
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [todayOnly, setTodayOnly] = useState(false)
+  const [overdueOnly, setOverdueOnly] = useState(false)
+  const [sortBy, setSortBy] = useState<"due_date" | "paid_date" | "amount">("due_date")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+  
+  // Modal states
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isReverseOpen, setIsReverseOpen] = useState(false)
+  const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null)
+  const [selectedLoan, setSelectedLoan] = useState<LoanDetails | null>(null)
+  const [paymentToReverse, setPaymentToReverse] = useState<PaymentRecord | null>(null)
+  
+  // Payment form state
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    payment_date: new Date().toISOString().split("T")[0],
+    payment_method: "cash" as PaymentMethod,
+    notes: "",
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Fetch installments with payments
+  const { data: installmentsData, isLoading, refetch } = trpc.loan.byId.useQuery(
+    { id: selectedLoan?.id || "" },
+    { enabled: !!selectedLoan?.id }
+  )
+  
+  // Demo data for payments list
+  const demoPayments: PaymentRecord[] = [
+    { id: "1", customer_name: "João Silva", customer_document: "123.456.789-00", loan_id: "l1", loan_contract_number: "EMP-2024-001", installment_number: 1, installment_total: 1250, amount_paid: 1250, due_date: "2024-03-15", paid_date: "2024-03-15", status: "paid", payment_method: "pix", notes: "Pagamento em dia" },
+    { id: "2", customer_name: "Maria Santos", customer_document: "987.654.321-00", loan_id: "l2", loan_contract_number: "EMP-2024-002", installment_number: 2, installment_total: 850, amount_paid: 850, due_date: "2024-03-18", paid_date: "2024-03-18", status: "paid", payment_method: "cash", notes: null },
+    { id: "3", customer_name: "Pedro Costa", customer_document: "456.789.123-00", loan_id: "l3", loan_contract_number: "EMP-2024-003", installment_number: 1, installment_total: 2100, amount_paid: 500, due_date: "2024-03-10", paid_date: "2024-03-12", status: "partial", payment_method: "transfer", notes: "Pagamento parcial" },
+    { id: "4", customer_name: "Ana Oliveira", customer_document: "321.654.987-00", loan_id: "l4", loan_contract_number: "EMP-2024-004", installment_number: 3, installment_total: 1500, amount_paid: 0, due_date: "2024-03-20", paid_date: null, status: "pending", payment_method: null, notes: null },
+    { id: "5", customer_name: "Carlos Lima", customer_document: "654.321.456-00", loan_id: "l5", loan_contract_number: "EMP-2024-005", installment_number: 2, installment_total: 1800, amount_paid: 0, due_date: "2024-02-28", paid_date: null, status: "late", payment_method: null, notes: null },
+    { id: "6", customer_name: "Juliana Alves", customer_document: "789.123.654-00", loan_id: "l6", loan_contract_number: "EMP-2024-006", installment_number: 1, installment_total: 2200, amount_paid: 2200, due_date: "2024-03-01", paid_date: "2024-03-01", status: "paid", payment_method: "card", notes: null },
+    { id: "7", customer_name: "Roberto Ferreira", customer_document: "147.258.369-00", loan_id: "l7", loan_contract_number: "EMP-2024-007", installment_number: 4, installment_total: 950, amount_paid: 0, due_date: "2024-03-25", paid_date: null, status: "pending", payment_method: null, notes: null },
+    { id: "8", customer_name: "Fernanda Souza", customer_document: "258.369.147-00", loan_id: "l8", loan_contract_number: "EMP-2024-008", installment_number: 2, installment_total: 1350, amount_paid: 1350, due_date: "2024-03-15", paid_date: "2024-03-14", status: "paid", payment_method: "pix", notes: "Antecipado" },
+  ]
+
+  // Apply filters
+  const filteredPayments = demoPayments.filter(payment => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      if (!payment.customer_name.toLowerCase().includes(query) &&
+          !payment.customer_document.includes(query) &&
+          !payment.loan_contract_number.toLowerCase().includes(query)) {
+        return false
+      }
+    }
+    
+    // Status filter
+    if (statusFilter !== "all" && payment.status !== statusFilter) {
+      return false
+    }
+    
+    // Date from filter
+    if (dateFrom && payment.due_date < dateFrom) {
+      return false
+    }
+    
+    // Date to filter
+    if (dateTo && payment.due_date > dateTo) {
+      return false
+    }
+    
+    // Today only filter
+    if (todayOnly) {
+      const today = new Date().toISOString().split("T")[0]
+      if (payment.due_date !== today && payment.paid_date !== today) {
+        return false
+      }
+    }
+    
+    // Overdue only filter
+    if (overdueOnly) {
+      if (payment.status !== "late") {
+        return false
+      }
+    }
+    
+    return true
+  })
+
+  // Apply sorting
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    let comparison = 0
+    switch (sortBy) {
+      case "due_date":
+        comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        break
+      case "paid_date":
+        const aDate = a.paid_date ? new Date(a.paid_date).getTime() : 0
+        const bDate = b.paid_date ? new Date(b.paid_date).getTime() : 0
+        comparison = aDate - bDate
+        break
+      case "amount":
+        comparison = a.installment_total - b.installment_total
+        break
+    }
+    return sortOrder === "asc" ? comparison : -comparison
+  })
+
+  // Pagination
+  const paginatedPayments = sortedPayments.slice(page * pageSize, (page + 1) * pageSize)
+  const totalPages = Math.ceil(sortedPayments.length / pageSize)
+
+  // Toggle sort
+  const handleSort = (column: "due_date" | "paid_date" | "amount") => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortBy(column)
+      setSortOrder("asc")
+    }
+  }
+
+  // Get status badge
+  const getStatusBadge = (status: InstallmentStatus) => {
+    switch (status) {
+      case "paid":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 text-green-700">
+            <CheckCircle className="h-3 w-3" />
+            Pago
+          </span>
+        )
+      case "pending":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 text-amber-700">
+            <Clock className="h-3 w-3" />
+            Pendente
+          </span>
+        )
+      case "late":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700">
+            <AlertCircle className="h-3 w-3" />
+            Atrasado
+          </span>
+        )
+      case "partial":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700">
+            <CreditCard className="h-3 w-3" />
+            Parcial
+          </span>
+        )
+    }
+  }
+
+  // Get payment method label
+  const getPaymentMethodLabel = (method: PaymentMethod | null) => {
+    switch (method) {
+      case "cash": return "Dinheiro"
+      case "pix": return "PIX"
+      case "transfer": return "Transferência"
+      case "card": return "Cartão"
+      default: return "-"
+    }
+  }
+
+  // Clear filters
+  const clearFilters = () => {
+    setSearchQuery("")
+    setStatusFilter("all")
+    setDateFrom("")
+    setDateTo("")
+    setTodayOnly(false)
+    setOverdueOnly(false)
+    setPage(0)
+  }
+
+  // Handle payment registration
+  const handleRegisterPayment = async () => {
+    setIsSubmitting(true)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    setIsSubmitting(false)
+    setIsRegisterOpen(false)
+    setPaymentForm({
+      amount: "",
+      payment_date: new Date().toISOString().split("T")[0],
+      payment_method: "cash",
+      notes: "",
+    })
+    setSelectedInstallment(null)
+    setSelectedLoan(null)
+    refetch()
+  }
+
+  // Handle payment reversal
+  const handleReversePayment = async () => {
+    setIsSubmitting(true)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    setIsSubmitting(false)
+    setIsReverseOpen(false)
+    setPaymentToReverse(null)
+    refetch()
+  }
+
+  // Check if there are active filters
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo || todayOnly || overdueOnly
+
+  return (
+    <motion.div 
+      className="space-y-6"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      {/* Header */}
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <DollarSign className="h-6 w-6 text-[#22C55E]" />
+            Registro de Pagamentos
+          </h1>
+          <p className="text-gray-500 mt-1">Gerencie os pagamentos de parcelas dos empréstimos</p>
+        </div>
+        <Button 
+          onClick={() => setIsRegisterOpen(true)}
+          className="bg-[#22C55E] hover:bg-[#16A34A] hover:shadow-xl hover:shadow-[#22C55E]/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Registrar Pagamento
+        </Button>
+      </motion.div>
+
+      {/* Filters */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-gray-200/60 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filtros
+              </CardTitle>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500 hover:text-[#22C55E]">
+                  <X className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar cliente, CPF ou contrato..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                className="h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]"
+              >
+                <option value="all">Todos os Status</option>
+                <option value="paid">Pago</option>
+                <option value="pending">Pendente</option>
+                <option value="late">Atrasado</option>
+                <option value="partial">Parcial</option>
+              </select>
+              
+              {/* Date From */}
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                className="text-sm"
+              />
+              
+              {/* Date To */}
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                className="text-sm"
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-3 mt-4">
+              <Button
+                variant={todayOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => { setTodayOnly(!todayOnly); setPage(0); }}
+                className={todayOnly ? "bg-[#22C55E] hover:bg-[#16A34A]" : ""}
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                Hoje
+              </Button>
+              <Button
+                variant={overdueOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => { setOverdueOnly(!overdueOnly); setPage(0); }}
+                className={overdueOnly ? "bg-red-500 hover:bg-red-600" : "text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300"}
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Atrasados
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Payments List */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-gray-200/60 shadow-sm">
+          <CardContent className="p-0">
+            {isLoading ? (
+              // Loading skeleton
+              <div className="divide-y divide-gray-100">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3 w-1/4" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <button 
+                          onClick={() => handleSort("due_date")}
+                          className="flex items-center gap-1 hover:text-[#22C55E] transition-colors"
+                        >
+                          Vencimento
+                          {sortBy === "due_date" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        </button>
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrato</th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Parcela</th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <button 
+                          onClick={() => handleSort("amount")}
+                          className="flex items-center gap-1 hover:text-[#22C55E] transition-colors"
+                        >
+                          Valor
+                          {sortBy === "amount" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        </button>
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <button 
+                          onClick={() => handleSort("paid_date")}
+                          className="flex items-center gap-1 hover:text-[#22C55E] transition-colors"
+                        >
+                          Pago em
+                          {sortBy === "paid_date" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        </button>
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    <AnimatePresence>
+                      {paginatedPayments.map((payment, index) => (
+                        <motion.tr
+                          key={payment.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          className={`hover:bg-gray-50/80 transition-colors ${payment.status === "late" ? "bg-red-50/30" : ""}`}
+                        >
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-gray-400" />
+                              <span className="font-medium text-gray-900">{formatDate(payment.due_date)}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+                                payment.status === "late" ? "bg-red-400" :
+                                payment.status === "paid" ? "bg-green-500" :
+                                "bg-blue-500"
+                              }`}>
+                                {payment.customer_name.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{payment.customer_name}</p>
+                                <p className="text-xs text-gray-500">{payment.customer_document}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="text-gray-600 font-mono text-sm">{payment.loan_contract_number}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="text-gray-600">#{payment.installment_number}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div>
+                              <p className="font-semibold text-gray-900">{formatCurrency(payment.amount_paid)}</p>
+                              {payment.status === "partial" && (
+                                <p className="text-xs text-gray-500">de {formatCurrency(payment.installment_total)}</p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            {payment.paid_date ? (
+                              <span className="text-green-600 font-medium">{formatDate(payment.paid_date)}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            {getStatusBadge(payment.status)}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-[#22C55E]/10 hover:text-[#22C55E]"
+                                onClick={() => {
+                                  setSelectedInstallment({
+                                    id: payment.id,
+                                    installment_number: payment.installment_number,
+                                    amount: payment.installment_total,
+                                    paid_amount: payment.amount_paid,
+                                    due_date: payment.due_date,
+                                    paid_date: payment.paid_date,
+                                    status: payment.status,
+                                  })
+                                  setIsDetailsOpen(true)
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    // Edit payment
+                                  }}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  {payment.status === "paid" && (
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        setPaymentToReverse(payment)
+                                        setIsReverseOpen(true)
+                                      }}
+                                      className="text-red-600"
+                                    >
+                                      <RotateCcw className="h-4 w-4 mr-2" />
+                                      Estornar
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {/* Empty state */}
+            {!isLoading && paginatedPayments.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <DollarSign className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum pagamento encontrado</h3>
+                <p className="text-gray-500 max-w-sm mb-6">
+                  {hasActiveFilters 
+                    ? "Tente ajustar os filtros para encontrar o que procura."
+                    : "Registre o primeiro pagamento do sistema."}
+                </p>
+                {hasActiveFilters && (
+                  <Button variant="outline" onClick={clearFilters}>
+                    Limpar Filtros
+                  </Button>
+                )}
+              </div>
+            )}
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100">
+                <p className="text-sm text-gray-500">
+                  Mostrando {page * pageSize + 1} - {Math.min((page + 1) * pageSize, sortedPayments.length)} de {sortedPayments.length}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Próximo
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Register Payment Modal */}
+      <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
+        <DialogContent className="max-w-lg w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-[#22C55E]" />
+              Registrar Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do pagamento da parcela
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Loan Selection - Demo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Empréstimo / Cliente *</label>
+              <select className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]">
+                <option value="">Selecione o empréstimo...</option>
+                <option value="l1">EMP-2024-001 - João Silva - R$ 1.250</option>
+                <option value="l2">EMP-2024-002 - Maria Santos - R$ 850</option>
+                <option value="l3">EMP-2024-003 - Pedro Costa - R$ 2.100</option>
+              </select>
+            </div>
+            
+            {/* Installment Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Parcela *</label>
+              <select className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]">
+                <option value="">Selecione a parcela...</option>
+                <option value="1">Parcela 1 - R$ 1.250 - Venc: 15/03/2024</option>
+                <option value="2">Parcela 2 - R$ 850 - Venc: 18/03/2024</option>
+              </select>
+            </div>
+            
+            {/* Payment Amount */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Valor Pago *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <Input
+                  type="number"
+                  placeholder="0,00"
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                  className="pl-10"
+                />
+              </div>
+              <p className="text-xs text-gray-500">Valor remaining: R$ 1.250</p>
+            </div>
+            
+            {/* Payment Date */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data do Pagamento *</label>
+              <Input
+                type="date"
+                value={paymentForm.payment_date}
+                onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+              />
+            </div>
+            
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Método de Pagamento *</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(["cash", "pix", "transfer", "card"] as PaymentMethod[]).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentForm({ ...paymentForm, payment_method: method })}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      paymentForm.payment_method === method
+                        ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    {method === "cash" && "💵 Dinheiro"}
+                    {method === "pix" && "⚡ PIX"}
+                    {method === "transfer" && "🏦 Transfer"}
+                    {method === "card" && "💳 Cartão"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Observações</label>
+              <textarea
+                value={paymentForm.notes}
+                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                placeholder="Observações opcionais..."
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] resize-none"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleRegisterPayment}
+              disabled={isSubmitting || !paymentForm.amount}
+              className="bg-[#22C55E] hover:bg-[#16A34A]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Confirmar Pagamento
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Details Modal */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-[#22C55E]" />
+              Detalhes do Pagamento
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedInstallment && (
+            <div className="space-y-6 py-4">
+              {/* Status Banner */}
+              <div className={`p-4 rounded-xl border ${
+                selectedInstallment.status === "paid" ? "bg-green-50 border-green-200" :
+                selectedInstallment.status === "late" ? "bg-red-50 border-red-200" :
+                selectedInstallment.status === "partial" ? "bg-blue-50 border-blue-200" :
+                "bg-amber-50 border-amber-200"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {selectedInstallment.status === "paid" && "Pagamento Concluído"}
+                      {selectedInstallment.status === "late" && "Pagamento Atrasado"}
+                      {selectedInstallment.status === "partial" && "Pagamento Parcial"}
+                      {selectedInstallment.status === "pending" && "Aguardando Pagamento"}
+                    </p>
+                    <p className="text-sm text-gray-600">Parcela #{selectedInstallment.installment_number}</p>
+                  </div>
+                  {getStatusBadge(selectedInstallment.status)}
+                </div>
+              </div>
+              
+              {/* Payment Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
+                  <p className="text-xl font-bold text-gray-900">{formatCurrency(selectedInstallment.amount)}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Valor Pago</p>
+                  <p className="text-xl font-bold text-green-600">{formatCurrency(selectedInstallment.paid_amount)}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Data de Vencimento</p>
+                  <p className="font-semibold text-gray-900">{formatDate(selectedInstallment.due_date)}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Data de Pagamento</p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedInstallment.paid_date ? formatDate(selectedInstallment.paid_date) : "-"}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Payment Method & Notes */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">Método de Pagamento</p>
+                    <p className="font-medium text-gray-900">PIX</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">Observações</p>
+                    <p className="font-medium text-gray-900">Pagamento em dia</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+              Fechar
+            </Button>
+            {selectedInstallment?.status !== "paid" && (
+              <Button 
+                onClick={() => {
+                  setIsDetailsOpen(false)
+                  setIsRegisterOpen(true)
+                }}
+                className="bg-[#22C55E] hover:bg-[#16A34A]"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Registrar Pagamento
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reverse Payment Confirmation Modal */}
+      <Dialog open={isReverseOpen} onOpenChange={setIsReverseOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Estorno
+            </DialogTitle>
+          </DialogHeader>
+          
+          {paymentToReverse && (
+            <div className="py-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                <p className="text-sm text-red-600 mb-2">Atenção: Esta ação não pode ser desfeita!</p>
+                <p className="text-gray-700">
+                  Você está prestes a estornar o pagamento de <strong>{formatCurrency(paymentToReverse.amount_paid)}</strong> 
+                  {' '}de {paymentToReverse.customer_name}.
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Motivo do Estorno</label>
+                <select className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">
+                  <option value="">Selecione o motivo...</option>
+                  <option value="duplicate">Pagamento Duplicado</option>
+                  <option value="error">Erro no Valor</option>
+                  <option value="chargeback">Chargeback</option>
+                  <option value="other">Outro Motivo</option>
+                </select>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReverseOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleReversePayment}
+              disabled={isSubmitting}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Confirmar Estorno
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
+  )
+}
