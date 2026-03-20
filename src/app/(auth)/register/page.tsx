@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import dynamic from "next/dynamic"
@@ -23,35 +23,66 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [createdEmail, setCreatedEmail] = useState("")
-  const { signUp } = useAuth()
+  
+  const { signUp, user, loading: authLoading, isInitialized } = useAuth()
   const router = useRouter()
   const { t } = useI18n()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  // Verificar se usuário já está autenticado
+  useEffect(() => {
+    if (isInitialized && !authLoading) {
+      if (user) {
+        console.log("[Register] Usuário já autenticado, redirecionando para dashboard")
+        router.push("/dashboard")
+      }
+    }
+  }, [user, authLoading, isInitialized, router])
+
+  // Limpar estados residuais ao montar o componente
+  useEffect(() => {
     setError(null)
     setSuccess(false)
+    setIsLoading(false)
+    setIsSubmitting(false)
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Evitar múltiplas requisições simultâneas
+    if (isSubmitting) {
+      return
+    }
+    
+    // Reset completo do estado antes de nova tentativa
+    setError(null)
+    setSuccess(false)
+    setIsLoading(true)
+    setIsSubmitting(true)
 
     // Validation with translations
     if (!name.trim()) {
       setError(t("auth.nameRequired"))
       setIsLoading(false)
+      setIsSubmitting(false)
       return
     }
 
     if (password !== confirmPassword) {
       setError(t("auth.passwordMismatch"))
       setIsLoading(false)
+      setIsSubmitting(false)
       return
     }
 
     if (password.length < 6) {
       setError(t("auth.weakPassword"))
       setIsLoading(false)
+      setIsSubmitting(false)
       return
     }
 
@@ -63,12 +94,15 @@ export default function RegisterPage() {
       if (error.code === "EMAIL_CONFIRMATION_REQUIRED") {
         setSuccess(true)
         setCreatedEmail(email)
+        setIsLoading(false)
         // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push(`/login?success=email_sent&email=${encodeURIComponent(email)}`)
         }, 3000)
       } else {
         setError(error.message)
+        setIsLoading(false)
+        setIsSubmitting(false)
       }
     } else {
       // No error means registration was successful
@@ -77,7 +111,6 @@ export default function RegisterPage() {
       await new Promise(resolve => setTimeout(resolve, 500))
       router.push("/dashboard")
     }
-    // Always set loading to false when done
     setIsLoading(false)
   }
 
@@ -129,6 +162,22 @@ export default function RegisterPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    )
+  }
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading || !isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0B1F3A] relative overflow-hidden px-4 py-12">
+        <FloatingParticles particleCount={150} className="z-0 fixed inset-0" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0B1F3A] via-[#1a3a5c] to-[#0B1F3A] z-0" />
+        <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl z-10">
+          <CardContent className="pt-8 pb-8 flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22C55E] mb-4"></div>
+            <p className="text-white/60">Verificando autenticação...</p>
+          </CardContent>
+        </Card>
       </div>
     )
   }

@@ -51,6 +51,47 @@ export async function middleware(req: NextRequest) {
 
   // If public route, just continue
   if (isPublicRoute) {
+    // Even for public routes, check if user is authenticated and on auth pages
+    if (pathname === '/login' || pathname === '/register') {
+      // Create response for cookie handling
+      let response = NextResponse.next({
+        request: {
+          headers: req.headers,
+        },
+      })
+
+      // Check if user has a valid session
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return req.cookies.getAll()
+            },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+              response = NextResponse.next({
+                request: {
+                  headers: req.headers,
+                },
+              })
+              cookiesToSet.forEach(({ name, value, options }) =>
+                response.cookies.set(name, value, options)
+              )
+            },
+          },
+        }
+      )
+
+      // Get session
+      const { data: { session } } = await supabase.auth.getSession()
+
+      // If user has a valid session and tries to access login/register, redirect to dashboard
+      if (session) {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
     return NextResponse.next()
   }
 
@@ -85,14 +126,37 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Get session and refresh if needed
-  const { data: { session }, error } = await supabase.auth.getSession()
+  // Get session - retry once if first attempt fails due to network issues
+  let session = null
+  let sessionError = null
+  
+  try {
+    const { data: { session: s }, error } = await supabase.auth.getSession()
+    session = s
+    sessionError = error
+  } catch (err) {
+    console.error('[Middleware] Session check error:', err)
+    // Give it one more try after a brief delay
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      const { data: { session: s }, error } = await supabase.auth.getSession()
+      session = s
+      sessionError = error
+    } catch (retryErr) {
+      console.error('[Middleware] Session retry error:', retryErr)
+    }
+  }
 
-  // If there's an error or no session, redirect to login
-  if (error || !session) {
-    const redirectUrl = new URL('/login', req.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+  // If there's an error or no session
+  if (sessionError || !session) {
+    // Don't redirect immediately - let the client handle the redirect
+    // This prevents race conditions where the session hasn't loaded yet
+    // Instead, allow the request to continue and let the client-side auth check handle it
+    console.log('[Middleware] No session found, allowing client-side redirect')
+    
+    // Still return the response to let the app render
+    // The client-side AuthProvider will handle the redirect
+    return response
   }
 
   // Check if session is about to expire (within 5 minutes) and refresh if needed
@@ -107,21 +171,14 @@ export async function middleware(req: NextRequest) {
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
         
         if (refreshError || !refreshedSession) {
-          // Refresh failed, redirect to login
-          const redirectUrl = new URL('/login', req.url)
-          redirectUrl.searchParams.set('redirect', pathname)
-          return NextResponse.redirect(redirectUrl)
+          // Refresh failed - don't redirect, let client handle it
+          console.log('[Middleware] Session refresh failed, allowing client-side handling')
         }
       } catch (err) {
-        console.error('Session refresh error:', err)
+        console.error('[Middleware] Session refresh error:', err)
         // Continue with current session if refresh fails
       }
     }
-  }
-
-  // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (['/login', '/register'].includes(pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
   return response

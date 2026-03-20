@@ -10,6 +10,73 @@ AXION is a SaaS credit management platform for small businesses. Built with Next
 - **Authentication**: Supabase Auth
 - **Animations**: Framer Motion (page transitions, staggered animations, hover effects)
 
+## Authentication Architecture
+
+### AuthProvider (`src/contexts/auth-context.tsx`)
+O AuthProvider gerencia todo o estado de autenticação no lado do cliente (client-side):
+
+**Estados:**
+- `user`: Usuário autenticado ou null
+- `loading`: Indica se a verificação de sessão está em andamento
+- `isInitialized`: Indica se a verificação inicial foi completada
+
+**Métodos:**
+- `signIn(email, password)`: Realiza login
+- `signUp(email, password, name)`: Realiza cadastro
+- `signOut()`: Realiza logout
+- `refreshSession()`: Força verificação de sessão
+
+**Características:**
+- Cache de verificação de sessão (5 segundos) para evitar verificações redundantes
+- Prevenção de race conditions com `isCheckingRef`
+- Limpeza de cache antes de operações de login/logout
+- Sincronização automática com eventos `onAuthStateChange` do Supabase
+
+### Middleware (`src/middleware.ts`)
+O middleware verifica autenticação no lado do servidor:
+
+**Comportamento:**
+- Rotas públicas: Permite acesso sem autenticação
+- Rotas protegidas: Verifica sessão e permite renderização (não redireciona imediatamente)
+- Rotas de auth (/login, /register): Se já autenticado, redireciona para dashboard
+
+**Importante:** O middleware NÃO faz redirect imediato quando não há sessão. Permite que o cliente (AuthProvider) lidere com isso para evitar race conditions.
+
+### Páginas de Auth
+
+**Login (`src/app/(auth)/login/page.tsx`):**
+- Verifica se usuário já está autenticado (isInitialized + user)
+- Se autenticado, redireciona automaticamente para /dashboard
+- Limpa estados residuais ao montar componente
+- Previne múltiplas requisições simultâneas (isSubmitting)
+- Mostra "Verificando autenticação..." enquanto carrega
+
+**Register (`src/app/(auth)/register/page.tsx`):**
+- Mesmo comportamento do Login
+- Redirect automático se já autenticado
+
+### Fluxo de Autenticação
+
+1. **Acesso à rota protegida:**
+   - Middleware permite renderização
+   - AuthProvider verifica sessão
+   - Se não autenticado: mostra loading → depois redireciona para /login
+   
+2. **Login:**
+   - Usuário entra com credenciais
+   - AuthProvider limpa cache, faz signIn
+   - Se sucesso: atualiza estado + cache + redirect para /dashboard
+   - Se erro: mostra mensagem de erro
+
+3. **Refresh (F5):**
+   - AuthProvider verifica sessão com cache
+   - Se cache válido (5s), usa dados em cache
+   - Caso contrário, busca nova sessão
+
+4. **Múltiplas abas:**
+   - Eventos onAuthStateChange sincronizam estado entre abas
+   - Logout em uma aba reflete em todas
+
 ## Project Structure
 ```
 src/

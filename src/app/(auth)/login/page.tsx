@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import dynamic from "next/dynamic"
@@ -18,11 +18,14 @@ const FloatingParticles = dynamic(
 )
 
 function LoginForm() {
+  // Estados locais para o formulário
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { signIn } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false) // Para evitar múltiplas requisições
+  
+  const { signIn, user, loading: authLoading, isInitialized } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t } = useI18n()
@@ -33,8 +36,32 @@ function LoginForm() {
   const emailSent = searchParams.get("success") === "email_sent"
   const sentEmail = searchParams.get("email") || ""
 
+  // NOVO: Verificar se usuário já está autenticado
+  useEffect(() => {
+    // Só redirecionar após a verificação inicial estar completa
+    if (isInitialized && !authLoading) {
+      if (user) {
+        console.log("[Login] Usuário já autenticado, redirecionando para dashboard")
+        router.push("/dashboard")
+      }
+    }
+  }, [user, authLoading, isInitialized, router])
+
+  // NOVO: Limpar estados residuais ao montar o componente
+  useEffect(() => {
+    // Reset de todos os estados locais quando a página é montada
+    setError(null)
+    setIsLoading(false)
+    setIsSubmitting(false)
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // NOVO: Evitar múltiplas requisições simultâneas
+    if (isSubmitting) {
+      return
+    }
     
     // Validate inputs
     if (!email || !password) {
@@ -42,18 +69,34 @@ function LoginForm() {
       return
     }
     
-    setIsLoading(true)
+    // NOVO: Reset completo do estado antes de nova tentativa
     setError(null)
+    setIsLoading(true)
+    setIsSubmitting(true)
 
-    const { error } = await signIn(email, password)
+    const { error: signInError } = await signIn(email, password)
 
-    if (error) {
-      setError(error.message)
+    if (signInError) {
+      setError(signInError.message)
       setIsLoading(false)
+      // Reset do flag de submitting para permitir nova tentativa
+      setIsSubmitting(false)
     } else {
-      // Success - don't set isLoading to false as we're redirecting
-      // This prevents the button from flickering
+      // Sucesso - o redirect será feito pelo useEffect acima
+      // Não precisa setar isLoading false aqui pois vamos redirecionar
     }
+  }
+
+  // NOVO: Mostrar loading enquanto verifica autenticação
+  if (authLoading || !isInitialized) {
+    return (
+      <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl">
+        <CardContent className="pt-8 pb-8 flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22C55E] mb-4"></div>
+          <p className="text-white/60">Verificando autenticação...</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -146,7 +189,7 @@ function LoginForm() {
           <Button 
             type="submit" 
             className="w-full bg-[#22C55E] hover:bg-[#4ADE80] text-white font-semibold h-11 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-[#22C55E]/30 disabled:opacity-50 disabled:hover:scale-100" 
-            disabled={isLoading}
+            disabled={isLoading || isSubmitting}
           >
             {isLoading ? (
               <>

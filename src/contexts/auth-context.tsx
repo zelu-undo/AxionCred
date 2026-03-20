@@ -1,8 +1,9 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase"
+import { Session } from "@supabase/supabase-js"
 
 type AppUser = {
   id: string
@@ -21,9 +22,13 @@ type AuthError = {
 type AuthContextType = {
   user: AppUser | null
   loading: boolean
+  // Novo: estado de verificação inicial concluída
+  isInitialized: boolean
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signUp: (email: string, password: string, name?: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
+  // Método para forçar verificação de sessão
+  refreshSession: () => Promise<void>
 }
 
 // Map Supabase error codes to user-friendly messages
