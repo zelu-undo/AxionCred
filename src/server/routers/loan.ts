@@ -448,4 +448,150 @@ export const loanRouter = router({
       overdue_count: overdueCount,
     }
   }),
+
+  // Get customers with overdue installments
+  overdueCustomers: protectedProcedure.query(async ({ ctx }) => {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Get overdue installments with customer info
+    const { data: overdueInstallments } = await ctx.supabase
+      .from("loan_installments")
+      .select(`
+        id,
+        amount,
+        due_date,
+        status,
+        loan:loans(
+          id,
+          status,
+          customer:customers(id, name)
+        )
+      `)
+      .eq("tenant_id", ctx.tenantId!)
+      .eq("status", "late")
+      .lt("due_date", today)
+      .order("due_date", { ascending: true })
+    
+    if (!overdueInstallments) return []
+    
+    // Group by customer
+    const customerMap = new Map()
+    
+    for (const installment of overdueInstallments) {
+      const loan = installment.loan as any
+      if (!loan || !loan.customer) continue
+      
+      const customerId = loan.customer.id
+      const customerName = loan.customer.name
+      
+      if (!customerMap.has(customerId)) {
+        customerMap.set(customerId, {
+          id: customerId,
+          name: customerName,
+          overdue_count: 0,
+          overdue_amount: 0,
+        })
+      }
+      
+      const customer = customerMap.get(customerId)
+      customer.overdue_count++
+      customer.overdue_amount += Number(installment.amount)
+    }
+    
+    return Array.from(customerMap.values())
+  }),
+
+  // Get dashboard charts data
+  dashboardCharts: protectedProcedure.query(async ({ ctx }) => {
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth()
+    
+    // Get loans by status for pie chart
+    const { data: loansByStatus } = await ctx.supabase
+      .from("loans")
+      .select("status")
+      .eq("tenant_id", ctx.tenantId!)
+    
+    const statusCounts = {
+      active: 0,
+      paid: 0,
+      pending: 0,
+      overdue: 0,
+    }
+    
+    loansByStatus?.forEach((loan: any) => {
+      if (loan.status && statusCounts.hasOwnProperty(loan.status)) {
+        statusCounts[loan.status as keyof typeof statusCounts]++
+      }
+    })
+    
+    // Get monthly revenue for last 6 months
+    const monthlyData = []
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(currentYear, currentMonth - i, 1)
+      const nextMonthDate = new Date(currentYear, currentMonth - i + 1, 1)
+      
+      const { data: payments } = await ctx.supabase
+        .from("payment_transactions")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "completed")
+        .gte("created_at", monthDate.toISOString())
+        .lt("created_at", nextMonthDate.toISOString())
+      
+      const monthName = monthDate.toLocaleDateString("pt-BR", { month: "short" })
+      monthlyData.push({
+        month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+        revenue: payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+      })
+    }
+    
+    // Get loans created per month for bar chart
+    const loansPerMonth = []
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(currentYear, currentMonth - i, 1)
+      const nextMonthDate = new Date(currentYear, currentMonth - i + 1, 1)
+      
+      const { count } = await ctx.supabase
+        .from("loans")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", ctx.tenantId!)
+        .gte("created_at", monthDate.toISOString())
+        .lt("created_at", nextMonthDate.toISOString())
+      
+      const monthName = monthDate.toLocaleDateString("pt-BR", { month: "short" })
+      loansPerMonth.push({
+        month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+        loans: count || 0,
+      })
+    }
+    
+    // Get customers per month
+    const customersPerMonth = []
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(currentYear, currentMonth - i, 1)
+      const nextMonthDate = new Date(currentYear, currentMonth - i + 1, 1)
+      
+      const { count } = await ctx.supabase
+        .from("customers")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", ctx.tenantId!)
+        .gte("created_at", monthDate.toISOString())
+        .lt("created_at", nextMonthDate.toISOString())
+      
+      const monthName = monthDate.toLocaleDateString("pt-BR", { month: "short" })
+      customersPerMonth.push({
+        month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+        customers: count || 0,
+      })
+    }
+    
+    return {
+      loansByStatus: Object.entries(statusCounts).map(([name, value]) => ({ name, value })),
+      monthlyRevenue: monthlyData,
+      loansPerMonth,
+      customersPerMonth,
+    }
+  }),
 })
