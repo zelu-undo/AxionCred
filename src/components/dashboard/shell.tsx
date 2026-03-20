@@ -214,11 +214,42 @@ export function Header() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [searchFocused, setSearchFocused] = React.useState(false)
+  const [isSearching, setIsSearching] = React.useState(false)
 
   // Avoid hydration mismatch
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Keyboard shortcut for search (Cmd/Ctrl + K)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault()
+        const searchInput = document.getElementById("global-search")
+        searchInput?.focus()
+      }
+      if (e.key === "Escape") {
+        setSearchFocused(false)
+        const searchInput = document.getElementById("global-search") as HTMLInputElement
+        if (searchInput) searchInput.blur()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      setIsSearching(true)
+      // Navigate to customers page with search query
+      router.push(`/customers?search=${encodeURIComponent(searchQuery.trim())}`)
+      setTimeout(() => setIsSearching(false), 500)
+    }
+  }
 
   const handleLogout = async () => {
     // signOut already handles the redirect to /login
@@ -259,17 +290,41 @@ export function Header() {
       
       {/* Global Search */}
       <div className="hidden md:flex flex-1 max-w-md mx-4">
-        <div className="relative w-full group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#22C55E] transition-colors" />
+        <form onSubmit={handleSearch} className="relative w-full group">
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200 ${searchFocused ? "text-[#22C55E]" : "text-gray-400"}`} />
           <input
+            id="global-search"
             type="text"
             placeholder="Buscar clientes, empréstimos, parcelas..."
-            className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-200 bg-gray-50/50 text-sm placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/10 transition-all duration-200"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            className={`w-full h-10 pl-10 pr-12 rounded-lg border text-sm placeholder:text-gray-400 focus:outline-none transition-all duration-200 ${
+              searchFocused 
+                ? "bg-white border-[#22C55E] ring-2 ring-[#22C55E]/10 shadow-lg shadow-[#22C55E]/5" 
+                : "border-gray-200 bg-gray-50/50 hover:bg-gray-100"
+            }`}
           />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 items-center gap-1 rounded border border-gray-200 bg-gray-100 px-1.5 font-mono text-[10px] font-medium text-gray-400">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </div>
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
+            >
+              <span className="text-xs text-gray-500">×</span>
+            </button>
+          ) : (
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 items-center gap-1 rounded border border-gray-200 bg-gray-100 px-1.5 font-mono text-[10px] font-medium text-gray-400 group-hover:border-gray-300 transition-colors">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          )}
+          {isSearching && (
+            <div className="absolute right-10 top-1/2 -translate-y-1/2">
+              <div className="h-4 w-4 border-2 border-[#22C55E] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </form>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">

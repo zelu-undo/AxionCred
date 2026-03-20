@@ -188,35 +188,35 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label>Telefone</Label>
                     <Input 
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                  />
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Idioma</Label>
+                    <Select value={locale} onValueChange={(value) => setLocale(value as "pt" | "en" | "es")}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pt">Português (BR)</SelectItem>
+                        <SelectItem value="en">English (US)</SelectItem>
+                        <SelectItem value="es">Español</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Idioma</Label>
-                  <Select value={locale} onValueChange={(value) => setLocale(value as "pt" | "en" | "es")}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt">Português (BR)</SelectItem>
-                      <SelectItem value="en">English (US)</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleSaveProfile} 
-                disabled={isSaving} 
-                className="w-full md:w-auto bg-[#22C55E] hover:bg-[#16A34A] hover:shadow-lg hover:shadow-[#22C55E]/30 transition-all duration-300"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isSaving ? "Salvando..." : "Salvar Alterações"}
-              </Button>
-            </CardContent>
-          </Card>
+                
+                <Button 
+                  onClick={handleSaveProfile} 
+                  disabled={isSaving} 
+                  className="w-full md:w-auto bg-[#22C55E] hover:bg-[#16A34A] hover:shadow-lg hover:shadow-[#22C55E]/30 transition-all duration-300"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </CardContent>
+            </Card>
           </motion.div>
 
           <motion.div variants={itemVariants}>

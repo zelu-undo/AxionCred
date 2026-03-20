@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,9 +38,19 @@ interface Address {
 export default function CustomersPage() {
   const { t } = useI18n()
   const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
+  const searchParams = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  
+  // Sync search query with URL params when coming from global search
+  useEffect(() => {
+    const urlSearch = searchParams.get("search")
+    if (urlSearch && urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch)
+    }
+  }, [searchParams, searchQuery])
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null)
   const [cpfError, setCpfError] = useState("")

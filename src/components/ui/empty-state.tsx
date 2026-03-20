@@ -24,41 +24,43 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={cn(
-        "flex flex-col items-center justify-center py-12 px-4 text-center",
+        "flex flex-col items-center justify-center py-16 px-4 text-center",
         className
       )}
     >
       {Icon && (
-        <div className="relative mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-            <Icon className="h-8 w-8 text-gray-400" />
+        <div className="relative mb-6">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center shadow-sm">
+            <Icon className="h-10 w-10 text-gray-400" />
           </div>
-          <div className="absolute inset-0 rounded-2xl bg-gray-100/50 animate-pulse" />
+          {/* Subtle glow effect */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#22C55E]/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
         </div>
       )}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
       {description && (
-        <p className="text-sm text-gray-500 max-w-sm mb-6">{description}</p>
+        <p className="text-gray-500 max-w-sm mb-8 leading-relaxed">{description}</p>
       )}
       {action && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={action.onClick}
           className="
-            inline-flex items-center justify-center
-            px-4 py-2 rounded-lg
-            bg-[#22C55E] text-white font-medium
-            hover:bg-[#16A34A]
+            inline-flex items-center justify-center gap-2
+            px-5 py-2.5 rounded-lg
+            bg-[#22C55E] text-white font-semibold text-sm
+            hover:bg-[#16A34A] hover:shadow-xl hover:shadow-emerald-500/25
             transition-all duration-200
-            hover:shadow-lg hover:shadow-emerald-500/25
             active:scale-[0.98]
           "
         >
           {action.label}
-        </button>
+        </motion.button>
       )}
     </motion.div>
   )
