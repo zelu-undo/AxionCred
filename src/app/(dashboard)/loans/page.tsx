@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, MoreVertical, Eye, Edit, Trash2, DollarSign, Calendar, Loader2 } from "lucide-react"
+import { Plus, Search, MoreVertical, Eye, Edit, Trash2, DollarSign, Calendar, Loader2, ChevronLeft, ChevronRight, Filter, X } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,11 +19,34 @@ import { useRouter } from "next/navigation"
 export default function LoansPage() {
   const { t } = useI18n()
   const router = useRouter()
+  
+  // Estados para busca e filtros
   const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
+  const [minAmount, setMinAmount] = useState<string>("")
+  const [maxAmount, setMaxAmount] = useState<string>("")
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+  const [showFilters, setShowFilters] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   
+  const LIMIT = 20
+  
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(0)
+  }, [searchQuery, statusFilter, minAmount, maxAmount, startDate, endDate])
+  
   const { data: loansData, isLoading, refetch } = trpc.loan.list.useQuery({
-    limit: 100,
+    search: searchQuery || undefined,
+    status: statusFilter as "pending" | "active" | "paid" | "cancelled" | "renegotiated" | undefined,
+    minAmount: minAmount ? parseFloat(minAmount) : undefined,
+    maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    limit: LIMIT,
+    offset: currentPage * LIMIT,
   })
 
   const deleteMutation = trpc.loan.cancel.useMutation({
@@ -33,11 +56,7 @@ export default function LoansPage() {
   })
 
   const loans = loansData?.loans || []
-  
-  const filteredLoans = loans.filter((loan: any) => {
-    const customerName = loan.customer?.name?.toLowerCase() || ""
-    return customerName.includes(searchQuery.toLowerCase())
-  })
+  const total = loansData?.total || 0
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -80,16 +99,114 @@ export default function LoansPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder={t("loans.searchLoans")}
+                placeholder="Buscar por nome, CPF ou contrato..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <DropdownMenu open={showFilters} onOpenChange={setShowFilters}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {(statusFilter || minAmount || maxAmount || startDate || endDate) && (
+                    <span className="ml-1 bg-[#22C55E] text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                      {[statusFilter, minAmount, maxAmount, startDate, endDate].filter(Boolean).length}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {/* Status Filter */}
+                <div className="p-2 border-b">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Status</p>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { value: undefined, label: "Todos" },
+                      { value: "pending", label: "Pendente" },
+                      { value: "active", label: "Ativo" },
+                      { value: "paid", label: "Pago" },
+                      { value: "cancelled", label: "Cancelado" },
+                    ].map((option) => (
+                      <button
+                        key={option.value ?? "all"}
+                        onClick={() => setStatusFilter(option.value)}
+                        className={`px-2 py-1 text-xs rounded ${
+                          statusFilter === option.value
+                            ? "bg-[#22C55E] text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Valor */}
+                <div className="p-2 border-b">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Valor (R$)</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Mín"
+                      type="number"
+                      value={minAmount}
+                      onChange={(e) => setMinAmount(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      placeholder="Máx"
+                      type="number"
+                      value={maxAmount}
+                      onChange={(e) => setMaxAmount(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                
+                {/* Data */}
+                <div className="p-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Data de Criação</p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder="De"
+                    />
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder="Até"
+                    />
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {(statusFilter || minAmount || maxAmount || startDate || endDate) && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setStatusFilter(undefined)
+                  setMinAmount("")
+                  setMaxAmount("")
+                  setStartDate("")
+                  setEndDate("")
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Limpar
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -114,7 +231,7 @@ export default function LoansPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredLoans.map((loan: any) => (
+                    {loans.map((loan: any) => (
                       <tr key={loan.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <p className="font-medium">{loan.customer?.name || "-"}</p>
@@ -173,11 +290,40 @@ export default function LoansPage() {
                 </table>
               </div>
               
-              {filteredLoans.length === 0 && (
+              {loans.length === 0 && (
                 <div className="py-8 text-center text-gray-500">
                   {t("loans.noLoansFound")}
                 </div>
               )}
+
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  Total de {total} empréstimos
+                </div>
+                {total > LIMIT && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                      disabled={currentPage === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Página {currentPage + 1} de {Math.ceil(total / LIMIT)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => p + 1)}
+                      disabled={(currentPage + 1) * LIMIT >= total}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </CardContent>

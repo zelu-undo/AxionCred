@@ -1,14 +1,31 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Calculator, CheckCircle, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, UserX } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+
+// Custom debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 interface InstallmentPreview {
   number: number
@@ -20,15 +37,24 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
-  // Get customers with search
-  const [customerSearch, setCustomerSearch] = useState("")
+  // Get customers with search - optimized with debounce
   const [showDropdown, setShowDropdown] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
   
+  // Debounce search input (300ms)
+  const debouncedSearch = useDebounce(searchInput, 300)
+  
+  // Minimum 2 characters to trigger search
+  const MIN_SEARCH_CHARS = 2
+  const MAX_RESULTS = 10
+  
+  // Fetch customers with optimizations
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
-    limit: 100,
-    search: customerSearch || undefined
+    limit: MAX_RESULTS,
+    search: debouncedSearch.length >= MIN_SEARCH_CHARS ? debouncedSearch : undefined
   }, {
-    enabled: customerSearch.length > 0 // Only fetch when searching
+    enabled: debouncedSearch.length >= MIN_SEARCH_CHARS,
+    staleTime: 5 * 60 * 1000, // Cache results for 5 minutes
   })
   const customers = customersData?.customers || []
 
@@ -61,6 +87,7 @@ export default function NewLoanPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [adjustedInstallments, setAdjustedInstallments] = useState<number | null>(null)
 
   // Calculate loan preview using business rules
   const { data: businessRulesData } = trpc.businessRules.get.useQuery()
@@ -78,47 +105,66 @@ export default function NewLoanPage() {
 
     // Get interest rate and type from business rules
     const rules = businessRulesData?.interestRules || []
+    
+    // Find the rule that matches the number of installments
     const rule = rules.find(
-      (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
+      (rule: any) => 
+        numInstallments >= (rule.min_installments || 0) && 
+        numInstallments <= (rule.max_installments || 999)
     )
     
-    const interestRate = rule?.interest_rate || 0
-    const interestType = rule?.interest_type || 'monthly'
+    // Don't use default - require explicit rule configuration
+    if (!rule) {
+      console.log("No matching interest rule found for", numInstallments, "installments")
+      setPreview(null)
+      setAdjustedInstallments(null)
+      return
+    }
+    
+    // Clear adjustment message if rule exists
+    setAdjustedInstallments(null)
+    
+    const interestRate = rule.interest_rate
+    const interestType = rule.interest_type
     
     let monthlyPayment: number
     let totalAmount: number
     let totalInterest: number
     
-    // Debug log
-    console.log("Calculation:", { principal, numInstallments, interestRate, interestType })
-    
-    if (interestRate === 0 || interestType === 'fixed') {
-      // Sem juros ou juros fixos
-      if (interestType === 'fixed') {
-        // Juros fixos: taxa aplicada uma única vez sobre o principal
-        totalInterest = principal * (interestRate / 100)
-        totalAmount = principal + totalInterest
-      } else {
-        // Sem juros
-        totalAmount = principal
-        totalInterest = 0
-      }
+    // Calculate using Price system (French Amortization)
+    // PMT = P * [r(1+r)^n] / [(1+r)^n - 1]
+    if (interestType === 'fixed') {
+      // Fixed interest: simple calculation
+      // Interest applied once on principal
+      totalInterest = principal * (interestRate / 100)
+      totalAmount = principal + totalInterest
       monthlyPayment = totalAmount / numInstallments
     } else if (interestType === 'weekly') {
-      // Juros semanal (sistema Price)
-      const weeklyRate = interestRate / 100 / 4.33 // ~52 semanas/ano
-      const totalWeeks = numInstallments * 4
-      const factor = Math.pow(1 + weeklyRate, totalWeeks)
-      totalAmount = (principal * weeklyRate * factor) / (factor - 1)
-      monthlyPayment = totalAmount / numInstallments
+      // Weekly interest rate - convert to monthly using compound interest
+      // Formula: monthlyRate = (1 + weeklyRate)^4.33 - 1
+      const weeklyRate = interestRate / 100
+      const monthlyRate = Math.pow(1 + weeklyRate, 4.33) - 1
+      
+      const factor = Math.pow(1 + monthlyRate, numInstallments)
+      monthlyPayment = (principal * monthlyRate * factor) / (factor - 1)
+      totalAmount = monthlyPayment * numInstallments
       totalInterest = totalAmount - principal
     } else {
-      // monthly: sistema Price com taxa mensal
+      // Monthly interest rate (standard Price system)
       const monthlyRate = interestRate / 100
-      const factor = Math.pow(1 + monthlyRate, numInstallments)
-      totalAmount = (principal * monthlyRate * factor) / (factor - 1)
-      monthlyPayment = totalAmount / numInstallments
-      totalInterest = totalAmount - principal
+      
+      if (monthlyRate === 0) {
+        // No interest - simple division
+        monthlyPayment = principal / numInstallments
+        totalAmount = principal
+        totalInterest = 0
+      } else {
+        // Price system with monthly rate
+        const factor = Math.pow(1 + monthlyRate, numInstallments)
+        monthlyPayment = (principal * monthlyRate * factor) / (factor - 1)
+        totalAmount = monthlyPayment * numInstallments
+        totalInterest = totalAmount - principal
+      }
     }
     
     // Generate installment dates
@@ -181,14 +227,17 @@ export default function NewLoanPage() {
   // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments)
-    if (!businessRulesData?.interestRules) return { rate: 0, type: 'monthly' }
+    if (!businessRulesData?.interestRules) return null
+    
     const rule = businessRulesData.interestRules.find(
-      r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
+      (r: any) => 
+        numInstallments >= (r.min_installments || 0) && 
+        numInstallments <= (r.max_installments || 999)
     )
-    return { 
-      rate: rule?.interest_rate || 0, 
-      type: rule?.interest_type || 'monthly' 
-    }
+    return rule ? { 
+      rate: rule.interest_rate, 
+      type: rule.interest_type 
+    } : null
   }, [formData.installments, businessRulesData])
 
   if (isSuccess) {
@@ -231,47 +280,57 @@ export default function NewLoanPage() {
               <div className="space-y-2">
                 <Label>Cliente *</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 z-10" />
                   <Input
                     placeholder="Buscar por nome ou CPF..."
-                    value={customerSearch}
+                    value={searchInput}
                     onChange={(e) => {
-                      setCustomerSearch(e.target.value)
+                      setSearchInput(e.target.value)
                       setShowDropdown(true)
                     }}
                     onFocus={() => setShowDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                     className="pl-9"
+                    autoComplete="off"
                   />
-                </div>
-                {/* Show dropdown only when focused and has results */}
-                {showDropdown && customerSearch && customers.length > 0 && (
-                  <div className="border rounded-md max-h-48 overflow-y-auto absolute z-10 bg-white w-[calc(100%-2rem)]">
-                    {loadingCustomers ? (
-                      <div className="p-2 text-center text-gray-500">
-                        <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                        Carregando...
-                      </div>
-                    ) : (
-                      customers.map((customer: any) => (
-                        <div
-                          key={customer.id}
-                          className={`p-2 cursor-pointer hover:bg-[#22C55E]50 ${
-                            formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
-                          }`}
-                          onClick={() => {
-                            setFormData({ ...formData, customerId: customer.id })
-                            setCustomerSearch(customer.name)
-                            setShowDropdown(false)
-                          }}
-                        >
-                          <div className="font-medium">{customer.name}</div>
-                          <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                  {/* Loading indicator inside input */}
+                  {loadingCustomers && (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 animate-spin" />
+                  )}
+                  {/* Show dropdown when has input or has results */}
+                  {showDropdown && (searchInput.length >= MIN_SEARCH_CHARS) && (
+                    <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg">
+                      {loadingCustomers ? (
+                        <div className="p-3 text-center text-gray-500">
+                          <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                          Buscando...
                         </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                      ) : customers.length > 0 ? (
+                        customers.map((customer: any) => (
+                          <div
+                            key={customer.id}
+                            className={`p-3 cursor-pointer hover:bg-[#22C55E]50 border-b last:border-b-0 ${
+                              formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
+                            }`}
+                            onClick={() => {
+                              setFormData({ ...formData, customerId: customer.id })
+                              setSearchInput(customer.name)
+                              setShowDropdown(false)
+                            }}
+                          >
+                            <div className="font-medium">{customer.name}</div>
+                            <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 text-center text-gray-500">
+                          <UserX className="h-4 w-4 inline mr-2" />
+                          Nenhum cliente encontrado
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {formData.customerId && !showDropdown && (
                   <div className="flex items-center gap-2">
                     <div className="text-sm text-green-600 flex items-center gap-1">
@@ -281,7 +340,7 @@ export default function NewLoanPage() {
                       type="button"
                       onClick={() => {
                         setFormData({ ...formData, customerId: "" })
-                        setCustomerSearch("")
+                        setSearchInput("")
                       }}
                       className="text-xs text-red-500 hover:underline"
                     >
@@ -317,41 +376,47 @@ export default function NewLoanPage() {
                     value={formData.installments}
                     onChange={(e) => {
                       const value = parseInt(e.target.value) || 1
-                      setFormData({ ...formData, installments: String(value) })
-                    }}
-                    onBlur={() => {
-                      // Auto-adjust to nearest valid range
+                      
+                      // Auto-adjust to nearest valid range in real-time
                       const rules = businessRulesData?.interestRules || []
-                      const num = parseInt(formData.installments)
+                      let adjustedValue = value
                       
                       if (rules.length > 0) {
-                        // Find ranges and adjust to nearest valid
                         const ranges = rules.map((r: any) => ({
                           min: r.min_installments,
                           max: r.max_installments
                         }))
                         
-                        // Check if within any range
-                        const inRange = ranges.some(r => num >= r.min && num <= r.max)
+                        const inRange = ranges.some(r => adjustedValue >= r.min && adjustedValue <= r.max)
                         
                         if (!inRange) {
                           // Find nearest range
                           let nearestMax = ranges[0].max
-                          let minDiff = Math.abs(num - ranges[0].max)
+                          let minDiff = Math.abs(adjustedValue - ranges[0].max)
+                          let nearestMin = ranges[0].min
                           
                           for (const r of ranges) {
-                            const diff = Math.abs(num - r.max)
+                            const diff = Math.abs(adjustedValue - r.max)
                             if (diff < minDiff) {
                               minDiff = diff
                               nearestMax = r.max
+                              nearestMin = r.min
                             }
                           }
-                          setFormData({ ...formData, installments: String(nearestMax) })
+                          adjustedValue = nearestMax
+                          // Set adjusted value to show message
+                          setAdjustedInstallments(adjustedValue)
+                        } else {
+                          setAdjustedInstallments(null)
                         }
-                      } else if (num > 12) {
-                        // No rules, use default max of 12
-                        setFormData({ ...formData, installments: "12" })
+                      } else if (adjustedValue > 12) {
+                        adjustedValue = 12
+                        setAdjustedInstallments(adjustedValue)
+                      } else {
+                        setAdjustedInstallments(null)
                       }
+                      
+                      setFormData({ ...formData, installments: String(adjustedValue) })
                     }}
                   />
                   {/* Show available ranges */}
@@ -359,12 +424,28 @@ export default function NewLoanPage() {
                     {businessRulesData?.interestRules?.length ? (
                       <>Faixas disponíveis: {businessRulesData.interestRules.map((r: any) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
                     ) : (
-                      "Máximo: 12x"
+                      "Configure regras de juros para definir parcelas disponíveis"
                     )}
                   </p>
-                  {currentInterestRate.rate > 0 && (
+                  
+                  {/* Auto-adjustment message */}
+                  {adjustedInstallments && (
+                    <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                      ⚠️ Número de parcelas ajustado automaticamente para {adjustedInstallments} (faixa válida mais próxima)
+                    </p>
+                  )}
+                  
+                  {/* Show interest rate if rule is found */}
+                  {currentInterestRate && (
                     <p className="text-xs text-green-600 font-medium">
                       Taxa: {currentInterestRate.rate}% {currentInterestRate.type === 'fixed' ? '(fixo)' : currentInterestRate.type === 'weekly' ? 'semanal' : 'ao mês'}
+                    </p>
+                  )}
+                  
+                  {/* Warning if no rule matches */}
+                  {!currentInterestRate && formData.installments && (
+                    <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                      ❌ Nenhuma regra de juros configurada para {formData.installments} parcelas. Configure uma faixa de juros.
                     </p>
                   )}
                 </div>
@@ -378,12 +459,18 @@ export default function NewLoanPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting || !formData.customerId || !formData.principal || !currentInterestRate}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Criando...
                   </>
+                ) : !currentInterestRate ? (
+                  "Configure regras de juros para continuar"
                 ) : "Criar Empréstimo"}
               </Button>
             </form>

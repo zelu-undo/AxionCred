@@ -141,8 +141,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check current session with timeout
     const checkSession = async () => {
-      console.log("[Auth] Starting session check...")
-      
       try {
         // Simple timeout without AbortController (getSession doesn't support abort)
         const timeoutMs = 5000 // 5 seconds timeout
@@ -154,7 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sessionResult = await new Promise<{ data: { session: any }; error: any }>((resolve) => {
           const timeout = setTimeout(() => {
             // If timeout, try to use cached user but it will be limited
-            console.log("[Auth] Session check timed out")
             resolve({ data: { session: null }, error: new Error("timeout") })
           }, timeoutMs)
           
@@ -169,10 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         const { data: { session }, error: sessionError } = sessionResult
         
-        console.log("[Auth] getSession result:", sessionError ? sessionError.message : "success", session ? "has session" : "no session")
-        
         if (session?.user) {
-          console.log("[Auth] User found in session:", session.user.id)
           let appUser: AppUser | null = null
           
           // Try to get user data from our users table
@@ -182,8 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .select("id, email, name, role, tenant_id")
               .eq("id", session.user.id)
               .single()
-
-            console.log("[Auth] Users table query:", userError ? userError.message : "success", userData)
 
             // Only use DB data if query succeeded
             if (!userError && userData) {
@@ -196,14 +188,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
           } catch (err) {
-            console.log("[Auth] Users table exception:", err)
+            // Non-blocking - ignore errors
           }
 
           // Fallback to Supabase Auth data if no user in DB
           if (!appUser) {
             // Try to get tenant_id from user_metadata in JWT token
             const metadataTenantId = session.user.user_metadata?.tenant_id
-            console.log("[Auth] Using fallback with tenant_id from metadata:", metadataTenantId)
             appUser = {
               id: session.user.id,
               email: session.user.email || "",
@@ -213,17 +204,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
           
-          console.log("[Auth] Setting user:", appUser)
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
-        } else {
-          console.log("[Auth] No session, setting loading to false")
         }
       } catch (error) {
-        console.error("[Auth] Session check error:", error)
+        // Non-blocking - ignore errors
       } finally {
         // Always set loading to false - critical to avoid infinite loading
-        console.log("[Auth] Setting loading to false")
         setLoading(false)
       }
     }
@@ -307,11 +294,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loading, pathname, router])
 
   const signIn = async (email: string, password: string) => {
+    console.log("signIn: Starting login process...")
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
+      console.log("signIn: Response received", { hasData: !!data.user, hasError: !!error, error: error?.message })
 
       if (error) {
         return { error: mapAuthError(error, locale) }
@@ -330,39 +319,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Use user data from Supabase Auth directly
-        // Default role is owner - DB sync is optional
-        const supabase = createClient()
-        
+        // Create user object immediately from Supabase Auth data
         let appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
           role: "owner",
-          tenantId: "",
+          tenantId: data.user.user_metadata?.tenant_id || "",
           plan: "starter"
         }
 
-        // Try to sync with database (optional - won't block login if it fails)
-        try {
-          // Check if tables exist by trying to list tenants
-          const { error: tenantError } = await supabase
-            .from("tenants")
-            .select("id")
-            .limit(1)
-
-          if (tenantError) {
-            // Tables don't exist or no access - skip sync
-            console.log("Skipping DB sync - tables not available")
-          } else {
-            // Tables exist - try to sync user
-            const { data: dbUser } = await supabase
+        // Try to get more info from database (non-blocking)
+        const syncUserData = async () => {
+          try {
+            const { data: dbUser, error: dbError } = await supabase
               .from("users")
               .select("id, email, name, role, tenant_id")
-              .eq("email", data.user.email!)
+              .eq("id", data.user!.id)
               .single()
 
-            if (dbUser) {
+            if (!dbError && dbUser) {
               appUser = {
                 id: dbUser.id,
                 email: dbUser.email,
@@ -371,51 +347,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 tenantId: dbUser.tenant_id || "",
                 plan: "starter"
               }
-            } else {
-              // Check if any tenants exist
-              const { data: tenants } = await supabase
-                .from("tenants")
-                .select("id")
-                .limit(1)
-
-              if (!tenants?.length) {
-                // First time - create tenant and user
-                const { data: tenantData } = await supabase
-                  .from("tenants")
-                  .insert({
-                    name: appUser.name,
-                    slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-                  })
-                  .select("id")
-                  .single()
-
-                if (tenantData?.id) {
-                  appUser.tenantId = tenantData.id
-                  await supabase.from("users").insert({
-                    id: data.user.id,
-                    email: data.user.email!,
-                    name: appUser.name,
-                    role: "owner",
-                    tenant_id: tenantData.id
-                  })
-                }
-              }
+              setUser(appUser)
+              localStorage.setItem("axion_user", JSON.stringify(appUser))
             }
+          } catch (err) {
+            // Non-blocking - ignore errors
           }
-        } catch (err) {
-          console.log("DB sync skipped:", err)
         }
         
+        // Start background sync but don't wait
+        syncUserData()
+        
+        // Set user and redirect immediately
+        console.log("signIn: Setting user and localStorage")
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
 
-        if (typeof window !== "undefined") {
-          router.push("/dashboard")
-        }
+        // Redirect to dashboard
+        console.log("signIn: Redirecting to /dashboard")
+        window.location.href = "/dashboard"
+        
+        return { error: null }
       }
 
-      return { error: null }
+      console.log("signIn: No user data returned")
+      return { error: { message: "Login failed", code: "UNKNOWN" } }
     } catch (error) {
+      console.log("signIn: Exception", error)
       return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
   }
@@ -520,9 +478,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       localStorage.removeItem("axion_user")
       setUser(null)
-      router.push("/login")
+      // Use window.location for a full page redirect to ensure clean state
+      window.location.href = "/login"
     } catch (error) {
       console.error("Sign out error:", error)
+      // Force redirect even on error
+      window.location.href = "/login"
     }
   }
 

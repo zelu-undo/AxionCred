@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -34,7 +33,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/_next/static') ||
     pathname.startsWith('/_next/image') ||
     pathname.startsWith('/public') ||
-    pathname.includes('.') // files with extensions
+    pathname.includes('.')
   ) {
     return NextResponse.next()
   }
@@ -54,52 +53,40 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Create response for cookie handling
-  let response = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
-  })
+  // Simple cookie check - just verify if auth cookies exist
+  // Let the client-side handle actual session validation
+  const allCookies = req.cookies.getAll()
+  
+  // Debug: log cookie names
+  console.log("All cookies:", allCookies.map(c => c.name))
+  
+  // Check for ANY Supabase cookies (they start with sb-)
+  // This is more permissive to avoid logout issues
+  const hasSupabaseCookie = allCookies.some(c => c.name.startsWith('sb-'))
 
-  // Check for Supabase auth tokens in cookies
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  // Get session without making async call - just check cookie validity
-  const { data: { session }, error } = await supabase.auth.getSession()
-
-  // If there's an error or no session, redirect to login
-  if (error || !session) {
+  // If no Supabase cookies, redirect to login
+  if (!hasSupabaseCookie) {
+    console.log("No Supabase cookies found, redirecting to login")
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
+  
+  console.log("Supabase cookies found, allowing access")
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
   if (['/login', '/register'].includes(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
+  // Create response and pass through
+  const response = NextResponse.next()
+  
+  // Copy headers
+  req.headers.forEach((value, key) => {
+    response.headers.set(key, value)
+  })
+  
   return response
 }
 

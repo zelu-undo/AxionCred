@@ -7,20 +7,25 @@ export const loanRouter = router({
     .input(
       z.object({
         customerId: z.string().optional(),
+        search: z.string().optional(), // Busca por nome do cliente, CPF ou número do contrato
         status: z.enum(["pending", "active", "paid", "cancelled", "renegotiated"]).optional(),
-        limit: z.number().min(1).max(100).default(50),
+        minAmount: z.number().optional(),
+        maxAmount: z.number().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { customerId, status, limit, offset } = input
+      const { customerId, search, status, minAmount, maxAmount, startDate, endDate, limit, offset } = input
 
       let query = ctx.supabase
         .from("loans")
         .select(`
           *,
-          customer:customers(name, phone)
-        `)
+          customer:customers(id, name, phone, document)
+        `, { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)
@@ -33,6 +38,26 @@ export const loanRouter = router({
         query = query.eq("status", status)
       }
 
+      // Filtro por valor mínimo
+      if (minAmount !== undefined) {
+        query = query.gte("principal_amount", minAmount)
+      }
+
+      // Filtro por valor máximo
+      if (maxAmount !== undefined) {
+        query = query.lte("principal_amount", maxAmount)
+      }
+
+      // Filtro por data - a partir de
+      if (startDate) {
+        query = query.gte("created_at", startDate)
+      }
+
+      // Filtro por data - até
+      if (endDate) {
+        query = query.lte("created_at", endDate)
+      }
+
       const { data, error, count } = await query
 
       if (error) {
@@ -42,7 +67,39 @@ export const loanRouter = router({
         })
       }
 
-      return { loans: data || [], total: count || 0 }
+      // Filtrar por busca (nome, CPF, contrato) no lado do cliente
+      // porque a busca requer join com customers
+      let filteredData = data || []
+      
+      if (search) {
+        const cleanSearch = search
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, "")
+        
+        const docSearch = search.replace(/\D/g, "")
+        
+        filteredData = filteredData.filter((loan: any) => {
+          const customerName = loan.customer?.name?.toLowerCase() || ""
+          const customerDoc = loan.customer?.document?.replace(/\D/g, "") || ""
+          const contractId = loan.id.toLowerCase()
+          
+          // Busca por nome (com e sem acento)
+          const nameMatch = customerName.includes(search.toLowerCase()) || 
+                          customerName.includes(cleanSearch)
+          
+          // Busca por CPF
+          const docMatch = docSearch.length >= 3 && customerDoc.includes(docSearch)
+          
+          // Busca por número do contrato (ID)
+          const contractMatch = contractId.includes(search.toLowerCase())
+          
+          return nameMatch || docMatch || contractMatch
+        })
+      }
+
+      return { loans: filteredData, total: count || 0 }
     }),
 
   byId: protectedProcedure
