@@ -294,11 +294,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loading, pathname, router])
 
   const signIn = async (email: string, password: string) => {
+    console.log("signIn: Starting login process...")
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
+      console.log("signIn: Response received", { hasData: !!data.user, hasError: !!error, error: error?.message })
 
       if (error) {
         return { error: mapAuthError(error, locale) }
@@ -357,17 +359,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncUserData()
         
         // Set user and redirect immediately
+        console.log("signIn: Setting user and localStorage")
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
 
         // Redirect to dashboard
+        console.log("signIn: Redirecting to /dashboard")
         window.location.href = "/dashboard"
         
         return { error: null }
       }
 
+      console.log("signIn: No user data returned")
       return { error: { message: "Login failed", code: "UNKNOWN" } }
     } catch (error) {
+      console.log("signIn: Exception", error)
       return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
   }
