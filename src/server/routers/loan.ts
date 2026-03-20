@@ -422,7 +422,7 @@ export const loanRouter = router({
   overdueCustomers: protectedProcedure.query(async ({ ctx }) => {
     const today = new Date().toISOString().split("T")[0]
 
-    // Get installments that are overdue
+    // Get installments that are overdue with loan info
     const { data: installments, error } = await ctx.supabase
       .from("loan_installments")
       .select(`
@@ -430,11 +430,7 @@ export const loanRouter = router({
         amount,
         due_date,
         status,
-        loan:loans(
-          id,
-          customer_id,
-          customer:customers(name)
-        )
+        loan:loans(id, customer_id)
       `)
       .eq("status", "late")
       .lt("due_date", today)
@@ -450,13 +446,14 @@ export const loanRouter = router({
     // Group by customer
     const customerMap = new Map()
     for (const inst of installments || []) {
-      const customerId = inst.loan?.customer_id
+      const loan = inst.loan as unknown as { customer_id?: string } | undefined
+      const customerId = loan?.customer_id
       if (!customerId) continue
 
       if (!customerMap.has(customerId)) {
         customerMap.set(customerId, {
           customer_id: customerId,
-          customer_name: inst.loan?.customer?.name || "Unknown",
+          customer_name: "",
           overdue_amount: 0,
           overdue_count: 0,
         })
@@ -464,6 +461,21 @@ export const loanRouter = router({
       const customer = customerMap.get(customerId)
       customer.overdue_amount += Number(inst.amount)
       customer.overdue_count += 1
+    }
+
+    // Get customer names
+    const customerIds = Array.from(customerMap.keys())
+    if (customerIds.length > 0) {
+      const { data: customers } = await ctx.supabase
+        .from("customers")
+        .select("id, name")
+        .in("id", customerIds)
+
+      for (const c of customers || []) {
+        if (customerMap.has(c.id)) {
+          customerMap.get(c.id).customer_name = c.name
+        }
+      }
     }
 
     // Return top 5 overdue customers
