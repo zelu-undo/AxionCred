@@ -35,7 +35,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative overflow-x-hidden">
       {/* Floating Particles Background */}
-      <FloatingParticles particleCount={300} className="z-0" />
+      <FloatingParticles particleCount={300} className="z-[1]" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">

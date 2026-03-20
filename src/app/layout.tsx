@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={cn(poppins.className, "min-h-screen bg-gray-50 overflow-x-hidden")}>
+      <body className={cn(poppins.className, "min-h-screen bg-gray-50")}>
         <TRPCProvider>
           <I18nProvider>
             <AuthProvider>

@@ -130,7 +130,7 @@ export function FloatingParticles({
   return (
     <canvas
       ref={canvasRef}
-      className={`absolute inset-0 pointer-events-none ${className}`}
+      className={`fixed inset-0 pointer-events-none z-0 ${className}`}
       style={{ width: "100%", height: "100%" }}
     />
   )
