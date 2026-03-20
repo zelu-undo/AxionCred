@@ -27,8 +27,19 @@ type AuthContextType = {
 }
 
 // Map Supabase error codes to user-friendly messages
-function mapAuthError(error: { message: string; name?: string }, locale: string = "pt"): AuthError {
-  const errorLower = error.message.toLowerCase()
+function mapAuthError(error: any, locale: string = "pt"): AuthError {
+  // Handle empty or undefined error objects
+  if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
+    return {
+      message: locale === "en" ? "An unexpected error occurred. Please try again." : 
+              locale === "es" ? "Ocurriu um erro inesperado. Intenta de novo." : 
+              "Ocorreu um erro inesperado. Tente novamente.",
+      code: "EMPTY_ERROR"
+    }
+  }
+
+  const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
+  const errorLower = errorMessage.toLowerCase()
   
   // Invalid login credentials
   if (errorLower.includes("invalid login credentials") || errorLower.includes("invalid email or password")) {
@@ -308,12 +319,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log("[Auth] Attempting signIn for:", email)
+      
+      // Add a timeout to the signIn process
+      const signInPromise = supabase.auth.signInWithPassword({
         email,
         password
       })
 
+      const timeoutMs = 15000 // 15 seconds for login
+      const result = await Promise.race([
+        signInPromise,
+        new Promise<any>((_, reject) => 
+          setTimeout(() => reject(new Error("timeout")), timeoutMs)
+        )
+      ])
+
+      const { data, error } = result
+
       if (error) {
+        console.error("[Auth] signIn error:", error)
         return { error: mapAuthError(error, locale) }
       }
 
@@ -415,8 +440,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error: null }
-    } catch (error) {
-      return { error: mapAuthError(error as { message: string; name?: string }, locale) }
+    } catch (error: any) {
+      console.error("[Auth] signIn exception:", error)
+      
+      // Handle timeout specifically
+      if (error.message === "timeout") {
+        return {
+          error: {
+            message: locale === "en" ? "Login timed out. Please check your connection and try again." : 
+                    locale === "es" ? "Tiempo de espera agotado. Revisa tu conexión." : 
+                    "Tempo de login esgotado. Verifique sua conexão e tente novamente.",
+            code: "TIMEOUT"
+          }
+        }
+      }
+      
+      return { error: mapAuthError(error, locale) }
     }
   }
 

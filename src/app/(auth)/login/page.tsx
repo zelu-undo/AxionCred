@@ -28,6 +28,13 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate inputs
+    if (!email || !password) {
+      setError("Por favor, preencha e-mail e senha")
+      return
+    }
+    
     setIsLoading(true)
     setError(null)
 
@@ -35,8 +42,11 @@ function LoginForm() {
 
     if (error) {
       setError(error.message)
+      setIsLoading(false)
+    } else {
+      // Success - don't set isLoading to false as we're redirecting
+      // This prevents the button from flickering
     }
-    setIsLoading(false)
   }
 
   return (
@@ -101,6 +111,7 @@ function LoginForm() {
                 className="pl-10"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -119,13 +130,21 @@ function LoginForm() {
                 className="pl-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Entrando..." : "Entrar"}
+            {isLoading ? (
+              <>
+                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Entrando...
+              </>
+            ) : (
+              "Entrar"
+            )}
           </Button>
         </form>
 
