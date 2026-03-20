@@ -344,11 +344,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Use user data from Supabase Auth directly
-        // Default role is owner - DB sync is optional
-        const supabase = createClient()
-        
-        let appUser: AppUser = {
+        // Create user object immediately from Supabase Auth data
+        // Skip DB sync for now to avoid blocking login
+        const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
@@ -356,72 +354,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tenantId: "",
           plan: "starter"
         }
-
-        // Try to sync with database (optional - won't block login if it fails)
-        try {
-          // Check if tables exist by trying to list tenants
-          const { error: tenantError } = await supabase
-            .from("tenants")
-            .select("id")
-            .limit(1)
-
-          if (!tenantError) {
-            // Tables exist - try to sync user
-            const { data: dbUser } = await supabase
-              .from("users")
-              .select("id, email, name, role, tenant_id")
-              .eq("email", data.user.email!)
-              .single()
-
-            if (dbUser) {
-              appUser = {
-                id: dbUser.id,
-                email: dbUser.email,
-                name: dbUser.name,
-                role: dbUser.role || "owner",
-                tenantId: dbUser.tenant_id || "",
-                plan: "starter"
-              }
-            } else {
-              // Check if any tenants exist
-              const { data: tenants } = await supabase
-                .from("tenants")
-                .select("id")
-                .limit(1)
-
-              if (!tenants?.length) {
-                // First time - create tenant and user
-                const { data: tenantData } = await supabase
-                  .from("tenants")
-                  .insert({
-                    name: appUser.name,
-                    slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-                  })
-                  .select("id")
-                  .single()
-
-                if (tenantData?.id) {
-                  appUser.tenantId = tenantData.id
-                  await supabase.from("users").insert({
-                    id: data.user.id,
-                    email: data.user.email!,
-                    name: appUser.name,
-                    role: "owner",
-                    tenant_id: tenantData.id
-                  })
-                }
-              }
-            }
-          }
-        } catch (err) {
-          console.log("DB sync skipped:", err)
-        }
         
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
         
         // CRITICAL: Set loading to false after successful login
-        // This prevents infinite loading screen
         setLoading(false)
 
         if (typeof window !== "undefined") {
