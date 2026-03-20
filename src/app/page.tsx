@@ -1,12 +1,32 @@
+"use client"
+
 import Link from "next/link"
-import Image from "next/image"
+import dynamic from "next/dynamic"
 import { CheckCircle, ArrowRight, Users, Clock, AlertTriangle, Shield, MessageCircle, DollarSign, TrendingUp, CreditCard, BarChart3, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { TrustedCompanies } from "@/components/landing/trusted-companies"
+
+// Dynamic import for particles (client-side only for performance)
+const FloatingParticles = dynamic(
+  () => import("@/components/landing/floating-particles").then((mod) => mod.FloatingParticles),
+  { ssr: false }
+)
+
+// WhatsApp number in format for wa.me links (country code 55 + DDD 44 + number)
+const WHATSAPP_NUMBER = "5544999152226"
+const WHATSAPP_FORMATTED = "44 99915-2226"
+
+function getWhatsAppUrl(message: string): string {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+}
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0B1F3A]">
+    <div className="min-h-screen bg-[#0B1F3A] relative overflow-x-hidden">
+      {/* Floating Particles Background */}
+      <FloatingParticles particleCount={25} className="z-0" />
+      
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,7 +76,7 @@ export default function LandingPage() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up-delay-300">
               <a 
-                href="https://wa.me/5544999915226?text=Olá! Quero começar a cobrar agora com o AXION."
+                href={getWhatsAppUrl("Olá! Quero começar a cobrar agora com o AXION.")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#22C55E] hover:bg-[#4ADE80] text-white h-11 rounded-md px-8 text-lg btn-cta"
@@ -324,7 +344,7 @@ export default function LandingPage() {
                 </ul>
                 
                 <a 
-                  href="https://wa.me/5544999915226?text=Olá! Quero saber mais sobre o Plano Starter (R$29/mês) do AXION. Preciso de até 50 clientes."
+                  href={getWhatsAppUrl("Olá! Quero saber mais sobre o Plano Starter (R$29/mês) do AXION. Preciso de até 50 clientes.")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full"
@@ -374,7 +394,7 @@ export default function LandingPage() {
                 </ul>
                 
                 <a 
-                  href="https://wa.me/5544999915226?text=Olá! Quero saber mais sobre o Plano Pro (R$49/mês) do AXION. Quero clientes ilimitados e relatórios."
+                  href={getWhatsAppUrl("Olá! Quero saber mais sobre o Plano Pro (R$49/mês) do AXION. Quero clientes ilimitados e relatórios.")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full"
@@ -406,6 +426,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Trusted Companies */}
+      <TrustedCompanies />
+
       {/* Confiança */}
       <section className="py-12 bg-[#0B1F3A]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -426,7 +449,7 @@ export default function LandingPage() {
             Comece agora e tenha controle total dos seus recebimentos.
           </p>
           <a 
-            href="https://wa.me/5544999915226?text=Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais."
+            href={getWhatsAppUrl("Olá! Quero começar a usar o AXION agora para controlar meus clientes e receber mais.")}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-[#0B1F3A] hover:bg-gray-100 h-11 rounded-md px-8 text-lg"
@@ -476,13 +499,14 @@ export default function LandingPage() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
             <a 
-              href="https://wa.me/5544999915226?text=Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?" 
+              href={getWhatsAppUrl("Olá! Gostaria de saber mais sobre o AXION. Pode me ajudar?")} 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-all duration-300 hover:-translate-y-1"
             >
               <MessageCircle className="h-5 w-5" />
-              Falar no WhatsApp
+              <span>Falar no WhatsApp</span>
+              <span className="text-white/60 text-sm">({WHATSAPP_FORMATTED})</span>
             </a>
           </div>
         </div>
