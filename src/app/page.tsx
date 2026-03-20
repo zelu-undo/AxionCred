@@ -107,41 +107,49 @@ export default function LandingPage() {
             </p>
             
             {/* Mockup */}
-            <div className="bg-[#1a2d4a] rounded-2xl p-6 max-w-lg mx-auto border border-white/10">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between bg-red-500/20 border border-red-500/30 rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-red-500/30 flex items-center justify-center text-white font-bold">J</div>
-                    <div>
-                      <p className="text-white font-medium">João</p>
-                      <p className="text-white/60 text-sm">R$ 150,00</p>
+            <ScaleIn delay={300}>
+              <div className="bg-[#1a2d4a] rounded-2xl p-6 max-w-lg mx-auto border border-white/10">
+                <div className="space-y-3">
+                  <FadeInUp delay={400}>
+                    <div className="flex items-center justify-between bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-red-500/30 flex items-center justify-center text-white font-bold">J</div>
+                        <div>
+                          <p className="text-white font-medium">João</p>
+                          <p className="text-white/60 text-sm">R$ 150,00</p>
+                        </div>
+                      </div>
+                      <span className="text-red-400 text-sm font-medium flex items-center gap-1">
+                        <AlertTriangle className="h-4 w-4" />
+                        Atrasado 3 dias
+                      </span>
                     </div>
-                  </div>
-                  <span className="text-red-400 text-sm font-medium flex items-center gap-1">
-                    <AlertTriangle className="h-4 w-4" />
-                    Atrasado 3 dias
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between bg-[#22C55E]/20 border border-[#22C55E]/30 rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-[#22C55E]/30 flex items-center justify-center text-white font-bold">M</div>
-                    <div>
-                      <p className="text-white font-medium">Maria</p>
-                      <p className="text-white/60 text-sm">R$ 80,00</p>
+                  </FadeInUp>
+                  
+                  <FadeInUp delay={450}>
+                    <div className="flex items-center justify-between bg-[#22C55E]/20 border border-[#22C55E]/30 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-[#22C55E]/30 flex items-center justify-center text-white font-bold">M</div>
+                        <div>
+                          <p className="text-white font-medium">Maria</p>
+                          <p className="text-white/60 text-sm">R$ 80,00</p>
+                        </div>
+                      </div>
+                      <span className="text-[#22C55E] text-sm font-medium flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Pago hoje
+                      </span>
                     </div>
-                  </div>
-                  <span className="text-[#22C55E] text-sm font-medium flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    Pago hoje
-                  </span>
-                </div>
-                
-                <div className="text-center text-white/50 text-sm py-2">
-                  3 parcelas vencem hoje
+                  </FadeInUp>
+                  
+                  <FadeInUp delay={500}>
+                    <div className="text-center text-white/50 text-sm py-2">
+                      3 parcelas vencem hoje
+                    </div>
+                  </FadeInUp>
                 </div>
               </div>
-            </div>
+            </ScaleIn>
           </div>
         </div>
       </section>
