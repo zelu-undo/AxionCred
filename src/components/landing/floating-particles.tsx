@@ -96,16 +96,16 @@ export function FloatingParticles({
 
     const updateCanvasSize = () => {
       const dpr = window.devicePixelRatio || 1
-      // Use full document size, not just viewport
-      const width = Math.max(document.documentElement.scrollWidth, window.innerWidth)
-      const height = Math.max(document.documentElement.scrollHeight, window.innerHeight)
+      // Use viewport size only
+      const width = window.innerWidth
+      const height = window.innerHeight
       canvas.width = width * dpr
       canvas.height = height * dpr
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
       ctx.scale(dpr, dpr)
       
-      // Reinitialize particles to cover full document
+      // Reinitialize particles to cover viewport
       particlesRef.current = initParticles(width, height)
     }
 
@@ -123,17 +123,10 @@ export function FloatingParticles({
       updateCanvasSize()
     }
 
-    // Handle scroll to reinitialize particles in new visible areas
-    const handleScroll = () => {
-      updateCanvasSize()
-    }
-
     window.addEventListener("resize", handleResize)
-    window.addEventListener("scroll", handleScroll)
 
     return () => {
       window.removeEventListener("resize", handleResize)
-      window.removeEventListener("scroll", handleScroll)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }

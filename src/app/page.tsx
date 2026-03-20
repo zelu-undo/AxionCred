@@ -34,8 +34,8 @@ function getWhatsAppUrl(message: string): string {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative">
-      {/* Floating Particles Background - absolute to scroll with page */}
-      <FloatingParticles particleCount={300} className="z-0 absolute inset-0" />
+      {/* Floating Particles Background - behind content but above background */}
+      <FloatingParticles particleCount={300} className="z-0 fixed inset-0" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
@@ -449,7 +449,7 @@ export default function LandingPage() {
 
       {/* Prova Social */}
       <FadeInUp delay={400}>
-        <section className="py-20 bg-[#0d2240]">
+        <section className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-2xl mx-auto hover:border-[#22C55E]/30 transition-all duration-300">
             <div className="h-16 w-16 bg-[#22C55E]/30 rounded-full flex items-center justify-center mx-auto mb-6">
