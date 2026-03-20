@@ -345,7 +345,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Create user object immediately from Supabase Auth data
-        // Skip DB sync for now to avoid blocking login
         const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
@@ -353,6 +352,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: "owner",
           tenantId: "",
           plan: "starter"
+        }
+
+        // Try to get tenantId from database (non-blocking)
+        try {
+          const supabase = createClient()
+          const { data: userData } = await supabase
+            .from("users")
+            .select("tenant_id, name, role")
+            .eq("id", data.user.id)
+            .single()
+
+          if (userData) {
+            appUser.tenantId = userData.tenant_id || ""
+            appUser.name = userData.name || appUser.name
+            appUser.role = userData.role || "owner"
+          }
+        } catch (err) {
+          console.log("Could not get tenantId:", err)
         }
         
         setUser(appUser)
