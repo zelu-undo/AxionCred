@@ -103,12 +103,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession()
         
         if (mounted && session?.user) {
+          // Buscar tenant_id do banco de dados
+          let tenantId = ""
+          try {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("tenant_id")
+              .eq("id", session.user.id)
+              .single()
+            
+            if (userData) {
+              tenantId = userData.tenant_id || ""
+            }
+          } catch (err) {
+            console.log("[Auth] Using fallback tenant_id")
+          }
+
           const appUser: AppUser = {
             id: session.user.id,
             email: session.user.email || "",
             name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
             role: "owner",
-            tenantId: session.user.user_metadata?.tenant_id || "",
+            tenantId: tenantId,
             plan: "starter"
           }
           setUser(appUser)
@@ -129,18 +145,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false
     }
-  }, [supabase])
+  }, [])
 
   // Listen for auth changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        // Buscar tenant_id do banco de dados
+        let tenantId = ""
+        try {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("tenant_id")
+            .eq("id", session.user.id)
+            .single()
+          
+          if (userData) {
+            tenantId = userData.tenant_id || ""
+          }
+        } catch (err) {
+          console.log("[Auth] Using fallback tenant_id")
+        }
+
         const appUser: AppUser = {
           id: session.user.id,
           email: session.user.email || "",
           name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
           role: "owner",
-          tenantId: session.user.user_metadata?.tenant_id || "",
+          tenantId: tenantId,
           plan: "starter"
         }
         setUser(appUser)
@@ -182,12 +214,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user && data.session) {
+        // Buscar tenant_id do banco de dados
+        let tenantId = ""
+        try {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("tenant_id, role")
+            .eq("id", data.user.id)
+            .single()
+          
+          if (userData) {
+            tenantId = userData.tenant_id || ""
+          }
+        } catch (err) {
+          console.log("[Auth] Using fallback tenant_id")
+        }
+
         const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
           role: "owner",
-          tenantId: "",
+          tenantId: tenantId,
           plan: "starter"
         }
         setUser(appUser)
@@ -224,12 +272,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Buscar tenant_id do banco de dados
+      let tenantId = ""
+      try {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("tenant_id")
+          .eq("id", data.user!.id)
+          .single()
+        
+        if (userData) {
+          tenantId = userData.tenant_id || ""
+        }
+      } catch (err) {
+        console.log("[Auth] Using fallback tenant_id")
+      }
+
       const appUser: AppUser = {
         id: data.user!.id,
         email: data.user!.email!,
         name: name || email.split("@")[0],
         role: "owner",
-        tenantId: ""
+        tenantId: tenantId
       }
       setUser(appUser)
       localStorage.setItem("axion_user", JSON.stringify(appUser))
