@@ -18,8 +18,15 @@ import {
   TrendingUp,
   Percent,
   Shield,
+  Search,
+  RefreshCw,
+  BarChart3,
+  Handshake,
+  DollarSign,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Sheet,
   SheetContent,
@@ -70,7 +77,9 @@ function NavigationItems() {
     { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
     { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
     { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
-    { name: "📄 Relatórios", href: "/reports", icon: Receipt, permission: "reports" },
+    { name: "📊 Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
+    { name: "🔄 Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
+    { name: "🛡️ Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
     { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
     { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
     { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
@@ -248,6 +257,21 @@ export function Header() {
         <span className="text-xl font-bold text-[#22C55E]">ON</span>
       </div>
       
+      {/* Global Search */}
+      <div className="hidden md:flex flex-1 max-w-md mx-4">
+        <div className="relative w-full group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#22C55E] transition-colors" />
+          <input
+            type="text"
+            placeholder="Buscar clientes, empréstimos, parcelas..."
+            className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-200 bg-gray-50/50 text-sm placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/10 transition-all duration-200"
+          />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 items-center gap-1 rounded border border-gray-200 bg-gray-100 px-1.5 font-mono text-[10px] font-medium text-gray-400">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2 sm:gap-4">
         <LanguageSelector />
         
@@ -268,13 +292,60 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="font-semibold">{t("notifications.title")}</DropdownMenuLabel>
+            <DropdownMenuLabel className="font-semibold flex items-center justify-between">
+              {t("notifications.title")}
+              <Badge className="bg-red-500 text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center">3</Badge>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <div className="py-6 text-center text-sm text-gray-500">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <Bell className="h-6 w-6 text-gray-400" />
+            {/* Notification Items */}
+            <div className="max-h-80 overflow-y-auto">
+              {/* Payment Received */}
+              <div className="px-3 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Pagamento Recebido</p>
+                    <p className="text-xs text-gray-500">R$ 1.500 de João Silva</p>
+                    <p className="text-xs text-gray-400 mt-1">Há 5 minutos</p>
+                  </div>
+                </div>
               </div>
-              {t("notifications.noNotifications")}
+              
+              {/* Overdue Alert */}
+              <div className="px-3 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Parcela Vencida</p>
+                    <p className="text-xs text-gray-500">Maria Santos - 3 dias atrasado</p>
+                    <p className="text-xs text-gray-400 mt-1">Há 1 hora</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* New Loan */}
+              <div className="px-3 py-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Novo Empréstimo</p>
+                    <p className="text-xs text-gray-500">Pedro Costa - R$ 5.000</p>
+                    <p className="text-xs text-gray-400 mt-1">Há 2 horas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DropdownMenuSeparator />
+            <div className="p-2">
+              <Button variant="outline" size="sm" className="w-full text-xs">
+                Ver todas as notificações
+              </Button>
             </div>
           </DropdownMenuContent>
         </DropdownMenu>

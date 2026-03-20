@@ -84,10 +84,20 @@ src/
 │   ├── (dashboard)/        # Protected dashboard routes
 │   │   ├── dashboard/      # Dashboard home
 │   │   ├── customers/      # Customer management
-│   │   └── loans/          # Loan management
+│   │   ├── loans/          # Loan management
+│   │   ├── collections/    # Collection management
+│   │   ├── alerts/        # Alerts system
+│   │   ├── reports/       # Reports
+│   │   │   └── financial/ # Financial reports (new)
+│   │   ├── guarantors/    # Guarantors & guarantees (new)
+│   │   ├── renegotiations/ # Debt renegotiation (new)
+│   │   ├── quick-sale/    # Quick sale
+│   │   └── settings/      # Settings
 │   └── api/trpc/           # tRPC API routes
 ├── components/
-│   ├── ui/                 # Reusable UI components
+│   ├── ui/                 # Reusable UI components (shadcn/ui)
+│   │   ├── tabs.tsx       # Tabs component (new)
+│   │   └── ...
 │   └── dashboard/           # Dashboard-specific components
 ├── lib/                    # Utilities
 ├── server/
@@ -96,8 +106,38 @@ src/
 │   ├── trpc.ts             # tRPC setup
 │   └── supabase.ts         # Supabase server client
 ├── trpc/                   # tRPC client
+├── contexts/               # React contexts (auth)
+├── hooks/                  # Custom hooks
+├── i18n/                   # Internationalization
 └── types/                  # TypeScript types
 ```
+
+## New Features (2026-03)
+
+### Financial Reports (`/reports/financial`)
+- Cash flow analysis (revenue, expenses, profit)
+- Projected cash flow based on installments
+- Default rate report by period
+- Team performance metrics
+
+### Guarantors Management (`/guarantors`)
+- Guarantor registration and management
+- Property, vehicle, and personal guarantees
+- Link guarantees to loans
+
+### Debt Renegotiation (`/renegotiations`)
+- Create renegotiation with new terms
+- Keep original loan history
+- Approve/reject workflow
+
+### Global Search
+- Search across customers, loans, installments, staff
+- Keyboard shortcut (Cmd/Ctrl + K)
+
+### Real-time Notifications
+- Payment notifications
+- Overdue alerts
+- New loan notifications
 
 ## Running the Project
 ```bash
