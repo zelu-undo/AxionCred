@@ -22,6 +22,7 @@ function LoginForm() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [touched, setTouched] = useState({ email: false, password: false })
   const { signIn } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -33,12 +34,41 @@ function LoginForm() {
   const emailSent = searchParams.get("success") === "email_sent"
   const sentEmail = searchParams.get("email") || ""
 
+  // Real-time validation
+  const validateEmail = (email: string) => {
+    if (!email) return "E-mail é obrigatório"
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) return "Digite um e-mail válido"
+    return null
+  }
+
+  const validatePassword = (password: string) => {
+    if (!password) return "Senha é obrigatória"
+    if (password.length < 6) return "Senha deve ter pelo menos 6 caracteres"
+    return null
+  }
+
+  const emailError = touched.email ? validateEmail(email) : null
+  const passwordError = touched.password ? validatePassword(password) : null
+  const isEmailValid = email.length > 0 && !emailError
+  const isPasswordValid = password.length > 0 && !passwordError
+
+  const handleBlur = (field: 'email' | 'password') => {
+    setTouched(prev => ({ ...prev, [field]: true }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Mark all fields as touched
+    setTouched({ email: true, password: true })
+    
     // Validate inputs
-    if (!email || !password) {
-      setError("Por favor, preencha e-mail e senha")
+    const emailValidationError = validateEmail(email)
+    const passwordValidationError = validatePassword(password)
+    
+    if (emailValidationError || passwordValidationError) {
+      setError(emailValidationError || passwordValidationError || "Preencha todos os campos")
       return
     }
     
@@ -110,18 +140,27 @@ function LoginForm() {
               E-mail
             </label>
             <div className="relative group">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-[#22C55E] transition-colors" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-[#22C55E] transition-colors z-10" />
               <Input
                 id="email"
                 type="email"
                 placeholder="seu@email.com"
+                dark
                 className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:bg-white/10 focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all duration-300"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => handleBlur('email')}
+                error={emailError || undefined}
+                success={isEmailValid}
                 disabled={isLoading}
                 required
+                autoComplete="email"
               />
             </div>
+            {/* Validation hint */}
+            {emailError && (
+              <p className="text-xs text-red-400 mt-1 animate-fade-in">{emailError}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -129,18 +168,28 @@ function LoginForm() {
               Senha
             </label>
             <div className="relative group">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-[#22C55E] transition-colors" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-[#22C55E] transition-colors z-10" />
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:bg-white/10 focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all duration-300"
+                showPasswordToggle
+                dark
+                className="pl-10 pr-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:bg-white/10 focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all duration-300"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => handleBlur('password')}
+                error={passwordError || undefined}
+                success={isPasswordValid}
                 disabled={isLoading}
                 required
+                autoComplete="current-password"
               />
             </div>
+            {/* Validation hint */}
+            {passwordError && (
+              <p className="text-xs text-red-400 mt-1 animate-fade-in">{passwordError}</p>
+            )}
           </div>
 
           <Button 
