@@ -433,6 +433,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
+        
+        // CRITICAL: Set loading to false after successful login
+        // This prevents infinite loading screen
+        setLoading(false)
 
         if (typeof window !== "undefined") {
           router.push("/dashboard")
@@ -537,6 +541,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
+          
+          // CRITICAL: Set loading to false after successful signup
+          // This prevents infinite loading screen
+          setLoading(false)
 
           // Redirect to dashboard
           if (typeof window !== "undefined") {
