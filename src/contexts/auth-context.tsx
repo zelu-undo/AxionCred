@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { createClient } from "@/lib/supabase"
+import { createBrowserClient } from "@supabase/ssr"
 
 type AppUser = {
   id: string
@@ -27,53 +27,21 @@ type AuthContextType = {
   signOut: () => Promise<void>
 }
 
-function mapAuthError(error: any, locale: string = "pt"): AuthError {
-  if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
-    return {
-      message: locale === "en" ? "An unexpected error occurred. Please try again." : 
-              locale === "es" ? "Ocurriu un error inesperado. Intenta de nuevo." : 
-              "Ocorreu um erro inesperado. Tente novamente.",
-      code: "EMPTY_ERROR"
-    }
-  }
-
-  const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
-  const errorLower = errorMessage.toLowerCase()
-  
-  if (errorLower.includes("invalid login credentials") || errorLower.includes("invalid email or password")) {
-    return { 
-      message: locale === "en" ? "Invalid email or password" : 
-              locale === "es" ? "Correo o contraseña incorrectos" : 
-              "E-mail ou senha incorretos",
-      code: "INVALID_CREDENTIALS"
-    }
+function mapAuthError(error: any): AuthError {
+  if (!error) {
+    return { message: "Ocorreu um erro inesperado", code: "EMPTY_ERROR" }
   }
   
-  if (errorLower.includes("email already in use") || errorLower.includes("email already registered")) {
-    return { 
-      message: locale === "en" ? "This email is already registered" : 
-              locale === "es" ? "Este correo ya está registrado" : 
-              "Este e-mail já está cadastrado",
-      code: "EMAIL_EXISTS"
-    }
-  }
+  const msg = (error.message || "").toLowerCase()
   
-  if (errorLower.includes("email not confirmed") || errorLower.includes("confirm your email")) {
-    return { 
-      message: locale === "en" ? "Please confirm your email. Check your inbox for the confirmation link." : 
-              locale === "es" ? "Por favor confirma tu correo. Revisa tu bandeja de entrada." : 
-              "Por favor, confirme seu e-mail. Verifique sua caixa de entrada.",
-      code: "EMAIL_NOT_CONFIRMED"
-    }
+  if (msg.includes("invalid")) {
+    return { message: "E-mail ou senha incorretos", code: "INVALID_CREDENTIALS" }
   }
-  
-  if (errorLower.includes("network") || errorLower.includes("fetch")) {
-    return { 
-      message: locale === "en" ? "Connection error. Please try again." : 
-              locale === "es" ? "Error de conexión. Intenta de nuevo." : 
-              "Erro de conexão. Tente novamente.",
-      code: "NETWORK_ERROR"
-    }
+  if (msg.includes("email")) {
+    return { message: "Verifique seu e-mail", code: "EMAIL_ISSUE" }
+  }
+  if (msg.includes("network") || msg.includes("fetch")) {
+    return { message: "Erro de conexão", code: "NETWORK_ERROR" }
   }
   
   return { message: error.message, code: "UNKNOWN" }
@@ -83,20 +51,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
-// Função para buscar tenant_id do banco
-async function fetchTenantId(supabase: any, userId: string): Promise<string> {
-  try {
-    const { data, error } = await supabase
-      .from("users")
-      .select("tenant_id")
-      .eq("id", userId)
-      .single()
-    
-    if (error || !data) return ""
-    return data.tenant_id || ""
-  } catch {
-    return ""
-  }
+function createSupabaseClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -105,9 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
 
-  // Carregar usuário do localStorage primeiro (instantâneo)
+  // Carregar do localStorage imediatamente
   useEffect(() => {
     const stored = localStorage.getItem("axion_user")
     if (stored) {
@@ -122,10 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Verificar sessão atual
+  // Verificar sessão
   useEffect(() => {
+    const supabase = createSupabaseClient()
     let mounted = true
-    let isInitialCheck = true
 
     const checkSession = async () => {
       try {
@@ -134,47 +92,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return
 
         if (session?.user) {
-          // Primeiro usa dados do localStorage se disponíveis
-          const stored = localStorage.getItem("axion_user")
-          let appUser: AppUser | null = null
-          
-          if (stored) {
-            try {
-              const parsed = JSON.parse(stored)
-              if (parsed.id === session.user.id) {
-                appUser = parsed
-              }
-            } catch {}
-          }
+          // Buscar tenant_id
+          let tenantId = ""
+          try {
+            const { data } = await supabase
+              .from("users")
+              .select("tenant_id")
+              .eq("id", session.user.id)
+              .single()
+            if (data) tenantId = data.tenant_id || ""
+          } catch {}
 
-          // Se não tem no localStorage ou é outro usuário, busca do banco
-          if (!appUser) {
-            const tenantId = await fetchTenantId(supabase, session.user.id)
-            appUser = {
-              id: session.user.id,
-              email: session.user.email || "",
-              name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-              role: "owner",
-              tenantId: tenantId,
-              plan: "starter"
-            }
-            localStorage.setItem("axion_user", JSON.stringify(appUser))
+          const appUser: AppUser = {
+            id: session.user.id,
+            email: session.user.email || "",
+            name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+            role: "owner",
+            tenantId,
+            plan: "starter"
           }
-          
           setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
         } else {
           setUser(null)
           localStorage.removeItem("axion_user")
         }
       } catch (err) {
-        console.error("[Auth] Session check error:", err)
-        // Em caso de erro, tenta usar localStorage
-        const stored = localStorage.getItem("axion_user")
-        if (stored) {
-          try {
-            setUser(JSON.parse(stored))
-          } catch {}
-        }
+        console.error("[Auth] Session error:", err)
       } finally {
         if (mounted) {
           setLoading(false)
@@ -185,93 +129,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkSession()
 
-    // Listener para mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return
-
-      // Só processa se não for o evento inicial (já tratado pelo getSession)
-      if (isInitialCheck) {
-        isInitialCheck = false
-        return
-      }
-
-      if (session?.user) {
-        // Usa dados do evento diretamente para速度
-        const appUser: AppUser = {
-          id: session.user.id,
-          email: session.user.email || "",
-          name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-          role: "owner",
-          tenantId: session.user.user_metadata?.tenant_id || "",
-          plan: "starter"
-        }
-        setUser(appUser)
-        localStorage.setItem("axion_user", JSON.stringify(appUser))
-        
-        // Atualiza tenantId em background
-        fetchTenantId(supabase, session.user.id).then(tenantId => {
-          if (mounted && tenantId) {
-            const updatedUser = { ...appUser, tenantId }
-            setUser(updatedUser)
-            localStorage.setItem("axion_user", JSON.stringify(updatedUser))
-          }
-        })
-      } else {
-        setUser(null)
-        localStorage.removeItem("axion_user")
-      }
-      setLoading(false)
-      setInitialized(true)
-    })
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => { mounted = false }
   }, [])
 
-  // Redirect if not authenticated
+  // Redirect
   useEffect(() => {
     if (!initialized || loading) return
     
-    const isPublicRoute = publicRoutes.some(route => 
-      pathname === route || pathname.startsWith(route + "/")
-    )
+    const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + "/"))
     
-    if (!user && !isPublicRoute) {
+    if (!user && !isPublic) {
       router.push("/login")
     }
   }, [user, loading, initialized, pathname, router])
 
   const signIn = async (email: string, password: string) => {
+    const supabase = createSupabaseClient()
+    
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
         return { error: mapAuthError(error) }
       }
 
-      if (data.user && data.session) {
-        // Buscar tenant_id do banco
-        const tenantId = await fetchTenantId(supabase, data.user.id)
+      if (data.user) {
+        let tenantId = ""
+        try {
+          const { data: u } = await supabase
+            .from("users")
+            .select("tenant_id")
+            .eq("id", data.user.id)
+            .single()
+          if (u) tenantId = u.tenant_id || ""
+        } catch {}
 
         const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
           role: "owner",
-          tenantId: tenantId,
+          tenantId,
           plan: "starter"
         }
         
-        // Salvar no localStorage ANTES de redirecionar
-        localStorage.setItem("axion_user", JSON.stringify(appUser))
         setUser(appUser)
-        
-        // Redirecionar
+        localStorage.setItem("axion_user", JSON.stringify(appUser))
         router.push("/dashboard")
       }
 
@@ -282,13 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, name?: string) => {
+    const supabase = createSupabaseClient()
+    
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { name: name || email.split("@")[0] }
-        }
+        options: { data: { name: name || email.split("@")[0] } }
       })
 
       if (error) {
@@ -296,36 +199,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data.session) {
-        return { 
-          error: { 
-            message: "Por favor, verifique seu e-mail para confirmar sua conta",
-            code: "EMAIL_CONFIRMATION_REQUIRED" 
-          } 
-        }
+        return { error: { message: "Verifique seu e-mail para confirmar", code: "EMAIL_CONFIRM" } }
       }
 
-      // Buscar tenant_id do banco
-      const tenantId = await fetchTenantId(supabase, data.user!.id)
+      let tenantId = ""
+      try {
+        const { data: u } = await supabase.from("users").select("tenant_id").eq("id", data.user!.id).single()
+        if (u) tenantId = u.tenant_id || ""
+      } catch {}
 
       const appUser: AppUser = {
         id: data.user!.id,
         email: data.user!.email!,
         name: name || email.split("@")[0],
         role: "owner",
-        tenantId: tenantId
+        tenantId
       }
       
-      localStorage.setItem("axion_user", JSON.stringify(appUser))
       setUser(appUser)
+      localStorage.setItem("axion_user", JSON.stringify(appUser))
       router.push("/dashboard")
 
       return { error: null }
     } catch (error) {
-      return { error: { message: "Erro ao criar conta. Tente novamente.", code: "UNKNOWN_ERROR" } }
+      return { error: { message: "Erro ao criar conta", code: "UNKNOWN" } }
     }
   }
 
   const signOut = async () => {
+    const supabase = createSupabaseClient()
     setUser(null)
     localStorage.removeItem("axion_user")
     await supabase.auth.signOut()
@@ -341,8 +243,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider")
   return context
 }

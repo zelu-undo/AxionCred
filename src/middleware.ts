@@ -51,47 +51,8 @@ export async function middleware(req: NextRequest) {
 
   // If public route, just continue
   if (isPublicRoute) {
-    // Even for public routes, check if user is authenticated and on auth pages
-    if (pathname === '/login' || pathname === '/register') {
-      // Create response for cookie handling
-      let response = NextResponse.next({
-        request: {
-          headers: req.headers,
-        },
-      })
-
-      // Check if user has a valid session
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return req.cookies.getAll()
-            },
-            setAll(cookiesToSet) {
-              cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-              response = NextResponse.next({
-                request: {
-                  headers: req.headers,
-                },
-              })
-              cookiesToSet.forEach(({ name, value, options }) =>
-                response.cookies.set(name, value, options)
-              )
-            },
-          },
-        }
-      )
-
-      // Get session
-      const { data: { session } } = await supabase.auth.getSession()
-
-      // If user has a valid session and tries to access login/register, redirect to dashboard
-      if (session) {
-        return NextResponse.redirect(new URL('/dashboard', req.url))
-      }
-    }
+    // Não fazer verificação de sessão no server para login/register
+    // O client-side já faz essa verificação
     return NextResponse.next()
   }
 
