@@ -102,14 +102,21 @@ function NavigationItems() {
             key={item.name}
             href={item.href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
               isActive
-                ? "bg-[#22C55E] text-white"
-                : "text-blue-200 hover:bg-[#1E3A8A] hover:text-white"
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
+                : "text-blue-200 hover:bg-white/10 hover:text-white"
             )}
           >
-            <item.icon className="h-5 w-5" />
-            {item.name}
+            {/* Indicador visual para item ativo */}
+            {isActive && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
+            )}
+            <item.icon className={cn(
+              "h-5 w-5 transition-transform duration-200",
+              !isActive && "group-hover:scale-110"
+            )} />
+            <span className="relative z-10">{item.name}</span>
           </Link>
         )
       })}
@@ -141,30 +148,47 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   const userName = user?.name || (user?.email ? user.email.split("@")[0] : "Usuário")
 
   return (
-    <div className={cn("flex h-full w-64 flex-col bg-[#1E3A8A]", className)} {...props}>
-      <div className="flex h-16 items-center gap-2 border-b border-blue-800 px-6">
-        <span className="text-2xl font-bold text-white">AXI</span>
-        <span className="text-2xl font-bold text-[#22C55E]">ON</span>
+    <div className={cn("flex h-full w-64 flex-col bg-gradient-to-b from-[#1E3A8A] via-[#1E3A8A] to-[#172554]", className)} {...props}>
+      {/* Logo com gradiente sutil */}
+      <div className="flex h-16 items-center gap-2 border-b border-white/10 px-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent" />
+        <span className="text-2xl font-bold text-white tracking-tight">AXI</span>
+        <span className="text-2xl font-bold text-[#22C55E] tracking-tight">ON</span>
       </div>
       
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         <NavigationItems />
       </nav>
       
-      <div className="border-t border-blue-800 p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-[#22C55E] flex items-center justify-center text-white font-medium">
+      {/* User section com design premium */}
+      <div className="border-t border-white/10 p-4 bg-white/5">
+        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+          {/* Avatar com gradiente */}
+          <div className="
+            h-10 w-10 rounded-full 
+            bg-gradient-to-br from-emerald-400 to-emerald-600
+            flex items-center justify-center 
+            text-white font-semibold
+            shadow-lg shadow-emerald-500/30
+            ring-2 ring-white/20
+          ">
             {userInitial}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">{userName}</p>
-            <p className="text-xs text-blue-200">{userEmail}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{userName}</p>
+            <p className="text-xs text-blue-200 truncate">{userEmail}</p>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="w-full mt-2 text-blue-200 hover:text-white hover:bg-[#1E3A8A]"
+          className="
+            w-full mt-2 
+            text-blue-200 hover:text-white 
+            hover:bg-white/10 
+            rounded-lg
+            transition-all duration-200
+          "
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4 mr-2" />

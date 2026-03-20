@@ -276,25 +276,34 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("customers.title")}</h1>
           <p className="text-gray-500">{t("customers.subtitle")}</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button 
+          onClick={() => setIsCreateOpen(true)}
+          className="
+            bg-[#22C55E] hover:bg-[#4ADE80] 
+            shadow-lg shadow-emerald-500/25
+            hover:shadow-emerald-500/40
+            transition-all duration-300 hover:scale-[1.02]
+            active:scale-[0.98]
+          "
+        >
           <Plus className="mr-2 h-4 w-4" />
           {t("customers.newCustomer")}
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
+        <CardHeader className="pb-4 border-b border-gray-100/50">
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
               <Input
                 placeholder={t("customers.searchCustomers")}
-                className="pl-9"
+                className="pl-9 bg-gray-50/50 border-gray-200/60 focus:bg-white focus:border-emerald-400 focus:ring-emerald-500/20 transition-all duration-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

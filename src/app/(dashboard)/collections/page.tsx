@@ -107,43 +107,70 @@ export default function CollectionsPage() {
         <p className="text-gray-500">Gerencie cobranças e inadimplências</p>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Premium Design */}
       <div className="grid md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+        <Card className="
+          relative overflow-hidden
+          border-l-4 border-l-red-500
+          bg-gradient-to-br from-red-50/50 to-white
+          hover:shadow-lg hover:-translate-y-0.5
+          transition-all duration-300
+        ">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-8 -mt-8" />
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm text-gray-500">Total Inadimplente</p>
-                <p className="text-2xl font-bold text-red-600">{formatCurrency(totalOverdue)}</p>
-                <p className="text-xs text-gray-500">{overduePayments.length} parcelas atrasadas</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Inadimplente</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalOverdue)}</p>
+                <p className="text-xs text-gray-500 mt-1">{overduePayments.length} parcelas atrasadas</p>
               </div>
-              <AlertCircle className="h-10 w-10 text-red-400" />
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center shadow-sm">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+        <Card className="
+          relative overflow-hidden
+          border-l-4 border-l-yellow-500
+          bg-gradient-to-br from-yellow-50/50 to-white
+          hover:shadow-lg hover:-translate-y-0.5
+          transition-all duration-300
+        ">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/10 rounded-full -mr-8 -mt-8" />
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm text-gray-500">Vence Hoje</p>
-                <p className="text-2xl font-bold text-yellow-600">{formatCurrency(totalToday)}</p>
-                <p className="text-xs text-gray-500">{todayPayments.length} parcelas</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vence Hoje</p>
+                <p className="text-2xl font-bold text-yellow-600 mt-1">{formatCurrency(totalToday)}</p>
+                <p className="text-xs text-gray-500 mt-1">{todayPayments.length} parcelas</p>
               </div>
-              <Clock className="h-10 w-10 text-yellow-400" />
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-50 flex items-center justify-center shadow-sm">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+        <Card className="
+          relative overflow-hidden
+          border-l-4 border-l-green-500
+          bg-gradient-to-br from-green-50/50 to-white
+          hover:shadow-lg hover:-translate-y-0.5
+          transition-all duration-300
+        ">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full -mr-8 -mt-8" />
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm text-gray-500">Recuperado (30d)</p>
-                <p className="text-2xl font-bold text-green-600">R$ 12.450</p>
-                <p className="text-xs text-gray-500">85% de taxa de recuperação</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recuperado (30d)</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">R$ 12.450</p>
+                <p className="text-xs text-gray-500 mt-1">85% de taxa de recuperação</p>
               </div>
-              <CheckCircle className="h-10 w-10 text-green-400" />
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center shadow-sm">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
