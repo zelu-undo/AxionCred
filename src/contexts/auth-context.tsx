@@ -330,36 +330,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Use user data from Supabase Auth directly
-        // Default role is owner - DB sync is optional
-        const supabase = createClient()
-        
+        // Create user object immediately from Supabase Auth data
         let appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
           role: "owner",
-          tenantId: "",
+          tenantId: data.user.user_metadata?.tenant_id || "",
           plan: "starter"
         }
 
-        // Try to sync with database (optional - won't block login if it fails)
-        try {
-          // Check if tables exist by trying to list tenants
-          const { error: tenantError } = await supabase
-            .from("tenants")
-            .select("id")
-            .limit(1)
-
-          if (tenantError) {
-            // Tables don't exist or no access - skip sync
-            console.log("Skipping DB sync - tables not available")
-          } else {
-            // Tables exist - try to sync user
+        // Try to get more info from database (non-blocking)
+        // This is async and won't block the login
+        const syncUserData = async () => {
+          try {
             const { data: dbUser } = await supabase
               .from("users")
               .select("id, email, name, role, tenant_id")
-              .eq("email", data.user.email!)
+              .eq("id", data.user!.id)
               .single()
 
             if (dbUser) {
@@ -371,50 +359,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 tenantId: dbUser.tenant_id || "",
                 plan: "starter"
               }
-            } else {
-              // Check if any tenants exist
-              const { data: tenants } = await supabase
-                .from("tenants")
-                .select("id")
-                .limit(1)
-
-              if (!tenants?.length) {
-                // First time - create tenant and user
-                const { data: tenantData } = await supabase
-                  .from("tenants")
-                  .insert({
-                    name: appUser.name,
-                    slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-                  })
-                  .select("id")
-                  .single()
-
-                if (tenantData?.id) {
-                  appUser.tenantId = tenantData.id
-                  await supabase.from("users").insert({
-                    id: data.user.id,
-                    email: data.user.email!,
-                    name: appUser.name,
-                    role: "owner",
-                    tenant_id: tenantData.id
-                  })
-                }
-              }
+              setUser(appUser)
+              localStorage.setItem("axion_user", JSON.stringify(appUser))
             }
+          } catch (err) {
+            console.log("DB sync in background:", err)
           }
-        } catch (err) {
-          console.log("DB sync skipped:", err)
         }
         
+        // Start background sync but don't wait
+        syncUserData()
+        
+        // Set user and redirect immediately
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
 
-        if (typeof window !== "undefined") {
-          router.push("/dashboard")
-        }
+        // Use window.location for a guaranteed redirect
+        window.location.href = "/dashboard"
+        
+        return { error: null }
       }
 
-      return { error: null }
+      return { error: { message: "Login failed", code: "UNKNOWN" } }
     } catch (error) {
       return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }

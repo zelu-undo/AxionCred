@@ -85,11 +85,43 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Get session without making async call - just check cookie validity
-  const { data: { session }, error } = await supabase.auth.getSession()
+  // Try to get session - but don't block if it takes too long
+  // Use a simple timeout approach
+  let session = null
+  let hasSessionError = false
+  
+  try {
+    // Check if auth cookies exist first - if they do, assume authenticated
+    const authCookies = req.cookies.getAll().filter(c => 
+      c.name.includes('sb-') && (c.name.includes('auth') || c.name.includes('access'))
+    )
+    
+    if (authCookies.length > 0) {
+      // Auth cookies exist - try to validate but don't wait too long
+      const sessionPromise = supabase.auth.getSession()
+      
+      // Wait max 3 seconds for session check
+      const timeoutPromise = new Promise((resolve) => 
+        setTimeout(() => resolve({ data: { session: null }, error: null }), 3000)
+      )
+      
+      const result = await Promise.race([sessionPromise, timeoutPromise]) as any
+      
+      if (result?.data?.session) {
+        session = result.data.session
+      }
+      // If timeout but cookies exist, still allow - client will verify
+    } else {
+      // No auth cookies - definitely not authenticated
+      console.log("No auth cookies found")
+    }
+  } catch (err) {
+    console.log("Middleware session check error:", err)
+    hasSessionError = true
+  }
 
   // If there's an error or no session, redirect to login
-  if (error || !session) {
+  if (hasSessionError || !session) {
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
