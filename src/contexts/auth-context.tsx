@@ -307,19 +307,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loading, pathname, router])
 
   const signIn = async (email: string, password: string) => {
+    console.log("[AUTH] signIn: Starting login process for", email)
     try {
+      console.log("[AUTH] signIn: Calling supabase.auth.signInWithPassword...")
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
+      console.log("[AUTH] signIn: Response received", { hasData: !!data.user, hasError: !!error })
 
       if (error) {
+        console.log("[AUTH] signIn: Error from Supabase", error.message)
         return { error: mapAuthError(error, locale) }
       }
 
       if (data.user) {
+        console.log("[AUTH] signIn: User authenticated", { userId: data.user.id, emailConfirmed: !!data.user.email_confirmed_at })
+        
         // Check if email is confirmed
         if (!data.user.email_confirmed_at) {
+          console.log("[AUTH] signIn: Email not confirmed")
           return { 
             error: { 
               message: locale === "en" ? "Please confirm your email before logging in. Check your inbox." : 
@@ -339,18 +346,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tenantId: data.user.user_metadata?.tenant_id || "",
           plan: "starter"
         }
+        console.log("[AUTH] signIn: Created appUser", appUser)
 
         // Try to get more info from database (non-blocking)
         // This is async and won't block the login
         const syncUserData = async () => {
+          console.log("[AUTH] signIn: Starting background DB sync...")
           try {
-            const { data: dbUser } = await supabase
+            const { data: dbUser, error: dbError } = await supabase
               .from("users")
               .select("id, email, name, role, tenant_id")
               .eq("id", data.user!.id)
               .single()
 
-            if (dbUser) {
+            if (dbError) {
+              console.log("[AUTH] signIn: DB sync error (non-blocking)", dbError.message)
+            } else if (dbUser) {
+              console.log("[AUTH] signIn: DB sync success", dbUser)
               appUser = {
                 id: dbUser.id,
                 email: dbUser.email,
@@ -363,7 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               localStorage.setItem("axion_user", JSON.stringify(appUser))
             }
           } catch (err) {
-            console.log("DB sync in background:", err)
+            console.log("[AUTH] signIn: DB sync exception (non-blocking)", err)
           }
         }
         
@@ -371,17 +383,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncUserData()
         
         // Set user and redirect immediately
+        console.log("[AUTH] signIn: Setting user state and localStorage")
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
 
         // Use window.location for a guaranteed redirect
+        console.log("[AUTH] signIn: Redirecting to /dashboard")
         window.location.href = "/dashboard"
         
         return { error: null }
       }
 
+      console.log("[AUTH] signIn: No user data returned")
       return { error: { message: "Login failed", code: "UNKNOWN" } }
     } catch (error) {
+      console.log("[AUTH] signIn: Exception", error)
       return { error: mapAuthError(error as { message: string; name?: string }, locale) }
     }
   }
