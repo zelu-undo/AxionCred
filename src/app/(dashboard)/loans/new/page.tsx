@@ -87,6 +87,7 @@ export default function NewLoanPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [adjustedInstallments, setAdjustedInstallments] = useState<number | null>(null)
 
   // Calculate loan preview using business rules
   const { data: businessRulesData } = trpc.businessRules.get.useQuery()
@@ -112,9 +113,19 @@ export default function NewLoanPage() {
         numInstallments <= (rule.max_installments || 999)
     )
     
-    // Use rule values or defaults
-    const interestRate = rule?.interest_rate ?? 5 // Default 5% if no rule
-    const interestType = rule?.interest_type ?? 'monthly'
+    // Don't use default - require explicit rule configuration
+    if (!rule) {
+      console.log("No matching interest rule found for", numInstallments, "installments")
+      setPreview(null)
+      setAdjustedInstallments(null)
+      return
+    }
+    
+    // Clear adjustment message if rule exists
+    setAdjustedInstallments(null)
+    
+    const interestRate = rule.interest_rate
+    const interestType = rule.interest_type
     
     let monthlyPayment: number
     let totalAmount: number
@@ -129,10 +140,10 @@ export default function NewLoanPage() {
       totalAmount = principal + totalInterest
       monthlyPayment = totalAmount / numInstallments
     } else if (interestType === 'weekly') {
-      // Weekly interest rate - convert to monthly for calculation
-      // Weekly rate = monthly rate / 4.33 (average weeks per month)
+      // Weekly interest rate - convert to monthly using compound interest
+      // Formula: monthlyRate = (1 + weeklyRate)^4.33 - 1
       const weeklyRate = interestRate / 100
-      const monthlyRate = weeklyRate * 4.33 // Approximate conversion
+      const monthlyRate = Math.pow(1 + weeklyRate, 4.33) - 1
       
       const factor = Math.pow(1 + monthlyRate, numInstallments)
       monthlyPayment = (principal * monthlyRate * factor) / (factor - 1)
@@ -216,17 +227,17 @@ export default function NewLoanPage() {
   // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments)
-    if (!businessRulesData?.interestRules) return { rate: 5, type: 'monthly' } // Default
+    if (!businessRulesData?.interestRules) return null
     
     const rule = businessRulesData.interestRules.find(
       (r: any) => 
         numInstallments >= (r.min_installments || 0) && 
         numInstallments <= (r.max_installments || 999)
     )
-    return { 
-      rate: rule?.interest_rate ?? 5, 
-      type: rule?.interest_type ?? 'monthly' 
-    }
+    return rule ? { 
+      rate: rule.interest_rate, 
+      type: rule.interest_type 
+    } : null
   }, [formData.installments, businessRulesData])
 
   if (isSuccess) {
@@ -382,18 +393,27 @@ export default function NewLoanPage() {
                           // Find nearest range
                           let nearestMax = ranges[0].max
                           let minDiff = Math.abs(adjustedValue - ranges[0].max)
+                          let nearestMin = ranges[0].min
                           
                           for (const r of ranges) {
                             const diff = Math.abs(adjustedValue - r.max)
                             if (diff < minDiff) {
                               minDiff = diff
                               nearestMax = r.max
+                              nearestMin = r.min
                             }
                           }
                           adjustedValue = nearestMax
+                          // Set adjusted value to show message
+                          setAdjustedInstallments(adjustedValue)
+                        } else {
+                          setAdjustedInstallments(null)
                         }
                       } else if (adjustedValue > 12) {
                         adjustedValue = 12
+                        setAdjustedInstallments(adjustedValue)
+                      } else {
+                        setAdjustedInstallments(null)
                       }
                       
                       setFormData({ ...formData, installments: String(adjustedValue) })
@@ -404,12 +424,28 @@ export default function NewLoanPage() {
                     {businessRulesData?.interestRules?.length ? (
                       <>Faixas disponíveis: {businessRulesData.interestRules.map((r: any) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
                     ) : (
-                      "Máximo: 12x"
+                      "Configure regras de juros para definir parcelas disponíveis"
                     )}
                   </p>
-                  {currentInterestRate.rate > 0 && (
+                  
+                  {/* Auto-adjustment message */}
+                  {adjustedInstallments && (
+                    <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                      ⚠️ Número de parcelas ajustado automaticamente para {adjustedInstallments} (faixa válida mais próxima)
+                    </p>
+                  )}
+                  
+                  {/* Show interest rate if rule is found */}
+                  {currentInterestRate && (
                     <p className="text-xs text-green-600 font-medium">
                       Taxa: {currentInterestRate.rate}% {currentInterestRate.type === 'fixed' ? '(fixo)' : currentInterestRate.type === 'weekly' ? 'semanal' : 'ao mês'}
+                    </p>
+                  )}
+                  
+                  {/* Warning if no rule matches */}
+                  {!currentInterestRate && formData.installments && (
+                    <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                      ❌ Nenhuma regra de juros configurada para {formData.installments} parcelas. Configure uma faixa de juros.
                     </p>
                   )}
                 </div>
@@ -423,12 +459,18 @@ export default function NewLoanPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting || !formData.customerId || !formData.principal || !currentInterestRate}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Criando...
                   </>
+                ) : !currentInterestRate ? (
+                  "Configure regras de juros para continuar"
                 ) : "Criar Empréstimo"}
               </Button>
             </form>
