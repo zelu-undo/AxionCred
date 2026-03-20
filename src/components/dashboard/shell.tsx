@@ -130,8 +130,8 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   }, [])
 
   const handleLogout = async () => {
+    // signOut already handles the redirect to /login
     await signOut()
-    router.push("/login")
   }
 
   // Simple logic - use user data if available, fallback to "?"
@@ -187,8 +187,8 @@ export function Header() {
   }, [])
 
   const handleLogout = async () => {
+    // signOut already handles the redirect to /login
     await signOut()
-    router.push("/login")
   }
 
   // Simple logic - use user data if available

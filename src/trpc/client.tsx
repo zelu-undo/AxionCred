@@ -49,13 +49,15 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
         setSessionToken(session.access_token)
       } else {
         setSessionToken("")
+        // Clear all queries when user logs out to prevent stale data
+        queryClient.clear()
       }
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [queryClient])
 
   // Create client with session token
   const trpcClient = useMemo(() => {

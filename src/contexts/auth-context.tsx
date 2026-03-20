@@ -517,12 +517,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
-      localStorage.removeItem("axion_user")
+      // Clear local state first to prevent race conditions
       setUser(null)
+      localStorage.removeItem("axion_user")
+      
+      // Then sign out from Supabase
+      await supabase.auth.signOut()
+      
+      // Finally redirect - this ensures state is cleared before navigation
       router.push("/login")
     } catch (error) {
       console.error("Sign out error:", error)
+      // Even if signOut fails, redirect to login
+      setUser(null)
+      localStorage.removeItem("axion_user")
+      router.push("/login")
     }
   }
 

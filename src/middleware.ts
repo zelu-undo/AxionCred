@@ -85,7 +85,7 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Get session without making async call - just check cookie validity
+  // Get session and refresh if needed
   const { data: { session }, error } = await supabase.auth.getSession()
 
   // If there's an error or no session, redirect to login
@@ -93,6 +93,30 @@ export async function middleware(req: NextRequest) {
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Check if session is about to expire (within 5 minutes) and refresh if needed
+  if (session.expires_at) {
+    const expiresAt = session.expires_at * 1000 // Convert to milliseconds
+    const now = Date.now()
+    const timeUntilExpiry = expiresAt - now
+    
+    // If session expires in less than 5 minutes, try to refresh
+    if (timeUntilExpiry < 5 * 60 * 1000 && session.refresh_token) {
+      try {
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+        
+        if (refreshError || !refreshedSession) {
+          // Refresh failed, redirect to login
+          const redirectUrl = new URL('/login', req.url)
+          redirectUrl.searchParams.set('redirect', pathname)
+          return NextResponse.redirect(redirectUrl)
+        }
+      } catch (err) {
+        console.error('Session refresh error:', err)
+        // Continue with current session if refresh fails
+      }
+    }
   }
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
