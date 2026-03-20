@@ -483,81 +483,79 @@ export default function LandingPage() {
         </section>
       </FadeInUp>
 
-      {/* CTA Final */}
+      {/* CTA Final + Footer - same trigger */}
       <FadeInUp delay={700}>
         <section className="py-20 bg-gradient-to-r from-[#0B1F3A] to-[#22C55E]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pare de perder dinheiro no fiado
-          </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Comece agora e tenha controle total dos seus recebimentos.
-          </p>
-          <a 
-            href={getWhatsAppUrl(WHATSAPP_MESSAGES.cta)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-[#0B1F3A] hover:bg-gray-100 h-11 rounded-md px-8 text-lg"
-          >
-            Começar a cobrar agora
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </a>
-        </div>
-      </section>
-      </FadeInUp>
-
-      {/* Footer - Hide particles by using higher z-index */}
-      <FadeInUp delay={800}>
-        <footer className="bg-[#0a1829] text-white py-12 relative z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl font-bold text-white">AXI</span>
-                <span className="text-xl font-bold text-[#22C55E] animate-gentle-bounce inline-block">ON</span>
-              </div>
-              <p className="text-white/50 text-sm">
-                Sistema simples para controlar quem te deve.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Produto</h4>
-              <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Como Funciona</a></li>
-                <li><a href="#beneficios" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Benefícios</a></li>
-                <li><a href="#planos" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Planos</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Empresa</h4>
-              <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Sobre</a></li>
-                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Contato</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Termos de Uso</a></li>
-                <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Privacidade</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Pare de perder dinheiro no fiado
+            </h2>
+            <p className="text-xl text-white/90 mb-8">
+              Comece agora e tenha controle total dos seus recebimentos.
+            </p>
             <a 
-              href={getWhatsAppUrl(WHATSAPP_MESSAGES.footer)} 
-              target="_blank" 
+              href={getWhatsAppUrl(WHATSAPP_MESSAGES.cta)}
+              target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-all duration-300 hover:-translate-y-1"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-[#0B1F3A] hover:bg-gray-100 h-11 rounded-md px-8 text-lg"
             >
-              <MessageCircle className="h-5 w-5" />
-              <span>Falar no WhatsApp</span>
-              <span className="text-white/60 text-sm">({WHATSAPP_FORMATTED})</span>
+              Começar a cobrar agora
+              <ArrowRight className="ml-2 h-5 w-5" />
             </a>
           </div>
-        </div>
-      </footer>
+        </section>
+
+        {/* Footer - Hide particles by using higher z-index */}
+        <footer className="bg-[#0a1829] text-white py-12 relative z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid md:grid-cols-4 gap-8 mb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xl font-bold text-white">AXI</span>
+                  <span className="text-xl font-bold text-[#22C55E] animate-gentle-bounce inline-block">ON</span>
+                </div>
+                <p className="text-white/50 text-sm">
+                  Sistema simples para controlar quem te deve.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-white mb-4">Produto</h4>
+                <ul className="space-y-2 text-sm text-white/50">
+                  <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Como Funciona</a></li>
+                  <li><a href="#beneficios" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Benefícios</a></li>
+                  <li><a href="#planos" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Planos</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-white mb-4">Empresa</h4>
+                <ul className="space-y-2 text-sm text-white/50">
+                  <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Sobre</a></li>
+                  <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Contato</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-white mb-4">Legal</h4>
+                <ul className="space-y-2 text-sm text-white/50">
+                  <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Termos de Uso</a></li>
+                  <li><a href="#" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Privacidade</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+              <p className="text-white/40 text-sm">© 2024 AXION. Todos os direitos reservados.</p>
+              <a 
+                href={getWhatsAppUrl(WHATSAPP_MESSAGES.footer)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[#22C55E] hover:text-[#4ADE80] transition-all duration-300 hover:-translate-y-1"
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span>Falar no WhatsApp</span>
+                <span className="text-white/60 text-sm">({WHATSAPP_FORMATTED})</span>
+              </a>
+            </div>
+          </div>
+        </footer>
       </FadeInUp>
     </div>
   )
