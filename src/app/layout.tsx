@@ -20,9 +20,20 @@ export const metadata: Metadata = {
   title: "AXION - Gestão de Crédito",
   description: "Plataforma de infraestrutura de crédito e confiança digital",
   icons: {
-    icon: "/favicon.ico",
-    apple: "/logo-axion.png",
+    icon: [
+      { url: "/favicon.ico", rel: "icon", type: "image/x-icon" },
+      { url: "/favicon-16x16.png", sizes: "16x16", rel: "icon", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", rel: "icon", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", rel: "apple-touch-icon" },
+    ],
+    other: [
+      { url: "/android-chrome-192x192.png", rel: "icon", sizes: "192x192" },
+      { url: "/android-chrome-512x512.png", rel: "icon", sizes: "512x512" },
+    ],
   },
+  manifest: "/site.webmanifest",
 }
 
 export default function RootLayout({
