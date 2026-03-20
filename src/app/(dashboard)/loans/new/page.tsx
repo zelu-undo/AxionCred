@@ -68,12 +68,13 @@ export default function NewLoanPage() {
     if (!principal || !numInstallments) return
 
     // Get interest rate and type from business rules
-    const rule = businessRulesData?.interestRules?.find(
-      rule => numInstallments >= rule.minInstallments && numInstallments <= rule.maxInstallments
+    const rules = businessRulesData?.interestRules || []
+    const rule = rules.find(
+      (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
     
-    const interestRate = rule?.interestRate || 0
-    const interestType = rule?.interestType || 'monthly'
+    const interestRate = rule?.interest_rate || 0
+    const interestType = rule?.interest_type || 'monthly'
     
     let monthlyPayment: number
     let totalAmount: number
@@ -222,7 +223,8 @@ export default function NewLoanPage() {
                     className="pl-9"
                   />
                 </div>
-                {customerSearch && (
+                {/* Show dropdown when searching or when customer is not selected */}
+                {(customerSearch || !formData.customerId) && customers.length > 0 && (
                   <div className="border rounded-md max-h-48 overflow-y-auto">
                     {loadingCustomers ? (
                       <div className="p-2 text-center text-gray-500">
@@ -251,8 +253,20 @@ export default function NewLoanPage() {
                   </div>
                 )}
                 {formData.customerId && (
-                  <div className="text-sm text-green-600 flex items-center gap-1">
-                    ✓ Cliente selecionado
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-green-600 flex items-center gap-1">
+                      ✓ Cliente selecionado
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, customerId: "" })
+                        setCustomerSearch("")
+                      }}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      (Alterar)
+                    </button>
                   </div>
                 )}
               </div>
@@ -277,19 +291,48 @@ export default function NewLoanPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Número de Parcelas</Label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  <Input
+                    type="number"
+                    min={1}
                     value={formData.installments}
-                    onChange={(e) => setFormData({ ...formData, installments: e.target.value })}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 18, 24, 36, 48].map((num) => (
-                      <option key={num} value={num}>
-                        {num}x
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1
+                      setFormData({ ...formData, installments: String(value) })
+                    }}
+                    onBlur={() => {
+                      // Auto-adjust to valid range
+                      const rules = businessRulesData?.interestRules || []
+                      const num = parseInt(formData.installments)
+                      
+                      if (rules.length === 0) {
+                        // No rules, use default max of 12
+                        if (num > 12) {
+                          setFormData({ ...formData, installments: "12" })
+                        }
+                      } else {
+                        // Find max installments from rules
+                        const maxInstallments = Math.max(...rules.map((r: any) => r.max_installments))
+                        if (num > maxInstallments) {
+                          setFormData({ ...formData, installments: String(maxInstallments) })
+                        }
+                        // Find min installments from rules
+                        const minInstallments = Math.min(...rules.map((r: any) => r.min_installments))
+                        if (num < minInstallments) {
+                          setFormData({ ...formData, installments: String(minInstallments) })
+                        }
+                      }
+                    }}
+                  />
+                  {/* Show available ranges */}
+                  <p className="text-xs text-gray-500">
+                    {businessRulesData?.interestRules?.length ? (
+                      <>Faixas disponíveis: {businessRulesData.interestRules.map((r: any) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
+                    ) : (
+                      "Máximo: 12x"
+                    )}
+                  </p>
                   {currentInterestRate.rate > 0 && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-green-600 font-medium">
                       Taxa: {currentInterestRate.rate}% {currentInterestRate.type === 'fixed' ? '(fixo)' : currentInterestRate.type === 'weekly' ? 'semanal' : 'ao mês'}
                     </p>
                   )}
