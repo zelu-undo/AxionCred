@@ -11,7 +11,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading, isInitialized } = useAuth()
+  const { user, loading } = useAuth()
   const [mounted, setMounted] = useState(false)
   
   // Avoid hydration mismatch - only render after client-side mount
@@ -19,9 +19,8 @@ export default function DashboardLayout({
     setMounted(true)
   }, [])
   
-  // Mostrar loading spinner durante o carregamento inicial
-  // Também mostra enquanto isInitialized é false (verificação de sessão em andamento)
-  if (!mounted || !isInitialized || loading) {
+  // Mostrar loading spinner apenas durante o carregamento inicial
+  if (!mounted || loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="flex flex-col items-center gap-4">
@@ -34,15 +33,14 @@ export default function DashboardLayout({
     )
   }
   
-  // Se não está autenticado após a verificação, esperar um pouco mais
-  // O middleware e o AuthProvider vão lidar com o redirecionamento
-  // Apenas mostrar loading enquanto isso
+  // Se não está autenticado, deixar o cliente redirecionar (middleware + useEffect no auth)
+  // Não bloquear a UI aqui - permitir que o apprenderize
   if (!user) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22C55E]"></div>
-          <p className="text-sm text-gray-500">Verificando autenticação...</p>
+          <p className="text-sm text-gray-500">Verificando...</p>
         </div>
       </div>
     )

@@ -1,9 +1,11 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase"
-import { Session } from "@supabase/supabase-js"
+
+// Criar cliente supabase apenas uma vez
+const supabaseClient = createClient()
 
 type AppUser = {
   id: string
@@ -22,22 +24,17 @@ type AuthError = {
 type AuthContextType = {
   user: AppUser | null
   loading: boolean
-  // Novo: estado de verificação inicial concluída
   isInitialized: boolean
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signUp: (email: string, password: string, name?: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
-  // Método para forçar verificação de sessão
-  refreshSession: () => Promise<void>
 }
 
-// Map Supabase error codes to user-friendly messages
 function mapAuthError(error: any, locale: string = "pt"): AuthError {
-  // Handle empty or undefined error objects
   if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
     return {
       message: locale === "en" ? "An unexpected error occurred. Please try again." : 
-              locale === "es" ? "Ocurriu um erro inesperado. Intenta de novo." : 
+              locale === "es" ? "Ocurriu un error inesperado. Intenta de nuevo." : 
               "Ocorreu um erro inesperado. Tente novamente.",
       code: "EMPTY_ERROR"
     }
@@ -46,7 +43,6 @@ function mapAuthError(error: any, locale: string = "pt"): AuthError {
   const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
   const errorLower = errorMessage.toLowerCase()
   
-  // Invalid login credentials
   if (errorLower.includes("invalid login credentials") || errorLower.includes("invalid email or password")) {
     return { 
       message: locale === "en" ? "Invalid email or password" : 
@@ -56,18 +52,7 @@ function mapAuthError(error: any, locale: string = "pt"): AuthError {
     }
   }
   
-  // User not found
-  if (errorLower.includes("user not found")) {
-    return { 
-      message: locale === "en" ? "User not found" : 
-              locale === "es" ? "Usuario no encontrado" : 
-              "Usuário não encontrado",
-      code: "USER_NOT_FOUND"
-    }
-  }
-  
-  // Email already exists
-  if (errorLower.includes("email already in use") || errorLower.includes("email already registered") || errorLower.includes("already been registered")) {
+  if (errorLower.includes("email already in use") || errorLower.includes("email already registered")) {
     return { 
       message: locale === "en" ? "This email is already registered" : 
               locale === "es" ? "Este correo ya está registrado" : 
@@ -76,17 +61,6 @@ function mapAuthError(error: any, locale: string = "pt"): AuthError {
     }
   }
   
-  // Invalid email
-  if (errorLower.includes("invalid email")) {
-    return { 
-      message: locale === "en" ? "Invalid email address" : 
-              locale === "es" ? "Dirección de correo inválida" : 
-              "Endereço de e-mail inválido",
-      code: "INVALID_EMAIL"
-    }
-  }
-  
-  // Email not confirmed
   if (errorLower.includes("email not confirmed") || errorLower.includes("confirm your email")) {
     return { 
       message: locale === "en" ? "Please confirm your email. Check your inbox for the confirmation link." : 
@@ -96,17 +70,6 @@ function mapAuthError(error: any, locale: string = "pt"): AuthError {
     }
   }
   
-  // Password too short
-  if (errorLower.includes("password should be at least") || errorLower.includes("minimum length of 6")) {
-    return { 
-      message: locale === "en" ? "Password must be at least 6 characters" : 
-              locale === "es" ? "La contraseña debe tener al menos 6 caracteres" : 
-              "A senha deve ter pelo menos 6 caracteres",
-      code: "WEAK_PASSWORD"
-    }
-  }
-  
-  // Network error
   if (errorLower.includes("network") || errorLower.includes("fetch")) {
     return { 
       message: locale === "en" ? "Connection error. Please try again." : 
@@ -116,166 +79,70 @@ function mapAuthError(error: any, locale: string = "pt"): AuthError {
     }
   }
   
-  // Too many attempts
-  if (errorLower.includes("too many requests") || errorLower.includes("rate limit")) {
-    return { 
-      message: locale === "en" ? "Too many attempts. Try again later." : 
-              locale === "es" ? "Demasiados intentos. Intenta más tarde." : 
-              "Muitas tentativas. Tente novamente mais tarde.",
-      code: "TOO_MANY_ATTEMPTS"
-    }
-  }
-  
-  // Default fallback
-  return { 
-    message: error.message,
-    code: "UNKNOWN"
-  }
+  return { message: error.message, code: "UNKNOWN" }
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Routes that don't require authentication
 const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [locale, setLocaleState] = useState<string>("pt")
+  const [initialized, setInitialized] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  // Criar supabase apenas uma vez com useRef para evitar recriações
-  const supabaseRef = useRef(createClient())
-  const supabase = supabaseRef.current
+  const supabase = supabaseClient
 
-  // Get locale from localStorage
+  // Initial session check
   useEffect(() => {
-    const savedLocale = localStorage.getItem("axion-locale")
-    if (savedLocale && ["pt", "en", "es"].includes(savedLocale)) {
-      setLocaleState(savedLocale)
-    }
-  }, [])
+    let mounted = true
 
-  useEffect(() => {
-    // Check current session
-    const checkSession = async () => {
-      console.log("[Auth] Starting session check...")
-      
+    const initAuth = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const { data: { session } } = await supabase.auth.getSession()
         
-        console.log("[Auth] getSession result:", sessionError ? sessionError.message : "success", session ? "has session" : "no session")
-        
-        if (session?.user) {
-          console.log("[Auth] User found in session:", session.user.id)
-          let appUser: AppUser | null = null
-          
-          // Try to get user data from our users table
-          try {
-            const { data: userData, error: userError } = await supabase
-              .from("users")
-              .select("id, email, name, role, tenant_id")
-              .eq("id", session.user.id)
-              .single()
-
-            console.log("[Auth] Users table query:", userError ? userError.message : "success", userData)
-
-            // Only use DB data if query succeeded
-            if (!userError && userData) {
-              appUser = {
-                id: userData.id,
-                email: userData.email,
-                name: userData.name,
-                role: userData.role || "owner",
-                tenantId: userData.tenant_id || ""
-              }
-            }
-          } catch (err) {
-            console.log("[Auth] Users table exception:", err)
-          }
-
-          // Fallback to Supabase Auth data if no user in DB
-          if (!appUser) {
-            // Try to get tenant_id from user_metadata in JWT token
-            const metadataTenantId = session.user.user_metadata?.tenant_id
-            console.log("[Auth] Using fallback with tenant_id from metadata:", metadataTenantId)
-            appUser = {
-              id: session.user.id,
-              email: session.user.email || "",
-              name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-              role: "owner",
-              tenantId: metadataTenantId || ""
-            }
-          }
-          
-          console.log("[Auth] Setting user:", appUser)
-          setUser(appUser)
-          localStorage.setItem("axion_user", JSON.stringify(appUser))
-        } else {
-          console.log("[Auth] No session, setting loading to false")
-        }
-      } catch (error) {
-        console.error("[Auth] Session check error:", error)
-      } finally {
-        // Always set loading to false - critical to avoid infinite loading
-        console.log("[Auth] Setting loading to false")
-        setLoading(false)
-        setIsInitialized(true)
-      }
-    }
-
-    checkSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // Check if email is confirmed
-        if (!session.user.email_confirmed_at) {
-          // Email not confirmed - don't set user, redirect to login
-          await supabase.auth.signOut()
-          setUser(null)
-          localStorage.removeItem("axion_user")
-          router.push("/login?error=email_not_confirmed")
-          return
-        }
-
-        let appUser: AppUser | null = null
-        
-        // Try to get from database
-        try {
-          const { data: userData } = await supabase
-            .from("users")
-            .select("id, email, name, role, tenant_id")
-            .eq("id", session.user.id)
-            .single()
-
-          if (userData) {
-            appUser = {
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              role: userData.role || "owner",
-              tenantId: userData.tenant_id || ""
-            }
-          }
-        } catch (err) {
-          console.log("Using Supabase Auth data directly")
-        }
-
-        // Fallback to Supabase Auth data
-        if (!appUser) {
-          // Try to get tenant_id from user_metadata in JWT token
-          const metadataTenantId = session.user.user_metadata?.tenant_id
-          appUser = {
+        if (mounted && session?.user) {
+          const appUser: AppUser = {
             id: session.user.id,
             email: session.user.email || "",
             name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
             role: "owner",
-            tenantId: metadataTenantId || ""
+            tenantId: session.user.user_metadata?.tenant_id || "",
+            plan: "starter"
           }
+          setUser(appUser)
+          localStorage.setItem("axion_user", JSON.stringify(appUser))
         }
-        
+      } catch (err) {
+        console.error("[Auth] Session check error:", err)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+          setInitialized(true)
+        }
+      }
+    }
+
+    initAuth()
+
+    return () => {
+      mounted = false
+    }
+  }, [supabase])
+
+  // Listen for auth changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const appUser: AppUser = {
+          id: session.user.id,
+          email: session.user.email || "",
+          name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+          role: "owner",
+          tenantId: session.user.user_metadata?.tenant_id || "",
+          plan: "starter"
+        }
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
       } else {
@@ -283,70 +150,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("axion_user")
       }
       setLoading(false)
-      setIsInitialized(true)
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+    return () => subscription.unsubscribe()
+  }, [supabase])
 
-  // Protect routes - redirect to login if not authenticated
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!loading) {
-      const isPublicRoute = publicRoutes.some(route => 
-        pathname === route || pathname.startsWith(route + "/")
-      )
-      
-      if (!user && !isPublicRoute) {
-        router.push("/login")
-      }
+    if (!initialized || loading) return
+    
+    const isPublicRoute = publicRoutes.some(route => 
+      pathname === route || pathname.startsWith(route + "/")
+    )
+    
+    if (!user && !isPublicRoute) {
+      router.push("/login")
     }
-  }, [user, loading, pathname, router])
+  }, [user, loading, initialized, pathname, router])
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log("[Auth] Attempting signIn for:", email)
-      
-      // Add a timeout to the signIn process
-      const signInPromise = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       })
 
-      const timeoutMs = 15000 // 15 seconds for login
-      const result = await Promise.race([
-        signInPromise,
-        new Promise<any>((_, reject) => 
-          setTimeout(() => reject(new Error("timeout")), timeoutMs)
-        )
-      ])
-
-      const { data, error } = result
-
       if (error) {
-        console.error("[Auth] signIn error:", error)
-        return { error: mapAuthError(error, locale) }
+        return { error: mapAuthError(error) }
       }
 
-      if (data.user) {
-        // Check if email is confirmed
-        if (!data.user.email_confirmed_at) {
-          return { 
-            error: { 
-              message: locale === "en" ? "Please confirm your email before logging in. Check your inbox." : 
-                      locale === "es" ? "Por favor confirma tu correo antes de iniciar sesión." : 
-                      "Por favor, confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.",
-              code: "EMAIL_NOT_CONFIRMED" 
-            } 
-          }
-        }
-
-        // Use user data from Supabase Auth directly
-        // Default role is owner - DB sync is optional
-        const supabase = createClient()
-        
-        let appUser: AppUser = {
+      if (data.user && data.session) {
+        const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
@@ -354,262 +188,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tenantId: "",
           plan: "starter"
         }
-
-        // Try to sync with database (optional - won't block login if it fails)
-        try {
-          // Check if tables exist by trying to list tenants
-          const { error: tenantError } = await supabase
-            .from("tenants")
-            .select("id")
-            .limit(1)
-
-          if (tenantError) {
-            // Tables don't exist or no access - skip sync
-            console.log("Skipping DB sync - tables not available")
-          } else {
-            // Tables exist - try to sync user
-            const { data: dbUser } = await supabase
-              .from("users")
-              .select("id, email, name, role, tenant_id")
-              .eq("email", data.user.email!)
-              .single()
-
-            if (dbUser) {
-              appUser = {
-                id: dbUser.id,
-                email: dbUser.email,
-                name: dbUser.name,
-                role: dbUser.role || "owner",
-                tenantId: dbUser.tenant_id || "",
-                plan: "starter"
-              }
-            } else {
-              // Check if any tenants exist
-              const { data: tenants } = await supabase
-                .from("tenants")
-                .select("id")
-                .limit(1)
-
-              if (!tenants?.length) {
-                // First time - create tenant and user
-                const { data: tenantData } = await supabase
-                  .from("tenants")
-                  .insert({
-                    name: appUser.name,
-                    slug: appUser.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-                  })
-                  .select("id")
-                  .single()
-
-                if (tenantData?.id) {
-                  appUser.tenantId = tenantData.id
-                  await supabase.from("users").insert({
-                    id: data.user.id,
-                    email: data.user.email!,
-                    name: appUser.name,
-                    role: "owner",
-                    tenant_id: tenantData.id
-                  })
-                }
-              }
-            }
-          }
-        } catch (err) {
-          console.log("DB sync skipped:", err)
-        }
-        
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
-
-        if (typeof window !== "undefined") {
-          router.push("/dashboard")
-        }
+        router.push("/dashboard")
       }
 
       return { error: null }
     } catch (error: any) {
-      console.error("[Auth] signIn exception:", error)
-      
-      // Handle timeout specifically
-      if (error.message === "timeout") {
-        return {
-          error: {
-            message: locale === "en" ? "Login timed out. Please check your connection and try again." : 
-                    locale === "es" ? "Tiempo de espera agotado. Revisa tu conexión." : 
-                    "Tempo de login esgotado. Verifique sua conexão e tente novamente.",
-            code: "TIMEOUT"
-          }
-        }
-      }
-      
-      return { error: mapAuthError(error, locale) }
+      return { error: mapAuthError(error) }
     }
   }
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
-      // Attempt Supabase Auth signup directly
-      // The user record will be created in the database after successful auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            name: name || email.split("@")[0]
-          }
+          data: { name: name || email.split("@")[0] }
         }
       })
 
       if (error) {
-        return { error: mapAuthError(error, locale) }
+        return { error: mapAuthError(error) }
       }
 
-      // If user was created successfully
-      if (data.user) {
-        const userName = name || email.split("@")[0]
-        
-        try {
-          // Try to create tenant for new user (may fail if table doesn't exist)
-          let tenantId = ""
-          try {
-            const { data: tenantData, error: tenantError } = await supabase
-              .from("tenants")
-              .insert({
-                name: userName,
-                slug: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now()
-              })
-              .select()
-              .single()
-
-            if (!tenantError && tenantData) {
-              tenantId = tenantData.id
-            }
-          } catch (tenantErr) {
-            console.warn("Tenant table may not exist:", tenantErr)
-          }
-
-          // Try to create user in our users table (may fail if table doesn't exist)
-          try {
-            await supabase.from("users").insert({
-              id: data.user.id,
-              email: data.user.email,
-              name: userName,
-              role: "owner",
-              tenant_id: tenantId,
-              email_confirmed: !data.session
-            })
-          } catch (userErr) {
-            console.warn("Users table may not exist:", userErr)
-          }
-
-          // If no session (email confirmation required), return success message
-          if (!data.session) {
-            return { 
-              error: { 
-                message: locale === "en" ? "Please check your email to confirm your account" : 
-                        locale === "es" ? "Por favor revisa tu correo para confirmar tu cuenta" : 
-                        "Por favor, verifique seu e-mail para confirmar sua conta",
-                code: "EMAIL_CONFIRMATION_REQUIRED" 
-              } 
-            }
-          }
-
-          // If session exists (email auto-confirmed), log user in
-          const appUser: AppUser = {
-            id: data.user.id,
-            email: data.user.email!,
-            name: userName,
-            role: "owner",
-            tenantId
-          }
-          setUser(appUser)
-          localStorage.setItem("axion_user", JSON.stringify(appUser))
-
-          // Redirect to dashboard
-          if (typeof window !== "undefined") {
-            router.push("/dashboard")
-          }
-        } catch (dbError) {
-          console.error("Database error during signup:", dbError)
+      if (!data.session) {
+        return { 
+          error: { 
+            message: "Por favor, verifique seu e-mail para confirmar sua conta",
+            code: "EMAIL_CONFIRMATION_REQUIRED" 
+          } 
         }
       }
 
+      const appUser: AppUser = {
+        id: data.user!.id,
+        email: data.user!.email!,
+        name: name || email.split("@")[0],
+        role: "owner",
+        tenantId: ""
+      }
+      setUser(appUser)
+      localStorage.setItem("axion_user", JSON.stringify(appUser))
+      router.push("/dashboard")
+
       return { error: null }
     } catch (error) {
-      console.error("Signup error:", error)
       return { error: { message: "Erro ao criar conta. Tente novamente.", code: "UNKNOWN_ERROR" } }
     }
   }
 
   const signOut = async () => {
-    try {
-      // Clear local state first to prevent race conditions
-      setUser(null)
-      localStorage.removeItem("axion_user")
-      
-      // Then sign out from Supabase
-      await supabase.auth.signOut()
-      
-      // Finally redirect - this ensures state is cleared before navigation
-      router.push("/login")
-    } catch (error) {
-      console.error("Sign out error:", error)
-      // Even if signOut fails, redirect to login
-      setUser(null)
-      localStorage.removeItem("axion_user")
-      router.push("/login")
-    }
-  }
-
-  const refreshSession = async () => {
-    console.log("[Auth] Force refreshing session")
-    // Force a session check by getting a new session
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      let appUser: AppUser | null = null
-      
-      try {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("id, email, name, role, tenant_id")
-          .eq("id", session.user.id)
-          .single()
-
-        if (userData) {
-          appUser = {
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            role: userData.role || "owner",
-            tenantId: userData.tenant_id || ""
-          }
-        }
-      } catch (err) {
-        console.log("Using Supabase Auth data directly")
-      }
-
-      if (!appUser) {
-        appUser = {
-          id: session.user.id,
-          email: session.user.email || "",
-          name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-          role: "owner",
-          tenantId: session.user.user_metadata?.tenant_id || ""
-        }
-      }
-
-      setUser(appUser)
-      localStorage.setItem("axion_user", JSON.stringify(appUser))
-    } else {
-      setUser(null)
-      localStorage.removeItem("axion_user")
-    }
-    setLoading(false)
-    setIsInitialized(true)
+    setUser(null)
+    localStorage.removeItem("axion_user")
+    await supabase.auth.signOut()
+    router.push("/login")
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, isInitialized, signIn, signUp, signOut, refreshSession }}>
+    <AuthContext.Provider value={{ user, loading, isInitialized: initialized, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )
