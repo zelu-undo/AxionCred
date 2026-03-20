@@ -4,10 +4,11 @@
 AXION is a SaaS credit management platform for small businesses. Built with Next.js 14 (App Router), tRPC, and Supabase.
 
 ## Tech Stack
-- **Frontend**: Next.js 14 (App Router), Tailwind CSS, shadcn/ui, React Query
+- **Frontend**: Next.js 14 (App Router), Tailwind CSS, shadcn/ui, React Query, Framer Motion
 - **Backend**: Node.js with tRPC (type-safe API)
 - **Database**: PostgreSQL (Supabase) with RLS
 - **Authentication**: Supabase Auth
+- **Animations**: Framer Motion (page transitions, staggered animations, hover effects)
 
 ## Project Structure
 ```
