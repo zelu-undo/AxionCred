@@ -32,11 +32,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const publicRoutes = ["/", "/login", "/register", "/alerts", "/super-admin", "/demo"]
 
 function createSupabaseClient() {
-  console.log("[Auth] Creating Supabase client")
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+}
+
+// Função para fazer fetch com timeout
+async function fetchWithTimeout(promise: Promise<any>, timeoutMs: number = 10000): Promise<any> {
+  let timeoutId: NodeJS.Timeout
+  
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error("Timeout excedido. Verifique sua conexão.")), timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    clearTimeout(timeoutId!)
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -46,21 +60,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  console.log("[Auth] Provider render - loading:", loading, "initialized:", initialized, "user:", user?.email)
-
   // Carregar do localStorage imediatamente
   useEffect(() => {
-    console.log("[Auth] localStorage effect running")
     const stored = localStorage.getItem("axion_user")
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
         if (parsed.id && parsed.email) {
-          console.log("[Auth] Loaded from localStorage:", parsed.email)
           setUser(parsed)
         }
-      } catch (e) {
-        console.error("[Auth] Error parsing localStorage:", e)
+      } catch {
         localStorage.removeItem("axion_user")
       }
     }
@@ -68,44 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar sessão
   useEffect(() => {
-    console.log("[Auth] Session check effect running")
     const supabase = createSupabaseClient()
     let mounted = true
 
     const checkSession = async () => {
-      console.log("[Auth] checkSession - starting")
       try {
-        console.log("[Auth] Calling getSession...")
-        const result = await supabase.auth.getSession()
-        console.log("[Auth] getSession result:", result)
+        const { data: { session } } = await fetchWithTimeout(supabase.auth.getSession(), 5000)
         
-        const { data: { session }, error } = result
-        
-        if (error) {
-          console.error("[Auth] Session error:", error)
-        }
-        
-        if (!mounted) {
-          console.log("[Auth] Component unmounted, stopping")
-          return
-        }
+        if (!mounted) return
 
         if (session?.user) {
-          console.log("[Auth] Session found for:", session.user.email)
-          
-          // Buscar tenant_id
           let tenantId = ""
           try {
-            const { data } = await supabase
-              .from("users")
-              .select("tenant_id")
-              .eq("id", session.user.id)
-              .single()
+            const { data } = await supabase.from("users").select("tenant_id").eq("id", session.user.id).single()
             if (data) tenantId = data.tenant_id || ""
-            console.log("[Auth] tenantId fetched:", tenantId)
-          } catch (e) {
-            console.log("[Auth] Error fetching tenantId:", e)
-          }
+          } catch {}
 
           const appUser: AppUser = {
             id: session.user.id,
@@ -117,17 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
-          console.log("[Auth] User set:", appUser.email)
         } else {
-          console.log("[Auth] No session found")
           setUser(null)
           localStorage.removeItem("axion_user")
         }
       } catch (err) {
-        console.error("[Auth] Session check exception:", err)
+        console.error("[Auth] Session error:", err)
       } finally {
         if (mounted) {
-          console.log("[Auth] Setting loading=false, initialized=true")
           setLoading(false)
           setInitialized(true)
         }
@@ -136,58 +119,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkSession()
 
-    return () => { 
-      console.log("[Auth] Session check effect cleanup")
-      mounted = false 
-    }
+    return () => { mounted = false }
   }, [])
 
   // Redirect
   useEffect(() => {
-    console.log("[Auth] Redirect effect - loading:", loading, "initialized:", initialized, "pathname:", pathname)
-    
-    if (!initialized || loading) {
-      console.log("[Auth] Skipping redirect - not ready")
-      return
-    }
+    if (!initialized || loading) return
     
     const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + "/"))
-    console.log("[Auth] Redirect check - isPublic:", isPublic, "hasUser:", !!user)
     
     if (!user && !isPublic) {
-      console.log("[Auth] Redirecting to /login")
       router.push("/login")
     }
   }, [user, loading, initialized, pathname, router])
 
   const signIn = async (email: string, password: string) => {
-    console.log("[Auth] signIn called for:", email)
     const supabase = createSupabaseClient()
     
     try {
-      console.log("[Auth] Calling signInWithPassword...")
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      console.log("[Auth] signIn result - error:", error, "data:", data ? "user exists" : "no data")
+      console.log("[Auth] signIn - starting...")
+      
+      // Fazer signIn com timeout de 15 segundos
+      const { data, error } = await fetchWithTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        15000
+      )
+
+      console.log("[Auth] signIn - got response, error:", error)
 
       if (error) {
-        console.error("[Auth] signIn error:", error)
         return { error: { message: error.message, code: error.code } }
       }
 
       if (data.user) {
-        console.log("[Auth] signIn success, user:", data.user.email)
-
         let tenantId = ""
         try {
-          const { data: u } = await supabase
-            .from("users")
-            .select("tenant_id")
-            .eq("id", data.user.id)
-            .single()
+          const { data: u } = await supabase.from("users").select("tenant_id").eq("id", data.user.id).single()
           if (u) tenantId = u.tenant_id || ""
-        } catch (e) {
-          console.log("[Auth] Error fetching tenantId:", e)
-        }
+        } catch {}
 
         const appUser: AppUser = {
           id: data.user.id,
@@ -198,7 +167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: "starter"
         }
         
-        console.log("[Auth] Setting user and redirecting...")
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
         router.push("/dashboard")
@@ -207,20 +175,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }
     } catch (error: any) {
       console.error("[Auth] signIn exception:", error)
-      return { error: { message: error.message || "Erro desconhecido", code: "EXCEPTION" } }
+      return { error: { message: error.message || "Erro de conexão. Tente novamente.", code: "TIMEOUT" } }
     }
   }
 
   const signUp = async (email: string, password: string, name?: string) => {
-    console.log("[Auth] signUp called")
     const supabase = createSupabaseClient()
     
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name: name || email.split("@")[0] } }
-      })
+      const { data, error } = await fetchWithTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name: name || email.split("@")[0] } }
+        }),
+        15000
+      )
 
       if (error) {
         return { error: { message: error.message, code: error.code } }
@@ -249,21 +219,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/dashboard")
 
       return { error: null }
-    } catch (error) {
-      return { error: { message: "Erro ao criar conta", code: "UNKNOWN" } }
+    } catch (error: any) {
+      return { error: { message: error.message || "Erro de conexão", code: "TIMEOUT" } }
     }
   }
 
   const signOut = async () => {
-    console.log("[Auth] signOut called")
     const supabase = createSupabaseClient()
     setUser(null)
     localStorage.removeItem("axion_user")
     await supabase.auth.signOut()
     router.push("/login")
   }
-
-  console.log("[Auth] Provider rendering with - loading:", loading, "initialized:", initialized, "user:", user?.email)
 
   return (
     <AuthContext.Provider value={{ user, loading, isInitialized: initialized, signIn, signUp, signOut }}>
