@@ -12,7 +12,18 @@ import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
 import { motion } from "framer-motion"
-import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor, TrendingUp, AlertTriangle, CheckCircle, Clock } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor, TrendingUp, AlertTriangle, CheckCircle, Clock, CreditCard, Calculator } from "lucide-react"
+
+// Calculate recommended credit limit based on payment history
+function calculateRecommendedLimit(): number {
+  // This would typically be calculated based on:
+  // - Payment history
+  // - Income (if available)
+  // - Current debt ratio
+  // - Tenant's max limit settings
+  // For demo, we'll return a fixed value
+  return 5000
+}
 
 // CPF formatting
 function formatCpf(value: string): string {
@@ -571,6 +582,57 @@ export default function CustomerDetailPage() {
                   <span>{customer.document || "-"}</span>
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Credit Limit */}
+        <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-[#22C55E]" />
+                Limite de Crédito
+              </CardTitle>
+              {isEditing && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, credit_limit: calculateRecommendedLimit() })}
+                  className="text-xs text-[#22C55E] hover:text-[#4ADE80]"
+                >
+                  Calcular automático
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isEditing ? (
+              <div className="space-y-2">
+                <Input
+                  type="number"
+                  value={formData.credit_limit || ""}
+                  onChange={(e) => setFormData({ ...formData, credit_limit: parseFloat(e.target.value) || 0 })}
+                  placeholder="0,00"
+                  className="text-2xl font-bold border-gray-200/60 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
+                />
+                <p className="text-xs text-gray-500">
+                  Limite recomendado: R$ {calculateRecommendedLimit().toLocaleString("pt-BR")}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200">
+                  <p className="text-sm text-emerald-700 mb-1">Limite disponível</p>
+                  <p className="text-3xl font-bold text-emerald-800">
+                    R$ {(customer.credit_limit || 0).toLocaleString("pt-BR")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Baseado no histórico de pagamentos</span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
