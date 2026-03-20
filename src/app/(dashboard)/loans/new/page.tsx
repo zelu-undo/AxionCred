@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, UserX } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import { showErrorToast } from "@/lib/toast"
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -66,7 +67,7 @@ export default function NewLoanPage() {
       }, 2000)
     },
     onError: (error) => {
-      alert(error.message)
+      showErrorToast(error.message)
       setIsSubmitting(false)
     }
   })

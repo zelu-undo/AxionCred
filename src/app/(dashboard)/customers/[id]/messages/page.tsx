@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { showSuccessToast } from "@/lib/toast";
 
 export default function CustomerMessagesPage() {
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
@@ -8,7 +9,7 @@ export default function CustomerMessagesPage() {
   const suggestedMessage = 'Olá João! Sua parcela de R$ 850,00 vence amanhã. Prepare o pagamento!';
 
   const handleSendMessage = () => {
-    alert('Mensagem enviada!');
+    showSuccessToast('Mensagem enviada com sucesso!')
     setSelectedMessage(null);
   };
 
