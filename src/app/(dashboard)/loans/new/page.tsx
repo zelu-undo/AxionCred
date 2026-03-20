@@ -104,51 +104,56 @@ export default function NewLoanPage() {
 
     // Get interest rate and type from business rules
     const rules = businessRulesData?.interestRules || []
+    
+    // Find the rule that matches the number of installments
     const rule = rules.find(
-      (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
+      (rule: any) => 
+        numInstallments >= (rule.min_installments || 0) && 
+        numInstallments <= (rule.max_installments || 999)
     )
     
-    const interestRate = rule?.interest_rate || 0
-    const interestType = rule?.interest_type || 'monthly'
+    // Use rule values or defaults
+    const interestRate = rule?.interest_rate ?? 5 // Default 5% if no rule
+    const interestType = rule?.interest_type ?? 'monthly'
     
     let monthlyPayment: number
     let totalAmount: number
     let totalInterest: number
     
-    // Debug log
-    console.log("Calculation:", { principal, numInstallments, interestRate, interestType })
-    
-    if (interestRate === 0 || interestType === 'fixed') {
-      // Sem juros ou juros fixos
-      if (interestType === 'fixed') {
-        // Juros fixos: taxa aplicada uma única vez sobre o principal
-        totalInterest = principal * (interestRate / 100)
-        totalAmount = principal + totalInterest
-      } else {
-        // Sem juros
-        totalAmount = principal
-        totalInterest = 0
-      }
+    // Calculate using Price system (French Amortization)
+    // PMT = P * [r(1+r)^n] / [(1+r)^n - 1]
+    if (interestType === 'fixed') {
+      // Fixed interest: simple calculation
+      // Interest applied once on principal
+      totalInterest = principal * (interestRate / 100)
+      totalAmount = principal + totalInterest
       monthlyPayment = totalAmount / numInstallments
     } else if (interestType === 'weekly') {
-      // Juros semanal (sistema Price)
-      // Fórmula: PMT = P * [r(1+r)^n] / [(1+r)^n - 1]
-      // Onde r = taxa semanal, n = total de semanas
-      const weeklyRate = interestRate / 100 / 4.33 // ~52 semanas/ano
-      const totalWeeks = numInstallments * 4
-      const factor = Math.pow(1 + weeklyRate, totalWeeks)
-      // Calcula parcela mensal (dividindo semanas por 4)
-      monthlyPayment = (principal * weeklyRate * factor) / (factor - 1) / 4
-      totalAmount = monthlyPayment * numInstallments
-      totalInterest = totalAmount - principal
-    } else {
-      // monthly: sistema Price com taxa mensal
-      // Fórmula: PMT = P * [r(1+r)^n] / [(1+r)^n - 1]
-      const monthlyRate = interestRate / 100
+      // Weekly interest rate - convert to monthly for calculation
+      // Weekly rate = monthly rate / 4.33 (average weeks per month)
+      const weeklyRate = interestRate / 100
+      const monthlyRate = weeklyRate * 4.33 // Approximate conversion
+      
       const factor = Math.pow(1 + monthlyRate, numInstallments)
       monthlyPayment = (principal * monthlyRate * factor) / (factor - 1)
       totalAmount = monthlyPayment * numInstallments
       totalInterest = totalAmount - principal
+    } else {
+      // Monthly interest rate (standard Price system)
+      const monthlyRate = interestRate / 100
+      
+      if (monthlyRate === 0) {
+        // No interest - simple division
+        monthlyPayment = principal / numInstallments
+        totalAmount = principal
+        totalInterest = 0
+      } else {
+        // Price system with monthly rate
+        const factor = Math.pow(1 + monthlyRate, numInstallments)
+        monthlyPayment = (principal * monthlyRate * factor) / (factor - 1)
+        totalAmount = monthlyPayment * numInstallments
+        totalInterest = totalAmount - principal
+      }
     }
     
     // Generate installment dates
@@ -211,13 +216,16 @@ export default function NewLoanPage() {
   // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments)
-    if (!businessRulesData?.interestRules) return { rate: 0, type: 'monthly' }
+    if (!businessRulesData?.interestRules) return { rate: 5, type: 'monthly' } // Default
+    
     const rule = businessRulesData.interestRules.find(
-      r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
+      (r: any) => 
+        numInstallments >= (r.min_installments || 0) && 
+        numInstallments <= (r.max_installments || 999)
     )
     return { 
-      rate: rule?.interest_rate || 0, 
-      type: rule?.interest_type || 'monthly' 
+      rate: rule?.interest_rate ?? 5, 
+      type: rule?.interest_type ?? 'monthly' 
     }
   }, [formData.installments, businessRulesData])
 
