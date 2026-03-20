@@ -69,7 +69,7 @@ export function TrustedCompanies() {
   const memoizedCompanies = useMemo(() => companies, [])
   
   return (
-    <section className="py-16 bg-[#0B1F3A] relative overflow-hidden">
+    <section className="py-16 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#22C55E]/5 rounded-full blur-3xl" />
