@@ -520,9 +520,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       localStorage.removeItem("axion_user")
       setUser(null)
-      router.push("/login")
+      // Use window.location for a full page redirect to ensure clean state
+      window.location.href = "/login"
     } catch (error) {
       console.error("Sign out error:", error)
+      // Force redirect even on error
+      window.location.href = "/login"
     }
   }
 

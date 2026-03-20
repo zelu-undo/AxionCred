@@ -1,14 +1,31 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Calculator, CheckCircle, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, UserX } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+
+// Custom debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 interface InstallmentPreview {
   number: number
@@ -20,15 +37,24 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
-  // Get customers with search
-  const [customerSearch, setCustomerSearch] = useState("")
+  // Get customers with search - optimized with debounce
   const [showDropdown, setShowDropdown] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
   
+  // Debounce search input (300ms)
+  const debouncedSearch = useDebounce(searchInput, 300)
+  
+  // Minimum 2 characters to trigger search
+  const MIN_SEARCH_CHARS = 2
+  const MAX_RESULTS = 10
+  
+  // Fetch customers with optimizations
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
-    limit: 100,
-    search: customerSearch || undefined
+    limit: MAX_RESULTS,
+    search: debouncedSearch.length >= MIN_SEARCH_CHARS ? debouncedSearch : undefined
   }, {
-    enabled: customerSearch.length > 0 // Only fetch when searching
+    enabled: debouncedSearch.length >= MIN_SEARCH_CHARS,
+    staleTime: 5 * 60 * 1000, // Cache results for 5 minutes
   })
   const customers = customersData?.customers || []
 
@@ -106,18 +132,22 @@ export default function NewLoanPage() {
       monthlyPayment = totalAmount / numInstallments
     } else if (interestType === 'weekly') {
       // Juros semanal (sistema Price)
+      // Fórmula: PMT = P * [r(1+r)^n] / [(1+r)^n - 1]
+      // Onde r = taxa semanal, n = total de semanas
       const weeklyRate = interestRate / 100 / 4.33 // ~52 semanas/ano
       const totalWeeks = numInstallments * 4
       const factor = Math.pow(1 + weeklyRate, totalWeeks)
-      totalAmount = (principal * weeklyRate * factor) / (factor - 1)
-      monthlyPayment = totalAmount / numInstallments
+      // Calcula parcela mensal (dividindo semanas por 4)
+      monthlyPayment = (principal * weeklyRate * factor) / (factor - 1) / 4
+      totalAmount = monthlyPayment * numInstallments
       totalInterest = totalAmount - principal
     } else {
       // monthly: sistema Price com taxa mensal
+      // Fórmula: PMT = P * [r(1+r)^n] / [(1+r)^n - 1]
       const monthlyRate = interestRate / 100
       const factor = Math.pow(1 + monthlyRate, numInstallments)
-      totalAmount = (principal * monthlyRate * factor) / (factor - 1)
-      monthlyPayment = totalAmount / numInstallments
+      monthlyPayment = (principal * monthlyRate * factor) / (factor - 1)
+      totalAmount = monthlyPayment * numInstallments
       totalInterest = totalAmount - principal
     }
     
@@ -231,47 +261,57 @@ export default function NewLoanPage() {
               <div className="space-y-2">
                 <Label>Cliente *</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 z-10" />
                   <Input
                     placeholder="Buscar por nome ou CPF..."
-                    value={customerSearch}
+                    value={searchInput}
                     onChange={(e) => {
-                      setCustomerSearch(e.target.value)
+                      setSearchInput(e.target.value)
                       setShowDropdown(true)
                     }}
                     onFocus={() => setShowDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                     className="pl-9"
+                    autoComplete="off"
                   />
-                </div>
-                {/* Show dropdown only when focused and has results */}
-                {showDropdown && customerSearch && customers.length > 0 && (
-                  <div className="border rounded-md max-h-48 overflow-y-auto absolute z-10 bg-white w-[calc(100%-2rem)]">
-                    {loadingCustomers ? (
-                      <div className="p-2 text-center text-gray-500">
-                        <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                        Carregando...
-                      </div>
-                    ) : (
-                      customers.map((customer: any) => (
-                        <div
-                          key={customer.id}
-                          className={`p-2 cursor-pointer hover:bg-[#22C55E]50 ${
-                            formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
-                          }`}
-                          onClick={() => {
-                            setFormData({ ...formData, customerId: customer.id })
-                            setCustomerSearch(customer.name)
-                            setShowDropdown(false)
-                          }}
-                        >
-                          <div className="font-medium">{customer.name}</div>
-                          <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                  {/* Loading indicator inside input */}
+                  {loadingCustomers && (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 animate-spin" />
+                  )}
+                  {/* Show dropdown when has input or has results */}
+                  {showDropdown && (searchInput.length >= MIN_SEARCH_CHARS) && (
+                    <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg">
+                      {loadingCustomers ? (
+                        <div className="p-3 text-center text-gray-500">
+                          <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                          Buscando...
                         </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                      ) : customers.length > 0 ? (
+                        customers.map((customer: any) => (
+                          <div
+                            key={customer.id}
+                            className={`p-3 cursor-pointer hover:bg-[#22C55E]50 border-b last:border-b-0 ${
+                              formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
+                            }`}
+                            onClick={() => {
+                              setFormData({ ...formData, customerId: customer.id })
+                              setSearchInput(customer.name)
+                              setShowDropdown(false)
+                            }}
+                          >
+                            <div className="font-medium">{customer.name}</div>
+                            <div className="text-sm text-gray-500">{customer.document || "Sem CPF"}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 text-center text-gray-500">
+                          <UserX className="h-4 w-4 inline mr-2" />
+                          Nenhum cliente encontrado
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {formData.customerId && !showDropdown && (
                   <div className="flex items-center gap-2">
                     <div className="text-sm text-green-600 flex items-center gap-1">
@@ -281,7 +321,7 @@ export default function NewLoanPage() {
                       type="button"
                       onClick={() => {
                         setFormData({ ...formData, customerId: "" })
-                        setCustomerSearch("")
+                        setSearchInput("")
                       }}
                       className="text-xs text-red-500 hover:underline"
                     >
@@ -317,41 +357,38 @@ export default function NewLoanPage() {
                     value={formData.installments}
                     onChange={(e) => {
                       const value = parseInt(e.target.value) || 1
-                      setFormData({ ...formData, installments: String(value) })
-                    }}
-                    onBlur={() => {
-                      // Auto-adjust to nearest valid range
+                      
+                      // Auto-adjust to nearest valid range in real-time
                       const rules = businessRulesData?.interestRules || []
-                      const num = parseInt(formData.installments)
+                      let adjustedValue = value
                       
                       if (rules.length > 0) {
-                        // Find ranges and adjust to nearest valid
                         const ranges = rules.map((r: any) => ({
                           min: r.min_installments,
                           max: r.max_installments
                         }))
                         
-                        // Check if within any range
-                        const inRange = ranges.some(r => num >= r.min && num <= r.max)
+                        const inRange = ranges.some(r => adjustedValue >= r.min && adjustedValue <= r.max)
                         
                         if (!inRange) {
                           // Find nearest range
                           let nearestMax = ranges[0].max
-                          let minDiff = Math.abs(num - ranges[0].max)
+                          let minDiff = Math.abs(adjustedValue - ranges[0].max)
                           
                           for (const r of ranges) {
-                            const diff = Math.abs(num - r.max)
+                            const diff = Math.abs(adjustedValue - r.max)
                             if (diff < minDiff) {
                               minDiff = diff
                               nearestMax = r.max
                             }
                           }
-                          setFormData({ ...formData, installments: String(nearestMax) })
+                          adjustedValue = nearestMax
                         }
-                      } else if (num > 12) {
-                        // No rules, use default max of 12
-                        setFormData({ ...formData, installments: "12" })
+                      } else if (adjustedValue > 12) {
+                        adjustedValue = 12
                       }
+                      
+                      setFormData({ ...formData, installments: String(adjustedValue) })
                     }}
                   />
                   {/* Show available ranges */}
