@@ -33,7 +33,7 @@ function getWhatsAppUrl(message: string): string {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0B1F3A] relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0B1F3A] relative overflow-y-scroll">
       {/* Floating Particles Background */}
       <FloatingParticles particleCount={300} className="z-[1]" />
       

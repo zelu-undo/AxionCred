@@ -33,7 +33,7 @@ export function FloatingParticles({
         vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.3,
         size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.35 + 0.12, // 10% decrease for subtler visibility
+        opacity: Math.random() * 0.33 + 0.11, // 15% decrease for subtler visibility
       })
     }
     return particles
