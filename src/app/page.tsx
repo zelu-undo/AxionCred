@@ -34,8 +34,8 @@ function getWhatsAppUrl(message: string): string {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative">
-      {/* Floating Particles Background - behind content but above background */}
-      <FloatingParticles particleCount={300} className="z-0 fixed inset-0" />
+      {/* Floating Particles Background - absolute to scroll with page */}
+      <FloatingParticles particleCount={300} className="z-0 absolute inset-0" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
