@@ -10,18 +10,58 @@ const publicRoutes = [
   '/alerts',
   '/super-admin',
   '/demo',
+]
+
+// Routes that should bypass all middleware checks
+const bypassRoutes = [
   '/_next',
   '/api',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/logo-axion.png',
 ]
 
 export async function middleware(req: NextRequest) {
+  const { pathname, searchParams } = req.nextUrl
+  
+  // Skip RSC requests - these are internal Next.js requests
+  const isRSC = searchParams.get('_rsc')
+  if (isRSC) {
+    return NextResponse.next()
+  }
+
+  // Skip static files and other assets
+  if (
+    pathname.startsWith('/_next/static') ||
+    pathname.startsWith('/_next/image') ||
+    pathname.startsWith('/public') ||
+    pathname.includes('.') // files with extensions
+  ) {
+    return NextResponse.next()
+  }
+
+  // Skip bypass routes
+  if (bypassRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next()
+  }
+
+  // Check if this is a public route
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route || pathname.startsWith(route + '/')
+  )
+
+  // If public route, just continue
+  if (isPublicRoute) {
+    return NextResponse.next()
+  }
+
+  // Create response for cookie handling
   let response = NextResponse.next({
     request: {
       headers: req.headers,
     },
   })
 
+  // Check for Supabase auth tokens in cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -45,27 +85,21 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Check if user is authenticated
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  const isAuthenticated = !!session
-  const isPublicRoute = publicRoutes.some(route => 
-    req.nextUrl.pathname === route || 
-    req.nextUrl.pathname.startsWith(route)
-  )
-  
-  // If user is not authenticated and trying to access protected route
-  if (!isAuthenticated && !isPublicRoute) {
+  // Get session without making async call - just check cookie validity
+  const { data: { session }, error } = await supabase.auth.getSession()
+
+  // If there's an error or no session, redirect to login
+  if (error || !session) {
     const redirectUrl = new URL('/login', req.url)
-    redirectUrl.searchParams.set('redirect', req.nextUrl.pathname)
+    redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
-  
-  // If user is authenticated and trying to access auth pages
-  if (isAuthenticated && ['/login', '/register'].includes(req.nextUrl.pathname)) {
+
+  // If user is authenticated and trying to access auth pages, redirect to dashboard
+  if (['/login', '/register'].includes(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
-  
+
   return response
 }
 
@@ -77,7 +111,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - paths with extensions (images, etc)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|.*\\.).*)',
   ],
 }
