@@ -30,6 +30,12 @@ interface SystemConfig {
   renegotiationMaxInstallments: number;
 }
 
+// Helper to check if late fee is enabled
+const isLateFeeEnabled = (config: SystemConfig) => config.lateFeeType !== null;
+
+// Helper to check if late interest is enabled
+const isLateInterestEnabled = (config: SystemConfig) => config.lateInterestType !== null;
+
 function validateNoOverlap(rules: InterestRule[], newRule: InterestRule, excludeId?: string): string | null {
   const filtered = rules.filter(r => r.id !== excludeId);
   for (const r of filtered) {
@@ -454,7 +460,7 @@ export default function BusinessRulesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Tipo</label>
-              <Select value={config.lateFeeType || 'none'} onValueChange={(v: any) => setConfig({...config, lateFeeType: v === 'none' ? null : v, lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
+              <Select value={isLateFeeEnabled(config) ? config.lateFeeType! : 'none'} onValueChange={(v: any) => setConfig({...config, lateFeeType: v === 'none' ? null : v as 'percentage' | 'fixed', lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
                 <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma</SelectItem>
@@ -471,7 +477,7 @@ export default function BusinessRulesPage() {
                 value={config.lateFeeValue || ''} 
                 onChange={e => setConfig({...config, lateFeeValue: Number(e.target.value)})}
                 placeholder={config.lateFeeType === 'percentage' ? "Ex: 10" : "Ex: 50,00"}
-                disabled={!config.lateFeeType || config.lateFeeType === 'none'}
+                disabled={!config.lateFeeType}
               />
             </div>
           </div>
@@ -483,7 +489,7 @@ export default function BusinessRulesPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Tipo</label>
-              <Select value={config.lateInterestType || 'none'} onValueChange={(v: any) => setConfig({...config, lateInterestType: v === 'none' ? null : v, lateInterestValue: v === 'none' ? 0 : config.lateInterestValue})}>
+              <Select value={isLateInterestEnabled(config) ? config.lateInterestType! : 'none'} onValueChange={(v: any) => setConfig({...config, lateInterestType: v === 'none' ? null : v as 'percentage' | 'fixed', lateInterestValue: v === 'none' ? 0 : config.lateInterestValue})}>
                 <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
@@ -500,7 +506,7 @@ export default function BusinessRulesPage() {
                 value={config.lateInterestValue || ''} 
                 onChange={e => setConfig({...config, lateInterestValue: Number(e.target.value)})}
                 placeholder={config.lateInterestType === 'percentage' ? "Ex: 1" : "Ex: 5,00"}
-                disabled={!config.lateInterestType || config.lateInterestType === 'none'}
+                disabled={!config.lateInterestType}
               />
             </div>
             <div>
