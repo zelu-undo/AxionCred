@@ -17,6 +17,7 @@ import {
   Menu,
   TrendingUp,
   Percent,
+  Shield,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
