@@ -48,11 +48,8 @@ function NavigationItems() {
     operator: ["dashboard", "customers", "loans"],
   }
   
-  // Starter plan limitations
+  // Starter plan limitations (empty for now - all features visible)
   const starterLimits = {
-    "quick-sale": false,
-    "alerts": false,
-    "reports": false,
   }
   
   // Get user permissions based on role
