@@ -2,6 +2,20 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 
+// Helper function to safely log customer events (won't fail if table doesn't exist)
+async function logCustomerEvent(supabase: any, customerId: string, type: string, description: string) {
+  try {
+    await supabase.from("customer_events").insert({
+      customer_id: customerId,
+      type,
+      description,
+    })
+  } catch (e) {
+    // Silently ignore if table doesn't exist
+    console.log("[customer] Event logging skipped:", type)
+  }
+}
+
 // Validate Brazilian CPF
 function validateCPF(cpf: string): boolean {
   if (cpf.length !== 11) return false
@@ -53,7 +67,6 @@ export const customerRouter = router({
         .from("customers")
         .select("*", { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
-        .neq("status", "deleted") // Exclude soft-deleted customers
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -150,50 +163,16 @@ export const customerRouter = router({
         .select("id, status, name, email, phone, address, notes")
         .eq("tenant_id", ctx.tenantId!)
         .eq("document", input.document || "")
-        .in("status", ["active", "inactive", "blocked", "deleted"])
+        .in("status", ["active", "inactive", "blocked"])
         .limit(1)
         .single()
 
       if (existing) {
-        if (existing.status === "deleted") {
-          // Reactivate deleted customer instead of creating new
-          const { data: reactivated, error } = await ctx.supabase
-            .from("customers")
-            .update({
-              status: "active",
-              deleted_at: null,
-              name: input.name,
-              email: input.email,
-              phone: input.phone,
-              address: input.address,
-              notes: input.notes,
-            })
-            .eq("id", existing.id)
-            .select()
-            .single()
-
-          if (error) {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: error.message,
-            })
-          }
-
-          // Log reactivation
-          await ctx.supabase.from("customer_events").insert({
-            customer_id: reactivated.id,
-            type: "reactivated",
-            description: "Cliente reativado após exclusão",
-          })
-
-          return reactivated
-        } else {
-          // Customer already exists and is active
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "Já existe um cliente cadastrado com este CPF",
-          })
-        }
+        // Customer already exists
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Já existe um cliente cadastrado com este CPF",
+        })
       }
 
       const { data, error } = await ctx.supabase
@@ -207,6 +186,7 @@ export const customerRouter = router({
           address: input.address,
           notes: input.notes,
           credit_limit: input.credit_limit,
+          status: "active",
         })
         .select()
         .single()
@@ -218,12 +198,8 @@ export const customerRouter = router({
         })
       }
 
-      // Log event
-      await ctx.supabase.from("customer_events").insert({
-        customer_id: data.id,
-        type: "created",
-        description: "Cliente cadastrado",
-      })
+      // Log event (safe - won't fail if table doesn't exist)
+      await logCustomerEvent(ctx.supabase, data.id, "created", "Cliente cadastrado")
 
       return data
     }),
@@ -268,7 +244,7 @@ export const customerRouter = router({
       }
 
       // Log changes for audit
-      if (current) {
+      if (current && data) {
         const changes: string[] = []
         if (current.name !== data.name) changes.push(`nome: "${current.name}" → "${data.name}"`)
         if (current.email !== data.email) changes.push(`e-mail: "${current.email || '-'}" → "${data.email || '-'}"`)
@@ -278,11 +254,7 @@ export const customerRouter = router({
         if (current.status !== data.status) changes.push(`status: "${current.status}" → "${data.status}"`)
 
         if (changes.length > 0) {
-          await ctx.supabase.from("customer_events").insert({
-            customer_id: id,
-            type: "updated",
-            description: `Alterações: ${changes.join(", ")}`,
-          })
+          await logCustomerEvent(ctx.supabase, id, "updated", `Alterações: ${changes.join(", ")}`)
         }
       }
 
@@ -292,18 +264,11 @@ export const customerRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Soft delete - mark as deleted but keep data for score sharing
+      // Soft delete - mark as inactive
       const { error } = await ctx.supabase
         .from("customers")
         .update({ 
-          status: "deleted",
-          deleted_at: new Date().toISOString(),
-          // Clear personal data but keep CPF for score
-          email: null,
-          phone: null,
-          address: null,
-          notes: null,
-          name: "[EXCLUÍDO]"
+          status: "inactive",
         })
         .eq("tenant_id", ctx.tenantId!)
         .eq("id", input.id)
@@ -316,11 +281,7 @@ export const customerRouter = router({
       }
 
       // Log the deletion
-      await ctx.supabase.from("customer_events").insert({
-        customer_id: input.id,
-        type: "deleted",
-        description: "Cliente excluído (soft delete - dados mantidos para score)",
-      })
+      await logCustomerEvent(ctx.supabase, input.id, "deleted", "Cliente desativado")
 
       return { success: true }
     }),
@@ -328,20 +289,23 @@ export const customerRouter = router({
   events: protectedProcedure
     .input(z.object({ customerId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
-        .from("customer_events")
-        .select("*")
-        .eq("customer_id", input.customerId)
-        .order("created_at", { ascending: false })
-        .limit(50)
+      try {
+        const { data, error } = await ctx.supabase
+          .from("customer_events")
+          .select("*")
+          .eq("customer_id", input.customerId)
+          .order("created_at", { ascending: false })
+          .limit(50)
 
-      if (error) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        })
+        if (error) {
+          // Return empty array if table doesn't exist
+          return []
+        }
+
+        return data || []
+      } catch (e) {
+        // Return empty array if table doesn't exist
+        return []
       }
-
-      return data || []
     }),
 })
