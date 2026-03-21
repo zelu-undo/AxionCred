@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
-import { AlertTriangle, CreditCard, Settings, TrendingUp, Bell, DollarSign, Clock, UserX } from "lucide-react"
+import { AlertTriangle, CreditCard, Settings, TrendingUp, Bell, DollarSign, Clock, UserX, Loader2 } from "lucide-react"
+import { trpc } from "@/trpc/client"
 
 interface Alert {
   id: string;
@@ -15,13 +16,58 @@ interface Alert {
 }
 
 export default function AlertsPage() {
-  const [alerts] = useState<Alert[]>([
-    { id: '1', type: 'credit', title: 'Parcela vencida há 5 dias', message: 'João Silva tem parcela de R$ 1.250 vencida', priority: 'high', timestamp: '2024-02-15 10:30' },
-    { id: '2', type: 'credit', title: 'Parcela vence amanhã', message: 'Maria Santos tem parcela de R$ 850 vence em 1 dia', priority: 'medium', timestamp: '2024-02-15 09:00' },
-    { id: '3', type: 'credit', title: 'Cliente inadimplente', message: 'Pedro Costa está inadimplente há 45 dias', priority: 'high', timestamp: '2024-02-15 08:00' },
-    { id: '4', type: 'operational', title: 'Pagamento registrado', message: 'Novo pagamento de R$ 1.250 recebido', priority: 'low', timestamp: '2024-02-15 11:00' },
-    { id: '5', type: 'strategic', title: 'Aumento de inadimplência', message: 'Taxa de inadimplência subiu 5% esta semana', priority: 'high', timestamp: '2024-02-15 07:00' },
-  ]);
+  // Fetch real alerts from the API
+  const { data: overdueData, isLoading: loadingOverdue } = trpc.payment.list.useQuery({
+    overdueOnly: true,
+    limit: 20,
+  }, { refetchOnMount: true })
+  
+  const { data: todayData, isLoading: loadingToday } = trpc.payment.list.useQuery({
+    todayOnly: true,
+    limit: 20,
+  }, { refetchOnMount: true })
+  
+  // Transform API data into alerts
+  const alerts: Alert[] = useMemo(() => {
+    const result: Alert[] = []
+    const now = new Date()
+    
+    // Add overdue payment alerts
+    if (overdueData?.payments) {
+      overdueData.payments.forEach((p: any) => {
+        const dueDate = new Date(p.due_date)
+        const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        result.push({
+          id: p.id,
+          type: 'credit',
+          title: daysOverdue > 30 ? 'Cliente inadimplente' : `Parcela vencida há ${daysOverdue} dias`,
+          message: `${p.customer_name} tem parcela de R$ ${(p.amount_due - (p.amount_paid || 0)).toFixed(2)} vencida`,
+          priority: daysOverdue > 30 ? 'high' : daysOverdue > 7 ? 'high' : 'medium',
+          timestamp: dueDate.toLocaleString('pt-BR'),
+        })
+      })
+    }
+    
+    // Add today's payment alerts
+    if (todayData?.payments) {
+      todayData.payments.forEach((p: any) => {
+        result.push({
+          id: p.id + '-today',
+          type: 'operational',
+          title: 'Parcela vence hoje',
+          message: `${p.customer_name} tem parcela de R$ ${(p.amount_due - (p.amount_paid || 0)).toFixed(2)} vence hoje`,
+          priority: 'medium',
+          timestamp: new Date().toLocaleString('pt-BR'),
+        })
+      })
+    }
+    
+    return result.sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 }
+      return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder]
+    })
+  }, [overdueData, todayData])
 
   const getTypeConfig = (type: string) => {
     switch (type) {
@@ -65,12 +111,19 @@ export default function AlertsPage() {
     }
   };
 
+  const isLoading = loadingOverdue || loadingToday
   const creditCount = alerts.filter(a => a.type === 'credit').length;
   const operationalCount = alerts.filter(a => a.type === 'operational').length;
   const strategicCount = alerts.filter(a => a.type === 'strategic').length;
   const highPriorityCount = alerts.filter(a => a.priority === 'high').length;
 
   return (
+    isLoading ? (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-[#22C55E]" />
+        <span className="ml-2 text-gray-500">Carregando alertas...</span>
+      </div>
+    ) : (
     <motion.div 
       className="space-y-6"
       initial={{ opacity: 0, y: 20 }}
@@ -213,5 +266,6 @@ export default function AlertsPage() {
         </CardContent>
       </Card>
     </motion.div>
+    )
   );
 }

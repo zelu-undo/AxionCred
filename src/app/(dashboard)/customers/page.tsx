@@ -175,8 +175,15 @@ export default function CustomersPage() {
 
     // Check for duplicate in database
     setIsCheckingCpf(true)
+    setCpfError("")
     try {
       const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erro de conexão" }))
+        throw new Error(errorData.error || `Erro ${response.status}`)
+      }
+      
       const result = await response.json()
       
       if (result.exists) {
@@ -188,8 +195,10 @@ export default function CustomersPage() {
       } else {
         setCpfError("")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao verificar CPF:", error)
+      // Don't block submission on network errors - just warn
+      setCpfError(error.message ? `Aviso: ${error.message}` : "")
     } finally {
       setIsCheckingCpf(false)
     }

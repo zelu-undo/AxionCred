@@ -7,6 +7,9 @@ import { usersRouter } from "./users"
 import { templatesRouter, notificationsRouter } from "./templates"
 import { superAdminRouter } from "./superAdmin"
 import { paymentRouter } from "./payment"
+import { dashboardRouter } from "./dashboard"
+import { guarantorsRouter } from "./guarantors"
+import { renegotiationsRouter } from "./renegotiations"
 
 export const appRouter = router({
   customer: customerRouter,
@@ -18,6 +21,9 @@ export const appRouter = router({
   notifications: notificationsRouter,
   superAdmin: superAdminRouter,
   payment: paymentRouter,
+  dashboard: dashboardRouter,
+  guarantors: guarantorsRouter,
+  renegotiations: renegotiationsRouter,
 })
 
 export type AppRouter = typeof appRouter

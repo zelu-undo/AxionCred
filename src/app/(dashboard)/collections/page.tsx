@@ -4,80 +4,56 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Phone, MessageCircle, AlertCircle, CheckCircle, Clock } from "lucide-react"
+import { Search, Phone, MessageCircle, AlertCircle, CheckCircle, Clock, Loader2 } from "lucide-react"
 import { useI18n } from "@/i18n/client"
-
-// Demo overdue payments
-const overduePayments = [
-  { 
-    id: "1", 
-    customer: "Carlos Oliveira", 
-    phone: "(11) 99999-8888",
-    amount: 4500, 
-    dueDate: "2024-01-15",
-    daysOverdue: 45,
-    loan: "Empréstimo #1234"
-  },
-  { 
-    id: "2", 
-    customer: "Ana Pereira", 
-    phone: "(11) 98888-7777",
-    amount: 3200, 
-    dueDate: "2024-02-01",
-    daysOverdue: 30,
-    loan: "Empréstimo #1235"
-  },
-  { 
-    id: "3", 
-    customer: "Roberto Lima", 
-    phone: "(11) 97777-6666",
-    amount: 2800, 
-    dueDate: "2024-02-05",
-    daysOverdue: 25,
-    loan: "Empréstimo #1236"
-  },
-  { 
-    id: "4", 
-    customer: "Maria Silva", 
-    phone: "(11) 96666-5555",
-    amount: 2100, 
-    dueDate: "2024-02-10",
-    daysOverdue: 20,
-    loan: "Empréstimo #1237"
-  },
-  { 
-    id: "5", 
-    customer: "João Santos", 
-    phone: "(11) 95555-4444",
-    amount: 1800, 
-    dueDate: "2024-02-15",
-    daysOverdue: 15,
-    loan: "Empréstimo #1238"
-  },
-]
-
-const todayPayments = [
-  { 
-    id: "6", 
-    customer: "Pedro Costa", 
-    phone: "(11) 94444-3333",
-    amount: 890, 
-    dueDate: "2024-03-18",
-    loan: "Empréstimo #1240"
-  },
-  { 
-    id: "7", 
-    customer: "Juliana Oliveira", 
-    phone: "(11) 93333-2222",
-    amount: 1250, 
-    dueDate: "2024-03-18",
-    loan: "Empréstimo #1241"
-  },
-]
+import { trpc } from "@/trpc/client"
+import { useDebounce } from "@/hooks/use-debounce"
 
 export default function CollectionsPage() {
   const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState("")
+  const debouncedSearch = useDebounce(searchQuery, 400)
+  
+  // Fetch overdue payments (late status)
+  const { data: overdueData, isLoading: loadingOverdue } = trpc.payment.list.useQuery({
+    overdueOnly: true,
+    limit: 50,
+    sortBy: "due_date",
+    sortOrder: "asc",
+  }, {
+    refetchOnMount: true,
+  })
+  
+  // Fetch today's payments
+  const today = new Date().toISOString().split("T")[0]
+  const { data: todayData, isLoading: loadingToday } = trpc.payment.list.useQuery({
+    todayOnly: true,
+    limit: 50,
+    sortBy: "due_date",
+    sortOrder: "asc",
+  }, {
+    refetchOnMount: true,
+  })
+  
+  // Transform API data to collection format
+  const overduePayments = (overdueData?.payments || []).map((p: any) => ({
+    id: p.id,
+    customer: p.customer_name,
+    phone: p.customer_phone || "",
+    amount: p.amount_due - (p.amount_paid || 0),
+    dueDate: p.due_date,
+    daysOverdue: Math.floor((new Date().getTime() - new Date(p.due_date).getTime()) / (1000 * 60 * 60 * 24)),
+    loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
+  }))
+  
+  const todayPayments = (todayData?.payments || []).map((p: any) => ({
+    id: p.id,
+    customer: p.customer_name,
+    phone: p.customer_phone || "",
+    amount: p.amount_due - (p.amount_paid || 0),
+    dueDate: p.due_date,
+    loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
+  }))
   
   const filteredOverdue = overduePayments.filter(payment =>
     payment.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,6 +83,14 @@ export default function CollectionsPage() {
         <p className="text-gray-500">Gerencie cobranças e inadimplências</p>
       </div>
 
+      {/* Loading State */}
+      {(loadingOverdue || loadingToday) ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-[#22C55E]" />
+          <span className="ml-2 text-gray-500">Carregando cobranças...</span>
+        </div>
+      ) : (
+      <>
       {/* Summary Cards - Premium Design */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card className="
@@ -282,6 +266,8 @@ export default function CollectionsPage() {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   )
 }

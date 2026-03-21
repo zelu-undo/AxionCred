@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Calculator, CheckCircle, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, AlertCircle } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import { useLoanCalculator, type InterestType } from "@/hooks/use-loan-calculator"
 
 interface InstallmentPreview {
   number: number
@@ -62,8 +63,11 @@ export default function NewLoanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  // Use centralized loan calculator hook
+  const { calculateLoan: computeLoan, generateSchedule } = useLoanCalculator()
+
   // Calculate loan preview using business rules
-  const { data: businessRulesData } = trpc.businessRules.get.useQuery()
+  const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
 
   const calculateLoan = () => {
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
@@ -74,7 +78,10 @@ export default function NewLoanPage() {
     
     const numInstallments = parseInt(formData.installments)
     
-    if (!principal || !numInstallments) return
+    if (!principal || !numInstallments) {
+      setPreview(null)
+      return
+    }
 
     // Get interest rate and type from business rules
     const rules = businessRulesData?.interestRules || []
@@ -83,62 +90,28 @@ export default function NewLoanPage() {
     )
     
     const interestRate = rule?.interest_rate || 0
-    const interestType = rule?.interest_type || 'monthly'
-    
-    let monthlyPayment: number
-    let totalAmount: number
-    let totalInterest: number
-    
-    // Debug log
-    console.log("Calculation:", { principal, numInstallments, interestRate, interestType })
-    
-    if (interestRate === 0 || interestType === 'fixed') {
-      // Sem juros ou juros fixos
-      if (interestType === 'fixed') {
-        // Juros fixos: taxa aplicada uma única vez sobre o principal
-        totalInterest = principal * (interestRate / 100)
-        totalAmount = principal + totalInterest
-      } else {
-        // Sem juros
-        totalAmount = principal
-        totalInterest = 0
-      }
-      monthlyPayment = totalAmount / numInstallments
-    } else if (interestType === 'weekly') {
-      // Juros semanal (sistema Price)
-      const weeklyRate = interestRate / 100 / 4.33 // ~52 semanas/ano
-      const totalWeeks = numInstallments * 4
-      const factor = Math.pow(1 + weeklyRate, totalWeeks)
-      totalAmount = (principal * weeklyRate * factor) / (factor - 1)
-      monthlyPayment = totalAmount / numInstallments
-      totalInterest = totalAmount - principal
-    } else {
-      // monthly: sistema Price com taxa mensal
-      const monthlyRate = interestRate / 100
-      const factor = Math.pow(1 + monthlyRate, numInstallments)
-      totalAmount = (principal * monthlyRate * factor) / (factor - 1)
-      monthlyPayment = totalAmount / numInstallments
-      totalInterest = totalAmount - principal
-    }
-    
-    // Generate installment dates
-    const firstDate = new Date(formData.firstPaymentDate)
-    const installments: InstallmentPreview[] = []
-    
-    for (let i = 0; i < numInstallments; i++) {
-      const dueDate = new Date(firstDate)
-      dueDate.setMonth(dueDate.getMonth() + i + 1)
-      installments.push({
-        number: i + 1,
-        amount: monthlyPayment,
-        dueDate: dueDate.toISOString().split("T")[0],
-      })
-    }
+    const interestType = (rule?.interest_type || 'monthly') as InterestType
+
+    // Use centralized calculation from hook
+    const calculation = computeLoan(principal, interestRate, numInstallments, interestType)
+
+    // Generate installment schedule using the hook
+    const installments = generateSchedule(
+      principal,
+      interestRate,
+      numInstallments,
+      interestType,
+      formData.firstPaymentDate
+    ).map(inst => ({
+      number: inst.number,
+      amount: inst.amount,
+      dueDate: inst.dueDate,
+    }))
     
     setPreview({
-      monthlyPayment,
-      totalInterest,
-      totalAmount,
+      monthlyPayment: calculation.installmentAmount,
+      totalInterest: calculation.totalInterest,
+      totalAmount: calculation.totalAmount,
       installments,
     })
   }
@@ -147,7 +120,7 @@ export default function NewLoanPage() {
     if (formData.principal && formData.installments && businessRulesData) {
       calculateLoan()
     }
-  }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData])
+  }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -399,7 +372,12 @@ export default function NewLoanPage() {
             <CardDescription>Visualize o valor das parcelas</CardDescription>
           </CardHeader>
           <CardContent>
-            {preview ? (
+            {isLoadingRules ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#22C55E]" />
+                <p className="mt-2 text-gray-500">Carregando regras...</p>
+              </div>
+            ) : preview ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
@@ -432,8 +410,9 @@ export default function NewLoanPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                Preencha os dados para ver a simulação
+              <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                <AlertCircle className="h-8 w-8 text-gray-400 mb-2" />
+                <p>Preencha os dados para ver a simulação</p>
               </div>
             )}
           </CardContent>

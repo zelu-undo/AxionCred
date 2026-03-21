@@ -44,8 +44,11 @@ import {
   Send,
   Building,
   Phone,
-  Mail
+  Mail,
+  Loader2
 } from "lucide-react"
+import { trpc } from "@/trpc/client"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 // Demo data for renegotiations
 const renegotiationsData = [
@@ -133,14 +136,21 @@ export default function RenegotiationsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [selectedRenegotiation, setSelectedRenegotiation] = useState<typeof renegotiationsData[0] | null>(null)
-  const [renegotiations] = useState(renegotiationsData)
+  const [selectedRenegotiation, setSelectedRenegotiation] = useState<any>(null)
+  
+  // Fetch real data from API
+  const { data: renegotiationsData, isLoading } = trpc.renegotiations.list.useQuery({ status: statusFilter as any }, {
+    refetchOnMount: true,
+  })
+  
+  const renegotiations = renegotiationsData?.renegotiations || []
 
-  const filteredRenegotiations = renegotiations.filter(r => {
+  const filteredRenegotiations = renegotiations.filter((r: any) => {
+    const customerName = r.loan?.customer?.name || ""
+    const customerDoc = r.loan?.customer?.document || ""
     const matchesSearch = 
-      r.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.originalLoan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.customer.document.includes(searchQuery)
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerDoc.includes(searchQuery)
     const matchesStatus = statusFilter === "all" || r.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -160,6 +170,14 @@ export default function RenegotiationsPage() {
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[#22C55E]" />
+      </div>
+    )
   }
 
   return (
@@ -293,7 +311,7 @@ export default function RenegotiationsPage() {
                     {/* Customer Info */}
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#22C55E] flex items-center justify-center text-white font-bold">
-                        {renegotiation.customer.name.split(" ").map(n => n[0]).join("")}
+                        {renegotiation.customer.name.split(" ").map((n: string) => n[0]).join("")}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -499,7 +517,7 @@ export default function RenegotiationsPage() {
                 {/* Customer */}
                 <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#22C55E] flex items-center justify-center text-white font-bold">
-                    {selectedRenegotiation.customer.name.split(" ").map(n => n[0]).join("")}
+                    {selectedRenegotiation.customer.name.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{selectedRenegotiation.customer.name}</p>

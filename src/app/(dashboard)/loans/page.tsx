@@ -42,13 +42,12 @@ export default function LoansPage() {
     },
   })
 
+  // Server-side filtering via tRPC - use debounced query directly
   const loans = loansData?.loans || []
   
-  // Filter loans client-side for smoother UX (search is debounced on input)
-  const filteredLoans = loans.filter((loan: any) => {
-    const customerName = loan.customer?.name?.toLowerCase() || ""
-    return customerName.includes(searchQuery.toLowerCase())
-  })
+  // Note: Search is already handled server-side via debouncedSearchQuery
+  // No client-side filtering needed - data comes pre-filtered from API
+  const displayLoans = loans
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -205,7 +204,7 @@ export default function LoansPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     <AnimatePresence>
-                      {filteredLoans.map((loan: any, index: number) => (
+                      {displayLoans.map((loan: any, index: number) => (
                         <motion.tr 
                           key={loan.id} 
                           className="
@@ -319,7 +318,7 @@ export default function LoansPage() {
                 </table>
               </div>
               
-              {filteredLoans.length === 0 && (
+              {displayLoans.length === 0 && (
                 <div className="py-16 text-center">
                   <div className="
                     inline-flex items-center justify-center w-20 h-20 

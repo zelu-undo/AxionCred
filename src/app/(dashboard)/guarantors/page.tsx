@@ -41,8 +41,11 @@ import {
   Car,
   Home,
   Handshake,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react"
+import { trpc } from "@/trpc/client"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 // Demo data for guarantors
 const guarantorsData = [
@@ -166,20 +169,22 @@ export default function GuarantorsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"guarantors" | "guarantees">("guarantors")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [guarantors] = useState(guarantorsData)
-  const [guarantees] = useState(guaranteesData)
-
-  const filteredGuarantors = guarantors.filter(g => 
-    g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    g.document.includes(searchQuery) ||
-    g.email.toLowerCase().includes(searchQuery.toLowerCase())
+  
+  // Fetch real data from API
+  const { data: guarantorsData, isLoading } = trpc.guarantors.list.useQuery(undefined, {
+    refetchOnMount: true,
+  })
+  
+  const guarantors = guarantorsData?.guarantors || []
+  const filteredGuarantors = guarantors.filter((g: any) => 
+    g.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    g.document?.includes(searchQuery) ||
+    g.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  const filteredGuarantees = guarantees.filter(g => 
-    g.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    g.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    g.documentNumber.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  
+  // For now, guarantees are fetched separately (empty for now)
+  const [guarantees] = useState<any[]>([])
+  const filteredGuarantees = guarantees
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -203,6 +208,14 @@ export default function GuarantorsPage() {
       default: 
         return <Badge variant="outline">{status}</Badge>
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[#22C55E]" />
+      </div>
+    )
   }
 
   return (
@@ -360,7 +373,7 @@ export default function GuarantorsPage() {
                               {guarantor.type === "business" ? (
                                 <Building className="h-5 w-5" />
                               ) : (
-                                guarantor.name.split(" ").map(n => n[0]).join("")
+                                guarantor.name.split(" ").map((n: string) => n[0]).join("")
                               )}
                             </div>
                             <div>

@@ -23,6 +23,14 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 5 * 1000,
             refetchOnWindowFocus: false,
+            retry: 1,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+          },
+          mutations: {
+            retry: 0,
+            onError: (error) => {
+              console.error("[tRPC] Mutation error:", error)
+            },
           },
         },
       })
