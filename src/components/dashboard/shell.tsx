@@ -169,42 +169,6 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         <NavigationItems />
       </nav>
-      
-      {/* User section com design premium */}
-      <div className="border-t border-white/10 p-4 bg-white/5">
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-          {/* Avatar com gradiente */}
-          <div className="
-            h-10 w-10 rounded-full 
-            bg-gradient-to-br from-emerald-400 to-emerald-600
-            flex items-center justify-center 
-            text-white font-semibold
-            shadow-lg shadow-emerald-500/30
-            ring-2 ring-white/20
-          ">
-            {userInitial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{userName}</p>
-            <p className="text-xs text-blue-200 truncate">{userEmail}</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="
-            w-full mt-2 
-            text-blue-200 hover:text-white 
-            hover:bg-white/10 
-            rounded-lg
-            transition-all duration-200
-          "
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          {t("navigation.logout")}
-        </Button>
-      </div>
     </div>
   )
 }
@@ -423,9 +387,8 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-semibold">{t("navigation.profile")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
               {t("navigation.settings")}
             </DropdownMenuItem>

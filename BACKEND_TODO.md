@@ -5,6 +5,47 @@ Este documento lista todas as funcionalidades que requerem implementação de ba
 
 ---
 
+## ✅ NOVAS FUNCIONALIDADES IMPLEMENTADAS (2026-03-20)
+
+### Fluxo de Caixa Completo
+- Frontend: ✅ `/reports/cash-flow` - Dashboard completo com entradas, saídas, projeções
+- Backend: Pendente - endpoints de dados reais
+
+### Scoring de Clientes
+- Frontend: ✅ `/customers/scoring` - Score automático, sugestões de limite
+- Backend: Pendente - cálculo automático, integração Serasa/SPC
+
+### Segmentação de Clientes
+- Frontend: ✅ `/customers/segments` - Tags, classificação, campanhas
+- Backend: Pendente - classificação automática, segmentação dinâmica
+
+### Dashboard Analítico
+- Frontend: ✅ `/reports/analytics` - KPIs, gráficos, comparações
+- Backend: Pendente - dados reais para métricas
+
+### Workflow de Aprovações
+- Frontend: ✅ `/settings/approvals` - Aprovações por valor, níveis
+- Backend: Pendente - lógica de aprovação, notificações
+
+### Lembretes Inteligentes
+- Frontend: ✅ `/settings/reminders` - Configuração de envios
+- Backend: Pendente - sistema de filas, integração e-mail/SMS
+
+### Logs de Auditoria
+- Frontend: ✅ `/settings/audit-logs` - Registro completo
+- Backend: Pendente - triggers de auditoria
+
+### LGPD/GDPR
+- Frontend: ✅ `/settings/lgpd` - Consentimento, controle de dados
+- Backend: Pendente - anonimização automática
+
+---
+
+## ⚠️ White-label (VERIFICAR COM CLIENTE)
+⚠️ **IMPORTANTE**: Antes de implementar, perguntar se deseja fazer.
+
+---
+
 ## 🔴 Prioridade Alta - Funcionalidades Core
 
 ### 1. Relatórios Financeiros Avançados
