@@ -608,7 +608,10 @@ export default function CustomerDetailPage() {
                       id="cep"
                       placeholder="00000-000"
                       value={formData.cep}
-                      onChange={(e) => setFormData({ ...formData, cep: formatCep(e.target.value) })}
+                      onChange={(e) => {
+                        const formatted = formatCep(e.target.value)
+                        handleCepChange(formatted)
+                      }}
                       onBlur={handleCepBlur}
                     />
                     {isLoadingCep && (
