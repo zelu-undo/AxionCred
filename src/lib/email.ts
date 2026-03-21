@@ -58,7 +58,6 @@ export async function sendConfirmationEmail(email: string, name: string, confirm
     })
     
     const result = await response.json()
-    console.log("Email sent:", result)
     return result
   } catch (error) {
     console.error("Error sending email:", error)

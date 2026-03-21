@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useCallback } from "react"
+import { useEffect, useRef, useCallback, useState } from "react"
 
 interface Particle {
   x: number
@@ -16,28 +16,55 @@ interface FloatingParticlesProps {
   className?: string
 }
 
+// Speed multiplier - 30% faster than default
+const SPEED_MULTIPLIER = 1.3
+
+// Get appropriate particle count based on device
+function getParticleCount(): number {
+  if (typeof window === 'undefined') return 300
+  return window.innerWidth < 768 ? 180 : 300
+}
+
 export function FloatingParticles({ 
-  particleCount = 60, 
+  particleCount: propParticleCount, 
   className = "" 
 }: FloatingParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])
   const animationRef = useRef<number>(0)
+  const [particleCount, setParticleCount] = useState(300)
+
+  useEffect(() => {
+    // Set initial particle count based on device
+    setParticleCount(getParticleCount())
+    
+    // Handle resize to adjust particle count
+    const handleResize = () => {
+      setParticleCount(getParticleCount())
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Use propParticleCount if provided, otherwise use responsive count
+  const activeParticleCount = propParticleCount ?? particleCount
 
   const initParticles = useCallback((width: number, height: number) => {
     const particles: Particle[] = []
-    for (let i = 0; i < particleCount; i++) {
+    const count = activeParticleCount
+    for (let i = 0; i < count; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.2,
-        vy: (Math.random() - 0.5) * 0.2,
+        vx: (Math.random() - 0.5) * 0.2 * SPEED_MULTIPLIER,
+        vy: (Math.random() - 0.5) * 0.2 * SPEED_MULTIPLIER,
         size: Math.random() * 2.5 + 1.5,
         opacity: 0.5,
       })
     }
     return particles
-  }, [particleCount])
+  }, [activeParticleCount])
 
   const drawParticles = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     ctx.clearRect(0, 0, width, height)

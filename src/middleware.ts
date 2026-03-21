@@ -43,13 +43,35 @@ export async function middleware(req: NextRequest) {
     pathname === route || pathname.startsWith(route + '/')
   )
 
-  // If public route, just continue - NO auth check
+  // If public route, just continue
   if (isPublicRoute) {
     return NextResponse.next()
   }
 
-  // For protected routes, let the client handle auth
-  // This prevents server/client race conditions
+  // Validate session on server for protected routes
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
+        setAll: (cookiesToSet) => {
+          // Note: Cannot set cookies in middleware for responses
+          // This is handled by the client
+        },
+      },
+    }
+  )
+
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // If no session, redirect to login
+  if (!session) {
+    const loginUrl = new URL('/login', req.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
   return NextResponse.next()
 }
 
