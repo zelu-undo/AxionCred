@@ -11,7 +11,6 @@ export const businessRulesRouter = router({
       .from("interest_rules")
       .select("*")
       .eq("tenant_id", ctx.tenantId!)
-      .eq("is_active", true)
       .order("min_installments", { ascending: true })
 
     // Get loan config

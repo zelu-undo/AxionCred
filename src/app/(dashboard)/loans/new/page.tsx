@@ -90,7 +90,8 @@ export default function NewLoanPage() {
       (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
     
-    const interestRate = rule?.interest_rate || 0
+    // Default interest rate if no rule found: 5% monthly
+    const interestRate = rule?.interest_rate ?? 5
     const interestType = (rule?.interest_type || 'monthly') as InterestType
 
     // Use centralized calculation from hook

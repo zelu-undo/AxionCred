@@ -68,15 +68,15 @@ export const customerRouter = router({
         .select("*", { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
         .order("created_at", { ascending: false })
-        .range(offset, offset + limit - 1)
 
       if (search) {
         // Remove punctuation and accents for search
         const cleanSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         
         if (cleanSearch.length > 0) {
-          // Use lowercase for case-insensitive search
-          query = query.or(`name.ilike.%${search}%,document.ilike.%${search.replace(/[^0-9]/g, '')}%`)
+          // Use lowercase for case-insensitive search - search both name and document
+          const docSearch = search.replace(/[^0-9]/g, '')
+          query = query.or(`name.ilike.%${cleanSearch}%,document.ilike.%${docSearch}%`)
         }
       }
 
@@ -84,7 +84,9 @@ export const customerRouter = router({
         query = query.eq("status", status)
       }
 
+      // Apply range AFTER filters
       const { data, error, count } = await query
+        .range(offset, offset + limit - 1)
 
       if (error) {
         throw new TRPCError({
