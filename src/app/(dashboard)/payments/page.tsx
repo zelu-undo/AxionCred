@@ -31,6 +31,8 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import { showErrorToast, showSuccessToast } from "@/lib/toast"
+import { useDebounce } from "@/hooks/use-debounce"
 
 // Payment method type
 type PaymentMethod = "cash" | "pix" | "transfer" | "card"
@@ -111,6 +113,9 @@ export default function PaymentsPage() {
   const [page, setPage] = useState(0)
   const pageSize = 20
   
+  // Debounce search to avoid too many API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 400)
+  
   // Modal states
   const [isRegisterOpen, setIsRegisterOpen] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -128,26 +133,58 @@ export default function PaymentsPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   
-  // Fetch installments with payments
-  const { data: installmentsData, isLoading, refetch } = trpc.loan.byId.useQuery(
-    { id: selectedLoan?.id || "" },
-    { enabled: !!selectedLoan?.id }
-  )
+  // Fetch payments from API (using real data)
+  const { data: paymentsData, isLoading, refetch } = trpc.payment.list.useQuery({
+    status: statusFilter === "all" ? undefined : statusFilter as any,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    limit: 100,
+  }, {
+    // Refresh when filters change
+    refetchOnMount: true,
+  })
   
-  // Demo data for payments list
-  const demoPayments: PaymentRecord[] = [
-    { id: "1", customer_name: "João Silva", customer_document: "123.456.789-00", loan_id: "l1", loan_contract_number: "EMP-2024-001", installment_number: 1, installment_total: 1250, amount_paid: 1250, due_date: "2024-03-15", paid_date: "2024-03-15", status: "paid", payment_method: "pix", notes: "Pagamento em dia" },
-    { id: "2", customer_name: "Maria Santos", customer_document: "987.654.321-00", loan_id: "l2", loan_contract_number: "EMP-2024-002", installment_number: 2, installment_total: 850, amount_paid: 850, due_date: "2024-03-18", paid_date: "2024-03-18", status: "paid", payment_method: "cash", notes: null },
-    { id: "3", customer_name: "Pedro Costa", customer_document: "456.789.123-00", loan_id: "l3", loan_contract_number: "EMP-2024-003", installment_number: 1, installment_total: 2100, amount_paid: 500, due_date: "2024-03-10", paid_date: "2024-03-12", status: "partial", payment_method: "transfer", notes: "Pagamento parcial" },
-    { id: "4", customer_name: "Ana Oliveira", customer_document: "321.654.987-00", loan_id: "l4", loan_contract_number: "EMP-2024-004", installment_number: 3, installment_total: 1500, amount_paid: 0, due_date: "2024-03-20", paid_date: null, status: "pending", payment_method: null, notes: null },
-    { id: "5", customer_name: "Carlos Lima", customer_document: "654.321.456-00", loan_id: "l5", loan_contract_number: "EMP-2024-005", installment_number: 2, installment_total: 1800, amount_paid: 0, due_date: "2024-02-28", paid_date: null, status: "late", payment_method: null, notes: null },
-    { id: "6", customer_name: "Juliana Alves", customer_document: "789.123.654-00", loan_id: "l6", loan_contract_number: "EMP-2024-006", installment_number: 1, installment_total: 2200, amount_paid: 2200, due_date: "2024-03-01", paid_date: "2024-03-01", status: "paid", payment_method: "card", notes: null },
-    { id: "7", customer_name: "Roberto Ferreira", customer_document: "147.258.369-00", loan_id: "l7", loan_contract_number: "EMP-2024-007", installment_number: 4, installment_total: 950, amount_paid: 0, due_date: "2024-03-25", paid_date: null, status: "pending", payment_method: null, notes: null },
-    { id: "8", customer_name: "Fernanda Souza", customer_document: "258.369.147-00", loan_id: "l8", loan_contract_number: "EMP-2024-008", installment_number: 2, installment_total: 1350, amount_paid: 1350, due_date: "2024-03-15", paid_date: "2024-03-14", status: "paid", payment_method: "pix", notes: "Antecipado" },
-  ]
+  // Register payment mutation
+  const registerPaymentMutation = trpc.payment.register.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Pagamento registrado com sucesso!")
+      refetch()
+    },
+    onError: (error) => {
+      showErrorToast(error.message || "Erro ao registrar pagamento")
+    },
+  })
+  
+  // Reverse payment mutation
+  const reversePaymentMutation = trpc.payment.reverse.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Pagamento estornado com sucesso!")
+      refetch()
+    },
+    onError: (error) => {
+      showErrorToast(error.message || "Erro ao estornar pagamento")
+    },
+  })
+  
+  // Use real payments data from API
+  const realPayments: PaymentRecord[] = paymentsData?.payments?.map((p: any) => ({
+    id: p.id,
+    customer_name: p.customer_name,
+    customer_document: p.customer_document,
+    loan_id: p.loan_id,
+    loan_contract_number: p.loan_id?.slice(0, 8) || "-",
+    installment_number: p.installment_number,
+    installment_total: p.installment_total,
+    amount_paid: p.amount_paid,
+    due_date: p.due_date,
+    paid_date: p.paid_date,
+    status: p.status,
+    payment_method: p.payment_method,
+    notes: p.notes,
+  })) || []
 
   // Apply filters
-  const filteredPayments = demoPayments.filter(payment => {
+  const filteredPayments = realPayments.filter(payment => {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
@@ -282,35 +319,66 @@ export default function PaymentsPage() {
 
   // Handle payment registration
   const handleRegisterPayment = async () => {
+    if (!selectedInstallment) {
+      showErrorToast("Selecione uma parcela para registrar o pagamento")
+      return
+    }
+    
+    const amount = parseFloat(paymentForm.amount.replace(/[^0-9]/g, "")) / 100
+    if (isNaN(amount) || amount <= 0) {
+      showErrorToast("Valor inválido")
+      return
+    }
+    
     setIsSubmitting(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    setIsSubmitting(false)
-    setIsRegisterOpen(false)
-    setPaymentForm({
-      amount: "",
-      payment_date: new Date().toISOString().split("T")[0],
-      payment_method: "cash",
-      notes: "",
-    })
-    setSelectedInstallment(null)
-    setSelectedLoan(null)
-    refetch()
+    try {
+      await registerPaymentMutation.mutateAsync({
+        installment_id: selectedInstallment.id,
+        amount,
+        payment_date: paymentForm.payment_date,
+        method: paymentForm.payment_method,
+        notes: paymentForm.notes,
+      })
+      
+      setIsRegisterOpen(false)
+      setPaymentForm({
+        amount: "",
+        payment_date: new Date().toISOString().split("T")[0],
+        payment_method: "cash",
+        notes: "",
+      })
+      setSelectedInstallment(null)
+      setSelectedLoan(null)
+    } catch (error) {
+      // Error is handled by mutation onError
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Handle payment reversal
   const handleReversePayment = async () => {
+    if (!paymentToReverse) {
+      showErrorToast("Selecione um pagamento para estornar")
+      return
+    }
+    
     setIsSubmitting(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    setIsSubmitting(false)
-    setIsReverseOpen(false)
-    setPaymentToReverse(null)
-    refetch()
+    try {
+      await reversePaymentMutation.mutateAsync({
+        transaction_id: paymentToReverse.id,
+        reason: "Estorno solicitado pelo operador",
+      })
+      
+      setIsReverseOpen(false)
+      setPaymentToReverse(null)
+    } catch (error) {
+      // Error is handled by mutation onError
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Check if there are active filters

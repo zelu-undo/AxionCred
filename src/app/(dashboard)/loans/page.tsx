@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, Search, MoreVertical, Eye, Edit, Trash2, DollarSign, Calendar, Loader2, Wallet, CreditCard } from "lucide-react"
+import { useDebounce } from "@/hooks/use-debounce"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +25,15 @@ export default function LoansPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   
+  // Debounce search to avoid too many API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 400)
+  
   const { data: loansData, isLoading, refetch } = trpc.loan.list.useQuery({
     limit: 100,
+    search: debouncedSearchQuery || undefined,
+  }, {
+    // Only fetch when we have search or on initial load
+    enabled: true,
   })
 
   const deleteMutation = trpc.loan.cancel.useMutation({
@@ -36,6 +44,7 @@ export default function LoansPage() {
 
   const loans = loansData?.loans || []
   
+  // Filter loans client-side for smoother UX (search is debounced on input)
   const filteredLoans = loans.filter((loan: any) => {
     const customerName = loan.customer?.name?.toLowerCase() || ""
     return customerName.includes(searchQuery.toLowerCase())

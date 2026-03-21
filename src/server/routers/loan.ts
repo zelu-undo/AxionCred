@@ -8,12 +8,13 @@ export const loanRouter = router({
       z.object({
         customerId: z.string().optional(),
         status: z.enum(["pending", "active", "paid", "cancelled", "renegotiated"]).optional(),
+        search: z.string().optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { customerId, status, limit, offset } = input
+      const { customerId, status, search, limit, offset } = input
 
       let query = ctx.supabase
         .from("loans")
@@ -31,6 +32,11 @@ export const loanRouter = router({
 
       if (status) {
         query = query.eq("status", status)
+      }
+
+      if (search) {
+        // Search by customer name (requires join via text search)
+        query = query.or(`customer.name.ilike.%${search}%`)
       }
 
       const { data, error, count } = await query
@@ -257,10 +263,10 @@ export const loanRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { installment_id, amount, payment_date, method } = input
 
-      // Get installment
+      // Get installment with loan details
       const { data: installment, error: instError } = await ctx.supabase
         .from("loan_installments")
-        .select("*, loan:loans(customer_id, tenant_id)")
+        .select("*, loan:loans(id, customer_id, tenant_id, principal_amount, total_amount, paid_amount, remaining_amount, installments_count, paid_installments, status)")
         .eq("id", installment_id)
         .single()
 
@@ -278,12 +284,27 @@ export const loanRouter = router({
         })
       }
 
+      // Validate minimum amount (80% of installment)
+      const minAmount = installment.amount * 0.8
+      if (amount < minAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Valor mínimo para pagamento é R$ ${minAmount.toFixed(2)}`,
+        })
+      }
+
+      const loan = installment.loan
+      const isFullPayment = amount >= installment.amount
+      const newStatus = isFullPayment ? "paid" : "partial"
+      const paidAmount = installment.paid_amount || 0
+      const newPaidAmount = paidAmount + amount
+
       // Update installment
       const { error: updateError } = await ctx.supabase
         .from("loan_installments")
         .update({
-          status: "paid",
-          paid_amount: amount,
+          status: newStatus,
+          paid_amount: newPaidAmount,
           paid_date: payment_date,
         })
         .eq("id", installment_id)
@@ -305,15 +326,50 @@ export const loanRouter = router({
         status: "completed",
       })
 
+      // Update loan totals
+      const newLoanPaidAmount = (loan.paid_amount || 0) + amount
+      const newRemainingAmount = (loan.total_amount || 0) - newLoanPaidAmount
+      const newPaidInstallments = isFullPayment 
+        ? (loan.paid_installments || 0) + 1 
+        : loan.paid_installments
+
+      // Determine new loan status
+      let newLoanStatus = loan.status
+      if (newPaidInstallments >= loan.installments_count) {
+        newLoanStatus = "paid"
+      } else if (newPaidInstallments > 0) {
+        newLoanStatus = "active"
+      }
+
+      // Update loan
+      await ctx.supabase
+        .from("loans")
+        .update({
+          paid_amount: newLoanPaidAmount,
+          remaining_amount: Math.max(0, newRemainingAmount),
+          paid_installments: newPaidInstallments,
+          status: newLoanStatus,
+        })
+        .eq("id", loan.id)
+
       // Log event
       await ctx.supabase.from("customer_events").insert({
-        customer_id: installment.loan.customer_id,
+        customer_id: loan.customer_id,
         type: "payment_received",
-        description: `Pagamento de R$ ${amount.toFixed(2)} recebido`,
-        metadata: { loan_id: installment.loan_id, installment_id, amount },
+        description: `Pagamento de R$ ${amount.toFixed(2)} ${isFullPayment ? '(quitação)' : ''} - Parcela ${installment.installment_number}/${loan.installments_count}`,
+        metadata: { 
+          loan_id: loan.id, 
+          installment_id, 
+          amount,
+          is_full_payment: isFullPayment,
+        },
       })
 
-      return { success: true }
+      return { 
+        success: true,
+        installment_status: newStatus,
+        loan_status: newLoanStatus,
+      }
     }),
 
   cancel: protectedProcedure

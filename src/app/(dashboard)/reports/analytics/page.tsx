@@ -180,10 +180,10 @@ export default function AnalyticsPage() {
   const [chartType, setChartType] = useState("bar")
 
   const defaultKPIs = [
-    { id: "total_clients", name: "Total de Clientes", value: "180", change: "+12%", trend: "up" as const, icon: Users },
-    { id: "revenue", name: "Receita Total", value: "R$ 328k", change: "+22%", trend: "up" as const, icon: DollarSign },
-    { id: "active_loans", name: "Empréstimos Ativos", value: "145", change: "+8%", trend: "up" as const, icon: CreditCard },
-    { id: "default_rate", name: "Taxa de Inadimplência", value: "2.3%", change: "-0.5%", trend: "down" as const, icon: TrendingDown },
+    { id: "total_clients", title: "Total de Clientes", value: "180", change: "+12%", trend: "up" as const, icon: Users },
+    { id: "revenue", title: "Receita Total", value: "R$ 328k", change: "+22%", trend: "up" as const, icon: DollarSign },
+    { id: "active_loans", title: "Empréstimos Ativos", value: "145", change: "+8%", trend: "up" as const, icon: CreditCard },
+    { id: "default_rate", title: "Taxa de Inadimplência", value: "2.3%", change: "-0.5%", trend: "down" as const, icon: TrendingDown },
   ]
 
   return (
@@ -322,7 +322,7 @@ export default function AnalyticsPage() {
                         <YAxis stroke="#9CA3AF" tickFormatter={(v) => `R$ ${v/1000}k`} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                          formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, 'Receita']}
+                          formatter={(value) => [`R$ ${Number(value || 0).toLocaleString("pt-BR")}`, 'Receita']}
                         />
                         <Bar dataKey="revenue" fill="#22C55E" radius={[4, 4, 0, 0]} />
                       </RechartsBarChart>
@@ -333,7 +333,7 @@ export default function AnalyticsPage() {
                         <YAxis stroke="#9CA3AF" tickFormatter={(v) => `R$ ${v/1000}k`} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                          formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, 'Receita']}
+                          formatter={(value) => [`R$ ${Number(value || 0).toLocaleString("pt-BR")}`, 'Receita']}
                         />
                         <Line type="monotone" dataKey="revenue" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E' }} />
                       </RechartsLineChart>
@@ -449,7 +449,7 @@ export default function AnalyticsPage() {
                     <YAxis stroke="#9CA3AF" tickFormatter={(v) => `R$ ${v/1000}k`} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                      formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, '']}
+                      formatter={(value) => [`R$ ${Number(value || 0).toLocaleString("pt-BR")}`, '']}
                     />
                     <Bar dataKey="previous" name="Período Anterior" fill="#6B7280" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="current" name="Período Atual" fill="#22C55E" radius={[4, 4, 0, 0]} />

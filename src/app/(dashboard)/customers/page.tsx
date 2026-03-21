@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, Phone, Mail, MoreVertical, Edit, Trash2, Eye, Loader2, MapPin, User, CreditCard, FileText } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useDebounce } from "@/hooks/use-debounce"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,9 @@ export default function CustomersPage() {
     }
   }, [searchParams, searchQuery])
 
+  // Debounce search to avoid too many API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 400)
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null)
   const [cpfError, setCpfError] = useState("")
@@ -91,9 +95,9 @@ export default function CustomersPage() {
     }
   }
   
-  // Fetch customers from database
+  // Fetch customers from database with debounced search
   const { data, isLoading, error, refetch } = trpc.customer.list.useQuery({
-    search: searchQuery || undefined,
+    search: debouncedSearchQuery || undefined,
     limit: 50,
     offset: 0,
   }, {
