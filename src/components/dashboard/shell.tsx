@@ -24,6 +24,7 @@ import {
   Handshake,
   DollarSign,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -52,7 +53,24 @@ type NavCategory = {
 function NavigationItems() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const pathname = usePathname()
   
+  // Estado para controlar quais categorias estão abertas (fechadas por padrão)
+  const [openCategories, setOpenCategories] = React.useState<Record<string, boolean>>({})
+  
+  // Alternar categoria
+  const toggleCategory = (title: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }))
+  }
+  
+  // Verificar se uma categoria tem item ativo e deve estar aberta
+  const isCategoryActive = (items: NavCategory["items"]) => {
+    return items.some(item => isActiveRoute(item.href, pathname))
+  }
+
   // Define permissions for each role
   const permissions = {
     owner: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "reports", "settings"],
@@ -124,8 +142,6 @@ function NavigationItems() {
     },
   ]
 
-  const pathname = usePathname()
-
   // More precise active check - only highlight exact match OR direct children
   const isActiveRoute = (href: string, currentPath: string): boolean => {
     // Exact match
@@ -146,48 +162,73 @@ function NavigationItems() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       {navigationCategories.map((category) => {
         const filteredItems = filterItems(category.items)
         if (filteredItems.length === 0) return null
         
+        const isOpen = openCategories[category.title] || false
+        const hasActiveItem = isCategoryActive(filteredItems)
+        
         return (
           <div key={category.title}>
-            {/* Título da categoria */}
-            <div className="px-3 mb-2">
-              <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                {category.title}
-              </h3>
-            </div>
+            {/* Título da categoria - clicável */}
+            <button
+              onClick={() => toggleCategory(category.title)}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors duration-200",
+                hasActiveItem 
+                  ? "text-emerald-400" 
+                  : "text-blue-400 hover:text-blue-200"
+              )}
+            >
+              <span>{category.title}</span>
+              <motion.div
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </motion.div>
+            </button>
             
-            {/* Itens da categoria */}
-            <div className="space-y-1">
-              {filteredItems.map((item) => {
-                const isActive = isActiveRoute(item.href, pathname)
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
-                      isActive
-                        ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
-                        : "text-blue-200 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    {/* Indicador visual para item ativo */}
-                    {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
-                    )}
-                    <item.icon className={cn(
-                      "h-5 w-5 transition-transform duration-200",
-                      !isActive && "group-hover:scale-110"
-                    )} />
-                    <span className="relative z-10">{item.name}</span>
-                  </Link>
-                )
-              })}
-            </div>
+            {/* Itens da categoria - com animação */}
+            <motion.div
+              initial={false}
+              animate={{ 
+                height: isOpen ? "auto" : 0,
+                opacity: isOpen ? 1 : 0
+              }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-1 py-1">
+                {filteredItems.map((item) => {
+                  const isActive = isActiveRoute(item.href, pathname)
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 group relative ml-2",
+                        isActive
+                          ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
+                          : "text-blue-200 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      {/* Indicador visual para item ativo */}
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />
+                      )}
+                      <item.icon className={cn(
+                        "h-4 w-4 transition-transform duration-200",
+                        !isActive && "group-hover:scale-110"
+                      )} />
+                      <span className="relative z-10">{item.name}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </motion.div>
           </div>
         )
       })}
