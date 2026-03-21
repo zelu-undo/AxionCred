@@ -171,7 +171,16 @@ export default function AlertsPage() {
         <CardContent className="pt-4">
           <div className="space-y-4">
             <AnimatePresence>
-              {alerts.map((alert, index) => {
+              {alerts.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 mb-4">
+                    <Bell className="h-10 w-10 text-blue-500" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Nenhum alerta no momento</p>
+                  <p className="text-gray-400 text-sm mt-1">Você receberá notificações importantes aqui</p>
+                </div>
+              ) : (
+                alerts.map((alert, index) => {
                 const config = getTypeConfig(alert.type);
                 const priorityConfig = getPriorityConfig(alert.priority);
                 const IconComponent = config.icon;
@@ -207,7 +216,8 @@ export default function AlertsPage() {
                     </div>
                   </motion.div>
                 );
-              })}
+              })
+              )}
             </AnimatePresence>
           </div>
         </CardContent>

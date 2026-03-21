@@ -41,7 +41,6 @@ function LoginForm() {
     // Só redirecionar após a verificação inicial estar completa
     if (isInitialized && !authLoading) {
       if (user) {
-        console.log("[Login] Usuário já autenticado, redirecionando para dashboard")
         router.push("/dashboard")
       }
     }

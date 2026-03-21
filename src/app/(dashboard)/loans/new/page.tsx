@@ -89,9 +89,6 @@ export default function NewLoanPage() {
     let totalAmount: number
     let totalInterest: number
     
-    // Debug log
-    console.log("Calculation:", { principal, numInstallments, interestRate, interestType })
-    
     if (interestRate === 0 || interestType === 'fixed') {
       // Sem juros ou juros fixos
       if (interestType === 'fixed') {
