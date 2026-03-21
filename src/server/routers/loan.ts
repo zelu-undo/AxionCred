@@ -437,55 +437,67 @@ export const loanRouter = router({
     }),
 
   dashboard: protectedProcedure.query(async ({ ctx }) => {
-    // Get total customers
-    const { count: totalCustomers } = await ctx.supabase
-      .from("customers")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", ctx.tenantId!)
-
-    // Get active loans
-    const { count: activeLoans } = await ctx.supabase
-      .from("loans")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", ctx.tenantId!)
-      .eq("status", "active")
-
-    // Get total to receive
-    const { data: loansData } = await ctx.supabase
-      .from("loans")
-      .select("remaining_amount")
-      .eq("tenant_id", ctx.tenantId!)
-      .in("status", ["pending", "active"])
-
-    const totalToReceive = loansData?.reduce((sum, l) => sum + Number(l.remaining_amount), 0) || 0
-
-    // Get total received this month
+    const today = new Date().toISOString().split("T")[0]
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
+    const startOfMonthStr = startOfMonth.toISOString()
 
-    const { data: receivedData } = await ctx.supabase
-      .from("payment_transactions")
-      .select("amount")
-      .eq("tenant_id", ctx.tenantId!)
-      .eq("status", "completed")
-      .gte("created_at", startOfMonth.toISOString())
+    // Usar RPC para agregar dados em uma única query quando possível
+    // Para máxima compatibilidade, fazer queries paralelas
+    const [
+      customerCountResult,
+      activeLoansResult,
+      loansSumResult,
+      paymentsSumResult,
+      overdueSumResult
+    ] = await Promise.all([
+      // Total customers
+      ctx.supabase
+        .from("customers")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", ctx.tenantId!),
+      
+      // Active loans count
+      ctx.supabase
+        .from("loans")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "active"),
+      
+      // Total to receive (pending + active loans) - apenas selecting column para performance
+      ctx.supabase
+        .from("loans")
+        .select("remaining_amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .in("status", ["pending", "active"]),
+      
+      // Total received this month
+      ctx.supabase
+        .from("payment_transactions")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "completed")
+        .gte("created_at", startOfMonthStr),
+      
+      // Overdue installments (pending ou late com vencimento < hoje)
+      ctx.supabase
+        .from("loan_installments")
+        .select("amount")
+        .lt("due_date", today)
+        .in("status", ["pending", "late"])
+    ])
 
-    const totalReceived = receivedData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
-
-    // Get overdue
-    const { data: overdueData } = await ctx.supabase
-      .from("loan_installments")
-      .select("amount")
-      .eq("status", "late")
-      .lt("due_date", new Date().toISOString().split("T")[0])
-
-    const overdueAmount = overdueData?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const overdueCount = overdueData?.length || 0
+    const totalCustomers = customerCountResult.count || 0
+    const activeLoans = activeLoansResult.count || 0
+    const totalToReceive = loansSumResult.data?.reduce((sum, l) => sum + Number(l.remaining_amount), 0) || 0
+    const totalReceived = paymentsSumResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+    const overdueAmount = overdueSumResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+    const overdueCount = overdueSumResult.data?.length || 0
 
     return {
-      total_customers: totalCustomers || 0,
-      active_loans: activeLoans || 0,
+      total_customers: totalCustomers,
+      active_loans: activeLoans,
       total_to_receive: totalToReceive,
       total_received: totalReceived,
       overdue_amount: overdueAmount,

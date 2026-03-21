@@ -133,12 +133,18 @@ export default function PaymentsPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   
-  // Fetch payments from API (using real data)
+  // Fetch payments from API with server-side filters
   const { data: paymentsData, isLoading, refetch } = trpc.payment.list.useQuery({
+    search: debouncedSearchQuery || undefined,
     status: statusFilter === "all" ? undefined : statusFilter as any,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
-    limit: 100,
+    todayOnly: todayOnly || undefined,
+    overdueOnly: overdueOnly || undefined,
+    sortBy,
+    sortOrder,
+    limit: pageSize,
+    offset: page * pageSize,
   }, {
     // Refresh when filters change
     refetchOnMount: true,
@@ -166,8 +172,8 @@ export default function PaymentsPage() {
     },
   })
   
-  // Use real payments data from API
-  const realPayments: PaymentRecord[] = paymentsData?.payments?.map((p: any) => ({
+  // Use real payments data from API (already filtered by server)
+  const paginatedPayments: PaymentRecord[] = paymentsData?.payments?.map((p: any) => ({
     id: p.id,
     customer_name: p.customer_name,
     customer_document: p.customer_document,
@@ -183,73 +189,8 @@ export default function PaymentsPage() {
     notes: p.notes,
   })) || []
 
-  // Apply filters
-  const filteredPayments = realPayments.filter(payment => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      if (!payment.customer_name.toLowerCase().includes(query) &&
-          !payment.customer_document.includes(query) &&
-          !payment.loan_contract_number.toLowerCase().includes(query)) {
-        return false
-      }
-    }
-    
-    // Status filter
-    if (statusFilter !== "all" && payment.status !== statusFilter) {
-      return false
-    }
-    
-    // Date from filter
-    if (dateFrom && payment.due_date < dateFrom) {
-      return false
-    }
-    
-    // Date to filter
-    if (dateTo && payment.due_date > dateTo) {
-      return false
-    }
-    
-    // Today only filter
-    if (todayOnly) {
-      const today = new Date().toISOString().split("T")[0]
-      if (payment.due_date !== today && payment.paid_date !== today) {
-        return false
-      }
-    }
-    
-    // Overdue only filter
-    if (overdueOnly) {
-      if (payment.status !== "late") {
-        return false
-      }
-    }
-    
-    return true
-  })
-
-  // Apply sorting
-  const sortedPayments = [...filteredPayments].sort((a, b) => {
-    let comparison = 0
-    switch (sortBy) {
-      case "due_date":
-        comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
-        break
-      case "paid_date":
-        const aDate = a.paid_date ? new Date(a.paid_date).getTime() : 0
-        const bDate = b.paid_date ? new Date(b.paid_date).getTime() : 0
-        comparison = aDate - bDate
-        break
-      case "amount":
-        comparison = a.installment_total - b.installment_total
-        break
-    }
-    return sortOrder === "asc" ? comparison : -comparison
-  })
-
-  // Pagination
-  const paginatedPayments = sortedPayments.slice(page * pageSize, (page + 1) * pageSize)
-  const totalPages = Math.ceil(sortedPayments.length / pageSize)
+  // Total from server (already filtered)
+  const totalPages = Math.ceil((paymentsData?.total || 0) / pageSize)
 
   // Toggle sort
   const handleSort = (column: "due_date" | "paid_date" | "amount") => {
@@ -694,7 +635,7 @@ export default function PaymentsPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100">
                 <p className="text-sm text-gray-500">
-                  Mostrando {page * pageSize + 1} - {Math.min((page + 1) * pageSize, sortedPayments.length)} de {sortedPayments.length}
+                  Mostrando {page * pageSize + 1} - {Math.min((page + 1) * pageSize, paymentsData?.total || 0)} de {paymentsData?.total || 0}
                 </p>
                 <div className="flex gap-2">
                   <Button

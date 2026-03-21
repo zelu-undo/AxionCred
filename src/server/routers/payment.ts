@@ -8,17 +8,24 @@ export const paymentRouter = router({
   list: protectedProcedure
     .input(
       z.object({
+        search: z.string().optional(),
         status: z.enum(["all", "paid", "pending", "late", "partial"]).optional(),
         dateFrom: z.string().optional(),
         dateTo: z.string().optional(),
         customerId: z.string().optional(),
         loanId: z.string().optional(),
+        todayOnly: z.boolean().optional(),
+        overdueOnly: z.boolean().optional(),
+        sortBy: z.enum(["due_date", "paid_date", "amount"]).optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { status, dateFrom, dateTo, customerId, loanId, limit, offset } = input
+      const { search, status, dateFrom, dateTo, customerId, loanId, todayOnly, overdueOnly, sortBy, sortOrder, limit, offset } = input
+
+      const today = new Date().toISOString().split("T")[0]
 
       // Primeiro, busca as parcelas com informações relacionadas
       let query = ctx.supabase
@@ -49,9 +56,9 @@ export const paymentRouter = router({
               email
             )
           )
-        `)
+        `, { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
-        .order("due_date", { ascending: true })
+        .order(sortBy === "paid_date" ? "paid_date" : "due_date", { ascending: sortOrder === "desc" ? false : true })
         .range(offset, offset + limit - 1)
 
       if (customerId) {
@@ -70,6 +77,11 @@ export const paymentRouter = router({
         query = query.lte("due_date", dateTo)
       }
 
+      // Filtrar por busca (nome ou documento do cliente) - via ILIKE
+      if (search) {
+        query = query.or(`loan.customer.name.ilike.%${search}%,loan.customer.document.ilike.%${search.replace(/[^0-9]/g, '')}%`)
+      }
+
       const { data, error, count } = await query
 
       if (error) {
@@ -79,12 +91,11 @@ export const paymentRouter = router({
         })
       }
 
-      // Filtra por status no lado do cliente se necessário
+      // Filtros adicionais no backend
       let installments = data || []
       
+      // Filtrar por status (late inclui pending com vencimento < hoje)
       if (status && status !== "all") {
-        const today = new Date().toISOString().split("T")[0]
-        
         installments = installments.filter((inst: any) => {
           const instStatus = inst.status
           
@@ -96,6 +107,20 @@ export const paymentRouter = router({
           
           return instStatus === status
         })
+      }
+      
+      // Filtrar hoje
+      if (todayOnly) {
+        installments = installments.filter((inst: any) => 
+          inst.due_date === today || inst.paid_date === today
+        )
+      }
+      
+      // Filtrar atrasados
+      if (overdueOnly) {
+        installments = installments.filter((inst: any) => 
+          inst.status === "late" || (inst.status === "pending" && inst.due_date < today)
+        )
       }
 
       // Formata os dados para o frontend
@@ -216,6 +241,13 @@ export const paymentRouter = router({
       const paidAmount = installment.paid_amount || 0
       const newPaidAmount = paidAmount + amount
 
+      // Iniciar transação manual - salvar estado original para rollback
+      const originalInstallmentStatus = installment.status
+      const originalInstallmentPaidAmount = installment.paid_amount || 0
+      const originalInstallmentPaidDate = installment.paid_date
+      const originalLoanPaidAmount = installment.loan.paid_amount || 0
+      const originalLoanPaidInstallments = installment.loan.paid_installments || 0
+
       // Atualiza a parcela
       const { error: updateError } = await ctx.supabase
         .from("loan_installments")
@@ -229,7 +261,7 @@ export const paymentRouter = router({
       if (updateError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: updateError.message,
+          message: `Erro ao atualizar parcela: ${updateError.message}`,
         })
       }
 
@@ -247,19 +279,19 @@ export const paymentRouter = router({
         })
 
       if (transactionError) {
-        // Faz rollback da parcela
+        // Rollback completo da parcela
         await ctx.supabase
           .from("loan_installments")
           .update({
-            status: installment.status,
-            paid_amount: paidAmount,
-            paid_date: installment.paid_date,
+            status: originalInstallmentStatus,
+            paid_amount: originalInstallmentPaidAmount,
+            paid_date: originalInstallmentPaidDate,
           })
           .eq("id", installment_id)
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Erro ao registrar transação",
+          message: `Erro ao registrar transação: ${transactionError.message}`,
         })
       }
 
@@ -290,8 +322,27 @@ export const paymentRouter = router({
         .eq("id", loan.id)
 
       if (loanUpdateError) {
-        console.error("Erro ao atualizar loan:", loanUpdateError)
-        // Não lança erro porque a parcela foi atualizada
+        // Rollback completo em caso de erro
+        await ctx.supabase
+          .from("loan_installments")
+          .update({
+            status: originalInstallmentStatus,
+            paid_amount: originalInstallmentPaidAmount,
+            paid_date: originalInstallmentPaidDate,
+          })
+          .eq("id", installment_id)
+        
+        // Remove a transação registrada
+        await ctx.supabase
+          .from("payment_transactions")
+          .delete()
+          .eq("installment_id", installment_id)
+          .eq("status", "completed")
+        
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao atualizar empréstimo: ${loanUpdateError.message}`,
+        })
       }
 
       // Log do evento
@@ -431,59 +482,60 @@ export const paymentRouter = router({
       return { success: true }
     }),
 
-  // Dashboard de pagamentos -overview
+  // Dashboard de pagamentos - overview
   dashboard: protectedProcedure.query(async ({ ctx }) => {
     const today = new Date().toISOString().split("T")[0]
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
-
-    // Total receber hoje
-    const { data: todayData } = await ctx.supabase
-      .from("loan_installments")
-      .select("amount")
-      .eq("tenant_id", ctx.tenantId!)
-      .eq("due_date", today)
-      .in("status", ["pending", "partial"])
-
-    const todayToReceive = todayData?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const todayCount = todayData?.length || 0
-
-    // Total recebido este mês
-    const { data: monthData } = await ctx.supabase
-      .from("payment_transactions")
-      .select("amount")
-      .eq("tenant_id", ctx.tenantId!)
-      .eq("status", "completed")
-      .gte("created_at", startOfMonth.toISOString())
-
-    const monthReceived = monthData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
-
-    // Total atrasado
-    const { data: overdueData } = await ctx.supabase
-      .from("loan_installments")
-      .select("amount")
-      .eq("tenant_id", ctx.tenantId!)
-      .lt("due_date", today)
-      .in("status", ["pending", "partial", "late"])
-
-    const overdueAmount = overdueData?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const overdueCount = overdueData?.length || 0
-
-    // Parcelas próximas (próximos 7 dias)
+    const startOfMonthStr = startOfMonth.toISOString()
     const nextWeek = new Date()
     nextWeek.setDate(nextWeek.getDate() + 7)
-    
-    const { data: upcomingData } = await ctx.supabase
-      .from("loan_installments")
-      .select("amount")
-      .eq("tenant_id", ctx.tenantId!)
-      .gte("due_date", today)
-      .lte("due_date", nextWeek.toISOString().split("T")[0])
-      .eq("status", "pending")
+    const nextWeekStr = nextWeek.toISOString().split("T")[0]
 
-    const upcomingAmount = upcomingData?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const upcomingCount = upcomingData?.length || 0
+    // Queries paralelas para performance
+    const [todayResult, monthResult, overdueResult, upcomingResult] = await Promise.all([
+      // Total receber hoje
+      ctx.supabase
+        .from("loan_installments")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("due_date", today)
+        .in("status", ["pending", "partial"]),
+      
+      // Total recebido este mês
+      ctx.supabase
+        .from("payment_transactions")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "completed")
+        .gte("created_at", startOfMonthStr),
+      
+      // Total atrasado
+      ctx.supabase
+        .from("loan_installments")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .lt("due_date", today)
+        .in("status", ["pending", "partial", "late"]),
+      
+      // Parcelas próximas (próximos 7 dias)
+      ctx.supabase
+        .from("loan_installments")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .gte("due_date", today)
+        .lte("due_date", nextWeekStr)
+        .eq("status", "pending"),
+    ])
+
+    const todayToReceive = todayResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+    const todayCount = todayResult.data?.length || 0
+    const monthReceived = monthResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+    const overdueAmount = overdueResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+    const overdueCount = overdueResult.data?.length || 0
+    const upcomingAmount = upcomingResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+    const upcomingCount = upcomingResult.data?.length || 0
 
     return {
       today_to_receive: todayToReceive,
