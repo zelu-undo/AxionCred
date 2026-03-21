@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS credit_settings (
     below_score_action VARCHAR(20) DEFAULT 'deny',
     block_on_low_score BOOLEAN DEFAULT true,
     
+    -- Pesos do cálculo de score (cada owner configura seu próprio peso)
+    score_payment_weight INTEGER DEFAULT 30,
+    score_time_weight INTEGER DEFAULT 25,
+    score_default_weight INTEGER DEFAULT 20,
+    score_usage_weight INTEGER DEFAULT 15,
+    score_stability_weight INTEGER DEFAULT 10,
+    
     -- Configurações de limite por cliente
     max_box_percentage_per_client DECIMAL(5,2) DEFAULT 20.00,
     client_limit_mandatory BOOLEAN DEFAULT false,
@@ -217,14 +224,34 @@ BEGIN
         v_stability_score := 500;
     END IF;
     
-    -- Cálculo do Score Final
+    -- Buscar pesos do cálculo de score das configurações do tenant
+    DECLARE
+        v_payment_weight DECIMAL(5,2) DEFAULT 0.30;
+        v_time_weight DECIMAL(5,2) DEFAULT 0.25;
+        v_default_weight DECIMAL(5,2) DEFAULT 0.20;
+        v_usage_weight DECIMAL(5,2) DEFAULT 0.15;
+        v_stability_weight DECIMAL(5,2) DEFAULT 0.10;
+    BEGIN
+    -- Buscar pesos das configurações do tenant
+    SELECT 
+        COALESCE(cs.score_payment_weight / 100.0, 0.30),
+        COALESCE(cs.score_time_weight / 100.0, 0.25),
+        COALESCE(cs.score_default_weight / 100.0, 0.20),
+        COALESCE(cs.score_usage_weight / 100.0, 0.15),
+        COALESCE(cs.score_stability_weight / 100.0, 0.10)
+    INTO v_payment_weight, v_time_weight, v_default_weight, v_usage_weight, v_stability_weight
+    FROM credit_settings cs
+    WHERE cs.tenant_id = p_tenant_id;
+    
+    -- Cálculo do Score Final usando pesos configuráveis
     v_final_score := ROUND(
-        (0.30 * v_payment_score) +
-        (0.25 * v_time_score) +
-        (0.20 * v_default_score) +
-        (0.15 * v_credit_usage_score) +
-        (0.10 * v_stability_score)
+        (v_payment_weight * v_payment_score) +
+        (v_time_weight * v_time_score) +
+        (v_default_weight * v_default_score) +
+        (v_usage_weight * v_credit_usage_score) +
+        (v_stability_weight * v_stability_score)
     )::INTEGER;
+    END;
     
     v_final_score := GREATEST(0, LEAST(1000, v_final_score));
     

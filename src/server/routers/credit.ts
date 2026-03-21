@@ -30,6 +30,12 @@ export const creditRouter = router({
         min_score_for_approval: z.number().min(0).max(1000).optional(),
         below_score_action: z.enum(["deny", "warn"]).optional(),
         block_on_low_score: z.boolean().optional(),
+        // Pesos do score (cada owner configura)
+        score_payment_weight: z.number().min(0).max(100).optional(),
+        score_time_weight: z.number().min(0).max(100).optional(),
+        score_default_weight: z.number().min(0).max(100).optional(),
+        score_usage_weight: z.number().min(0).max(100).optional(),
+        score_stability_weight: z.number().min(0).max(100).optional(),
         max_box_percentage_per_client: z.number().min(1).max(100).optional(),
         client_limit_mandatory: z.boolean().optional(),
         max_active_loans_per_customer: z.number().min(1).max(20).optional(),

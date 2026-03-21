@@ -40,6 +40,12 @@ export default function CreditSettingsPage() {
     max_active_loans_per_customer: 5,
     allow_refinancing: true,
     refinancing_strategy: "pay_off" as "pay_off" | "add_balance",
+    // Pesos do Score (visível apenas para owner)
+    score_payment_weight: 30,
+    score_time_weight: 25,
+    score_default_weight: 20,
+    score_usage_weight: 15,
+    score_stability_weight: 10,
   })
 
   const [isSaving, setIsSaving] = useState(false)
@@ -57,6 +63,12 @@ export default function CreditSettingsPage() {
         max_active_loans_per_customer: settings.max_active_loans_per_customer || 5,
         allow_refinancing: settings.allow_refinancing ?? true,
         refinancing_strategy: settings.refinancing_strategy || "pay_off",
+        // Score weights
+        score_payment_weight: settings.score_payment_weight || 30,
+        score_time_weight: settings.score_time_weight || 25,
+        score_default_weight: settings.score_default_weight || 20,
+        score_usage_weight: settings.score_usage_weight || 15,
+        score_stability_weight: settings.score_stability_weight || 10,
       })
     }
   }, [settings])
@@ -142,6 +154,38 @@ export default function CreditSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Legenda de Classificação de Risco - SEGUNDO */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Classificação de Risco</CardTitle>
+          <CardDescription>Como o sistema classifica o risco do cliente</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+              <p className="font-bold text-red-700">Muito Alto</p>
+              <p className="text-sm text-red-600">Score 0-300</p>
+              <p className="text-xs text-red-500">Fator: 0.20-0.39</p>
+            </div>
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center">
+              <p className="font-bold text-orange-700">Alto</p>
+              <p className="text-sm text-orange-600">Score 301-600</p>
+              <p className="text-xs text-orange-500">Fator: 0.40-0.69</p>
+            </div>
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+              <p className="font-bold text-yellow-700">Médio</p>
+              <p className="text-sm text-yellow-600">Score 601-800</p>
+              <p className="text-xs text-yellow-500">Fator: 0.70-0.89</p>
+            </div>
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+              <p className="font-bold text-green-700">Baixo</p>
+              <p className="text-sm text-green-600">Score 801-1000</p>
+              <p className="text-xs text-green-500">Fator: 0.90-1.00</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Configurações de Caixa */}
       <Card>
         <CardHeader>
@@ -164,15 +208,19 @@ export default function CreditSettingsPage() {
 
             <div className="space-y-2">
               <Label>Comportamento ao Atingir Limite</Label>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.block_on_box_limit}
-                  onCheckedChange={(checked) => setFormData({ ...formData, block_on_box_limit: checked })}
-                />
-                <span className="text-sm">
-                  {formData.block_on_box_limit ? "Bloquear novos empréstimos" : "Apenas alertar"}
-                </span>
-              </div>
+              <Select
+                value={formData.block_on_box_limit ? "block" : "warn"}
+                onValueChange={(value) => setFormData({ ...formData, block_on_box_limit: value === "block" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="block">Bloquear novos empréstimos</SelectItem>
+                  <SelectItem value="warn">Apenas alertar</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">O que fazer quando o caixa atingir o limite configurado</p>
             </div>
           </div>
         </CardContent>
@@ -212,16 +260,73 @@ export default function CreditSettingsPage() {
                   <SelectItem value="warn">Apenas alertar</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-gray-500">O que fazer quando o score do cliente estiver abaixo do mínimo</p>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.block_on_low_score}
-                  onCheckedChange={(checked) => setFormData({ ...formData, block_on_low_score: checked })}
+          {/* Pesos do Score */}
+          <div className="mt-6">
+            <h4 className="font-medium mb-3">Pesos do Cálculo de Score</h4>
+            <p className="text-xs text-gray-500 mb-4">Ajuste a importância de cada fator no cálculo do score. O total deve ser 100%.</p>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs">Pagamento (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.score_payment_weight}
+                  onChange={(e) => setFormData({ ...formData, score_payment_weight: Number(e.target.value) })}
                 />
-                <Label>Bloquear automaticamente se abaixo do mínimo</Label>
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Tempo (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.score_time_weight}
+                  onChange={(e) => setFormData({ ...formData, score_time_weight: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Inadimplência (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.score_default_weight}
+                  onChange={(e) => setFormData({ ...formData, score_default_weight: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Uso Crédito (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.score_usage_weight}
+                  onChange={(e) => setFormData({ ...formData, score_usage_weight: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Estabilidade (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.score_stability_weight}
+                  onChange={(e) => setFormData({ ...formData, score_stability_weight: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <span className={formData.score_payment_weight + formData.score_time_weight + formData.score_default_weight + formData.score_usage_weight + formData.score_stability_weight === 100 ? "text-green-600" : "text-red-600"}>
+                Total: {formData.score_payment_weight + formData.score_time_weight + formData.score_default_weight + formData.score_usage_weight + formData.score_stability_weight}%
+              </span>
+              {formData.score_payment_weight + formData.score_time_weight + formData.score_default_weight + formData.score_usage_weight + formData.score_stability_weight !== 100 && (
+                <span className="text-red-500 ml-2">(deve ser 100%)</span>
+              )}
             </div>
           </div>
         </CardContent>
@@ -256,22 +361,29 @@ export default function CreditSettingsPage() {
                 value={formData.max_active_loans_per_customer}
                 onChange={(e) => setFormData({ ...formData, max_active_loans_per_customer: Number(e.target.value) })}
               />
+              <p className="text-xs text-gray-500">Limite de empréstimos ativos por cliente</p>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.client_limit_mandatory}
-                  onCheckedChange={(checked) => setFormData({ ...formData, client_limit_mandatory: checked })}
-                />
-                <Label>Limite do cliente é obrigatório (bloqueia)</Label>
-              </div>
-              <p className="text-xs text-gray-500">
-                {formData.client_limit_mandatory 
-                  ? "O sistema bloqueará empréstimos que excedam o limite calculado" 
-                  : "O sistema apenas alertará, mas permitirá a aprovação manual"}
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label>Comportamento ao Exceder Limite do Cliente</Label>
+            <Select
+              value={formData.client_limit_mandatory ? "mandatory" : "optional"}
+              onValueChange={(value) => setFormData({ ...formData, client_limit_mandatory: value === "mandatory" })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mandatory">Bloquear - Não permite exceder limite</SelectItem>
+                <SelectItem value="optional">Alertar - Permite aprovação manual</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              {formData.client_limit_mandatory 
+                ? "O sistema bloqueará empréstimos que excedam o limite calculado" 
+                : "O sistema apenas alertará, mas permitirá a aprovação manual"}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -283,39 +395,41 @@ export default function CreditSettingsPage() {
           <CardDescription>Configure as regras de roll-over de empréstimos</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.allow_refinancing}
-                  onCheckedChange={(checked) => setFormData({ ...formData, allow_refinancing: checked })}
-                />
-                <Label>Permitir Refinanciamento</Label>
-              </div>
-              <p className="text-xs text-gray-500">Permite criar novos empréstimos baseados em anteriores</p>
-            </div>
-
-            {formData.allow_refinancing && (
-              <div className="space-y-2">
-                <Label>Estratégia de Refinanciamento</Label>
-                <Select
-                  value={formData.refinancing_strategy}
-                  onValueChange={(value) => setFormData({ ...formData, refinancing_strategy: value as "pay_off" | "add_balance" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pay_off">Quitar automaticamente o anterior</SelectItem>
-                    <SelectItem value="add_balance">Somar saldo devedor ao novo valor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label>Permitir Refinanciamento</Label>
+            <Select
+              value={formData.allow_refinancing ? "allow" : "disallow"}
+              onValueChange={(value) => setFormData({ ...formData, allow_refinancing: value === "allow" })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="allow">Sim - Permite criar novos empréstimos baseados em anteriores</SelectItem>
+                <SelectItem value="disallow">Não - Bloqueia refinancing</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {formData.allow_refinancing && (
+            <div className="space-y-2">
+              <Label>Estratégia de Refinanciamento</Label>
+              <Select
+                value={formData.refinancing_strategy}
+                onValueChange={(value) => setFormData({ ...formData, refinancing_strategy: value as "pay_off" | "add_balance" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pay_off">Quitar automaticamente o anterior</SelectItem>
+                  <SelectItem value="add_balance">Somar saldo devedor ao novo valor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
-
       {/* Legenda de Classificação de Risco */}
       <Card>
         <CardHeader>
