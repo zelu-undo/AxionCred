@@ -72,7 +72,7 @@ export const dashboardRouter = router({
           status,
           loan:loans(customer_id, tenant_id)
         `)
-        .eq("loan.tenant_id", tenantId)
+        .eq("loan.tenant_id", ctx.tenantId!)
         .eq("status", "pending")
         .lt("due_date", today)
 
@@ -115,7 +115,7 @@ export const dashboardRouter = router({
             customer:customers(name)
           )
         `)
-        .eq("loan.tenant_id", tenantId)
+        .eq("loan.tenant_id", ctx.tenantId!)
         .eq("status", "pending")
         .lt("due_date", today)
         .order("due_date", { ascending: true })

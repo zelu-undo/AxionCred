@@ -2,6 +2,20 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 
+// Helper function to safely log customer events (won't fail if table doesn't exist)
+async function logCustomerEvent(supabase: any, customerId: string, type: string, description: string) {
+  try {
+    await supabase.from("customer_events").insert({
+      customer_id: customerId,
+      type,
+      description,
+    })
+  } catch (e) {
+    // Silently ignore if table doesn't exist
+    console.log("[payment] Event logging skipped:", type)
+  }
+}
+
 // Payment router - gerencia registros de pagamento e listagem
 export const paymentRouter = router({
   // Lista pagamentos com filtros
@@ -57,7 +71,7 @@ export const paymentRouter = router({
             )
           )
         `, { count: "exact" })
-        .eq("tenant_id", ctx.tenantId!)
+        .eq("loan.tenant_id", ctx.tenantId!)
         .order(sortBy === "paid_date" ? "paid_date" : "due_date", { ascending: sortOrder === "desc" ? false : true })
         .range(offset, offset + limit - 1)
 
@@ -345,19 +359,23 @@ export const paymentRouter = router({
         })
       }
 
-      // Log do evento
-      await ctx.supabase.from("customer_events").insert({
-        customer_id: loan.customer_id,
-        type: "payment_received",
-        description: `Pagamento de R$ ${amount.toFixed(2)} ${isFullPayment ? '(quitação)' : ''} - Parcela ${installment.installment_number}/${loan.installments_count}`,
-        metadata: { 
-          loan_id: loan.id, 
-          installment_id, 
-          amount,
-          method,
-          is_full_payment: isFullPayment,
-        },
-      })
+      // Log do evento (safe - won't fail if table doesn't exist)
+      try {
+        await ctx.supabase.from("customer_events").insert({
+          customer_id: loan.customer_id,
+          type: "payment_received",
+          description: `Pagamento de R$ ${amount.toFixed(2)} ${isFullPayment ? '(quitação)' : ''} - Parcela ${installment.installment_number}/${loan.installments_count}`,
+          metadata: { 
+            loan_id: loan.id, 
+            installment_id, 
+            amount,
+            method,
+            is_full_payment: isFullPayment,
+          },
+        })
+      } catch (e) {
+        console.log("[payment] Event logging skipped")
+      }
 
       return { 
         success: true, 
@@ -467,17 +485,22 @@ export const paymentRouter = router({
         .eq("id", loan.id)
 
       // Log do estorno
-      await ctx.supabase.from("customer_events").insert({
-        customer_id: loan.customer_id,
-        type: "payment_reversed",
-        description: `Pagamento estornado: R$ ${transaction.amount.toFixed(2)} - Motivo: ${reason}`,
-        metadata: { 
-          loan_id: loan.id, 
-          transaction_id,
-          amount: transaction.amount,
-          reason,
-        },
-      })
+      // Log do estorno (safe - won't fail if table doesn't exist)
+      try {
+        await ctx.supabase.from("customer_events").insert({
+          customer_id: loan.customer_id,
+          type: "payment_reversed",
+          description: `Pagamento estornado: R$ ${transaction.amount.toFixed(2)} - Motivo: ${reason}`,
+          metadata: { 
+            loan_id: loan.id, 
+            transaction_id,
+            amount: transaction.amount,
+            reason,
+          },
+        })
+      } catch (e) {
+        console.log("[payment] Reverse event logging skipped")
+      }
 
       return { success: true }
     }),
@@ -493,15 +516,21 @@ export const paymentRouter = router({
     nextWeek.setDate(nextWeek.getDate() + 7)
     const nextWeekStr = nextWeek.toISOString().split("T")[0]
 
-    // Queries paralelas para performance
+    // Queries paralelas para performance - usando via loans para filtrar por tenant
     const [todayResult, monthResult, overdueResult, upcomingResult] = await Promise.all([
       // Total receber hoje
       ctx.supabase
-        .from("loan_installments")
-        .select("amount")
+        .from("loans")
+        .select(`
+          installments:loan_installments(
+            amount,
+            due_date,
+            status
+          )
+        `)
         .eq("tenant_id", ctx.tenantId!)
-        .eq("due_date", today)
-        .in("status", ["pending", "partial"]),
+        .eq("installments.due_date", today)
+        .eq("installments.status", "pending"),
       
       // Total recebido este mês
       ctx.supabase
@@ -511,31 +540,59 @@ export const paymentRouter = router({
         .eq("status", "completed")
         .gte("created_at", startOfMonthStr),
       
-      // Total atrasado
+      // Total atrasado - via loans
       ctx.supabase
-        .from("loan_installments")
-        .select("amount")
+        .from("loans")
+        .select(`
+          installments:loan_installments(
+            amount,
+            due_date,
+            status
+          )
+        `)
         .eq("tenant_id", ctx.tenantId!)
-        .lt("due_date", today)
-        .in("status", ["pending", "partial", "late"]),
+        .lt("installments.due_date", today)
+        .in("installments.status", ["pending", "partial", "late"]),
       
-      // Parcelas próximas (próximos 7 dias)
+      // Parcelas próximas (próximos 7 dias) - via loans
       ctx.supabase
-        .from("loan_installments")
-        .select("amount")
+        .from("loans")
+        .select(`
+          installments:loan_installments(
+            amount,
+            due_date,
+            status
+          )
+        `)
         .eq("tenant_id", ctx.tenantId!)
-        .gte("due_date", today)
-        .lte("due_date", nextWeekStr)
-        .eq("status", "pending"),
+        .gte("installments.due_date", today)
+        .lte("installments.due_date", nextWeekStr)
+        .eq("installments.status", "pending"),
     ])
 
-    const todayToReceive = todayResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const todayCount = todayResult.data?.length || 0
+    // Handle nested installments structure from new query format
+    const todayToReceive = todayResult.data?.reduce((sum: number, loan: any) => {
+      const installments = loan.installments || []
+      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+    }, 0) || 0
+    const todayCount = todayResult.data?.reduce((sum: number, loan: any) => {
+      return sum + (loan.installments?.length || 0)
+    }, 0) || 0
     const monthReceived = monthResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
-    const overdueAmount = overdueResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const overdueCount = overdueResult.data?.length || 0
-    const upcomingAmount = upcomingResult.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-    const upcomingCount = upcomingResult.data?.length || 0
+    const overdueAmount = overdueResult.data?.reduce((sum: number, loan: any) => {
+      const installments = loan.installments || []
+      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+    }, 0) || 0
+    const overdueCount = overdueResult.data?.reduce((sum: number, loan: any) => {
+      return sum + (loan.installments?.length || 0)
+    }, 0) || 0
+    const upcomingAmount = upcomingResult.data?.reduce((sum: number, loan: any) => {
+      const installments = loan.installments || []
+      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+    }, 0) || 0
+    const upcomingCount = upcomingResult.data?.reduce((sum: number, loan: any) => {
+      return sum + (loan.installments?.length || 0)
+    }, 0) || 0
 
     return {
       today_to_receive: todayToReceive,
