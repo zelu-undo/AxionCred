@@ -69,7 +69,7 @@ export const creditRouter = router({
 
     const { data: loans } = await ctx.supabase
       .from("loans")
-      .select("amount, status")
+      .select("amount, status, customer_document")
       .eq("tenant_id", ctx.tenantId)
       .in("status", ["active", "overdue", "paid"])
 
@@ -291,7 +291,7 @@ export const creditRouter = router({
 
       const { data: loans } = await ctx.supabase
         .from("loans")
-        .select("amount, status")
+        .select("amount, status, customer_document")
         .eq("tenant_id", ctx.tenantId)
         .in("status", ["active", "overdue", "paid"])
 
