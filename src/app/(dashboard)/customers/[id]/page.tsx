@@ -292,8 +292,14 @@ export default function CustomerDetailPage() {
     // Check for duplicate CPF (excluding current customer)
     setIsCheckingCpf(true)
     try {
+      // Get the session token to send in header
+      const supabase = (await import("@/lib/supabase")).createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ""
+      
       const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}&excludeId=${customerId}`, {
         credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       const result = await response.json()
       

@@ -177,8 +177,14 @@ export default function CustomersPage() {
     setIsCheckingCpf(true)
     setCpfError("")
     try {
+      // Get the session token to send in header
+      const supabase = (await import("@/lib/supabase")).createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ""
+      
       const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}`, {
         credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       
       if (!response.ok) {

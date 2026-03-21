@@ -90,8 +90,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           let tenantId = ""
           try {
             const { data } = await supabase.from("users").select("tenant_id").eq("id", session.user.id).single()
-            if (data) tenantId = data.tenant_id || ""
-          } catch {}
+            if (data) {
+              tenantId = data.tenant_id || ""
+            }
+            
+            // Se não encontrar tenant, criar automaticamente
+            if (!tenantId) {
+              console.log("[Auth] Criando tenant e usuário automaticamente...")
+              
+              // Criar tenant
+              const { data: newTenant, error: tenantError } = await supabase
+                .from("tenants")
+                .insert({
+                  name: session.user.email?.split("@")[0] || "Minha Empresa",
+                  slug: session.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
+                  plan: "starter"
+                })
+                .select()
+                .single()
+              
+              if (tenantError) {
+                console.error("[Auth] Erro ao criar tenant:", tenantError)
+              } else if (newTenant) {
+                // Criar usuário na tabela users com tenant_id
+                const { error: userError } = await supabase
+                  .from("users")
+                  .insert({
+                    id: session.user.id,
+                    email: session.user.email,
+                    name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+                    tenant_id: newTenant.id,
+                    role: "owner",
+                    is_active: true
+                  })
+                
+                if (userError) {
+                  console.error("[Auth] Erro ao criar usuário:", userError)
+                } else {
+                  tenantId = newTenant.id
+                  console.log("[Auth] Tenant e usuário criados com sucesso!")
+                }
+              }
+            }
+          } catch (err) {
+            console.error("[Auth] Erro ao buscar/criar usuário:", err)
+          }
 
           const appUser: AppUser = {
             id: session.user.id,
@@ -155,8 +198,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let tenantId = ""
         try {
           const { data: u } = await supabase.from("users").select("tenant_id").eq("id", data.user.id).single()
-          if (u) tenantId = u.tenant_id || ""
-        } catch {}
+          if (u) {
+            tenantId = u.tenant_id || ""
+          }
+          
+          // Se não encontrar tenant, criar automaticamente
+          if (!tenantId) {
+            console.log("[Auth] Criando tenant e usuário automaticamente...")
+            
+            // Criar tenant
+            const { data: newTenant, error: tenantError } = await supabase
+              .from("tenants")
+              .insert({
+                name: data.user.email?.split("@")[0] || "Minha Empresa",
+                slug: data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
+                plan: "starter"
+              })
+              .select()
+              .single()
+            
+            if (tenantError) {
+              console.error("[Auth] Erro ao criar tenant:", tenantError)
+            } else if (newTenant) {
+              // Criar usuário na tabela users com tenant_id
+              const { error: userError } = await supabase
+                .from("users")
+                .insert({
+                  id: data.user.id,
+                  email: data.user.email,
+                  name: data.user.user_metadata?.name || data.user.email?.split("@")[0] || "Usuário",
+                  tenant_id: newTenant.id,
+                  role: "owner",
+                  is_active: true
+                })
+              
+              if (userError) {
+                console.error("[Auth] Erro ao criar usuário:", userError)
+              } else {
+                tenantId = newTenant.id
+                console.log("[Auth] Tenant e usuário criados com sucesso!")
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[Auth] Erro ao buscar/criar usuário:", err)
+        }
 
         const appUser: AppUser = {
           id: data.user.id,
@@ -203,15 +289,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let tenantId = ""
       try {
         const { data: u } = await supabase.from("users").select("tenant_id").eq("id", data.user!.id).single()
-        if (u) tenantId = u.tenant_id || ""
-      } catch {}
+        if (u) {
+          tenantId = u.tenant_id || ""
+        }
+        
+        // Se não encontrar tenant, criar automaticamente
+        if (!tenantId) {
+          console.log("[Auth] Criando tenant e usuário automaticamente...")
+          
+          // Criar tenant
+          const { data: newTenant, error: tenantError } = await supabase
+            .from("tenants")
+            .insert({
+              name: name || email.split("@")[0] || "Minha Empresa",
+              slug: (name || email.split("@")[0])?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
+              plan: "starter"
+            })
+            .select()
+            .single()
+          
+          if (tenantError) {
+            console.error("[Auth] Erro ao criar tenant:", tenantError)
+          } else if (newTenant) {
+            // Criar usuário na tabela users com tenant_id
+            const { error: userError } = await supabase
+              .from("users")
+              .insert({
+                id: data.user!.id,
+                email: data.user!.email,
+                name: name || email.split("@")[0] || "Usuário",
+                tenant_id: newTenant.id,
+                role: "owner",
+                is_active: true
+              })
+            
+            if (userError) {
+              console.error("[Auth] Erro ao criar usuário:", userError)
+            } else {
+              tenantId = newTenant.id
+              console.log("[Auth] Tenant e usuário criados com sucesso!")
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Auth] Erro ao buscar/criar usuário:", err)
+      }
 
       const appUser: AppUser = {
         id: data.user!.id,
         email: data.user!.email!,
         name: name || email.split("@")[0],
         role: "owner",
-        tenantId
+        tenantId,
+        plan: "starter"
       }
       
       setUser(appUser)

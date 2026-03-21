@@ -5,40 +5,63 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const cpf = searchParams.get("cpf")
-    const excludeId = searchParams.get("excludeId") // For edit mode - exclude current customer
+    const excludeId = searchParams.get("excludeId")
 
     if (!cpf) {
       return NextResponse.json({ error: "CPF é obrigatório" }, { status: 400 })
     }
 
-    const supabase = createClient()
+    // Get the authorization header (session token from client)
+    const authHeader = request.headers.get("authorization") || ""
+    const token = authHeader.replace("Bearer ", "")
     
-    // Get current tenant from auth
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
+    // Create server client with the token
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ error: "Configuração inválida" }, { status: 500 })
+    }
+    
+    // Use import dinâmico para evitar problemas com o cliente browser
+    const { createClient: createServerClient } = await import("@supabase/supabase-js")
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+    
+    // Get current user from token
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Get user to find tenant_id
-    const { data: user } = await supabase
+    const { data: userData } = await supabase
       .from("users")
       .select("tenant_id")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single()
 
-    if (!user?.tenant_id) {
-      return NextResponse.json({ error: "Tenant não encontrado" }, { status: 400 })
+    if (!userData?.tenant_id) {
+      // If no tenant, just return that CPF doesn't exist (for new users)
+      return NextResponse.json({ exists: false })
     }
 
     // Build query
     let query = supabase
       .from("customers")
       .select("id, name, status, deleted_at")
-      .eq("tenant_id", user.tenant_id)
+      .eq("tenant_id", userData.tenant_id)
       .eq("document", cpf)
       .in("status", ["active", "inactive", "blocked", "deleted"])
 
-    // Exclude current customer in edit mode
     if (excludeId) {
       query = query.neq("id", excludeId)
     }
