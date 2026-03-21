@@ -93,49 +93,46 @@ export default function CustomerDetailPage() {
     credit_limit: 0,
   })
 
-  // Calculate payment status and priority based on customer loans
-  const getPaymentStatus = () => {
-    // This would typically come from backend based on loan data
-    // For demo, we'll calculate based on customer status
-    if (customer?.status === "inactive") return "inadimplente"
-    if (customer?.status === "blocked") return "inadimplente"
-    return "em_dia"
-  }
-
-  const getPriorityScore = () => {
-    // Priority calculation based on overdue amount and days
-    // Higher score = higher priority for collection
-    const paymentStatus = getPaymentStatus()
-    if (paymentStatus === "inadimplente") return 1 // High priority
-    if (paymentStatus === "em_dia") return 3 // Low priority (good payer)
-    return 2 // Medium priority
-  }
-
-  const paymentStatus = getPaymentStatus()
-  const priorityScore = getPriorityScore()
-
   // Priority configuration
-  const priorityConfig = {
+  const priorityConfig: Record<number, { label: string; color: string; icon: any; bg: string; text: string }> = {
     1: { label: "Alta", color: "red", icon: AlertTriangle, bg: "bg-red-100", text: "text-red-700" },
     2: { label: "Média", color: "yellow", icon: Clock, bg: "bg-yellow-100", text: "text-yellow-700" },
     3: { label: "Baixa", color: "green", icon: CheckCircle, bg: "bg-green-100", text: "text-green-700" },
   }
 
   // Payment status configuration  
-  const statusConfig = {
+  const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     em_dia: { label: "Em Dia", color: "green", icon: CheckCircle },
     atencao: { label: "Atenção", color: "yellow", icon: Clock },
     inadimplente: { label: "Inadimplente", color: "red", icon: AlertTriangle },
   }
 
-  const currentPriority = priorityConfig[priorityScore as keyof typeof priorityConfig]
-  const currentStatus = statusConfig[paymentStatus as keyof typeof statusConfig]
-
-  // Fetch customer data
+  // Fetch customer data FIRST (must be before any hooks that use customer)
   const { data: customer, isLoading, refetch } = trpc.customer.byId.useQuery(
     { id: customerId },
     { enabled: !!customerId }
   )
+
+  // Calculate status based on customer data (after it's loaded)
+  const getSafePaymentStatus = () => {
+    if (!customer) return "em_dia"
+    if (customer.status === "inactive" || customer.status === "blocked") return "inadimplente"
+    return "em_dia"
+  }
+  
+  const getSafePriorityScore = () => {
+    const status = getSafePaymentStatus()
+    if (status === "inadimplente") return 1
+    if (status === "em_dia") return 3
+    return 2
+  }
+
+  const currentPaymentStatus = getSafePaymentStatus()
+  const currentPriorityScore = getSafePriorityScore()
+
+  // Safe access to config objects
+  const currentPriority = priorityConfig[currentPriorityScore as keyof typeof priorityConfig] || priorityConfig[2]
+  const currentStatus = statusConfig[currentPaymentStatus as keyof typeof statusConfig] || statusConfig.em_dia
 
   // Fetch customer events for audit
   const { data: events } = trpc.customer.events.useQuery(
@@ -452,7 +449,7 @@ export default function CustomerDetailPage() {
               <span className={`
                 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
                 text-xs font-medium border
-                ${paymentStatus === "em_dia" ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-700" :
+                ${currentPaymentStatus === "em_dia" ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-700" :
                   "bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-700"}
               `}>
                 {currentStatus && <currentStatus.icon className="h-3 w-3" />}
@@ -463,8 +460,8 @@ export default function CustomerDetailPage() {
               <span className={`
                 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
                 text-xs font-medium border
-                ${priorityScore === 1 ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-200" :
-                  priorityScore === 2 ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200" :
+                ${currentPriorityScore === 1 ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-200" :
+                  currentPriorityScore === 2 ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200" :
                   "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"}
               `}>
                 <TrendingUp className="h-3 w-3" />
