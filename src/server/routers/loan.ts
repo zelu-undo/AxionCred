@@ -236,7 +236,7 @@ export const loanRouter = router({
               client_limit_check: clientLimitCheck,
               score_check: scoreCheck,
               max_loans_check: maxLoansCheck,
-              override_by: ctx.user?.email || "unknown",
+              override_by: ctx.userId || "unknown",
               override_reason: override_reason,
             })
           } else {
