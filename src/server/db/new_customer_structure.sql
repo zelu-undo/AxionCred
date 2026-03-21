@@ -6,40 +6,29 @@
 -- 2. Dados LOCAIS (por tenant/usuário) - operações, relacionamentos
 -- ============================================
 
--- 1. Adicionar coluna tenant_id na tabela customers (se não existir)
--- A coluna tenant_id indica qual usuário tem acesso operacional ao cliente
-
--- 2. Modificar política RLS para buscar clientes de duas formas:
--- a) Clientes locais (tenant_id = current tenant)
--- b) Clientes globais (que existem mas não pertencem a nenhum tenant)
-
--- Primeiro, verificar se a função get_current_tenant_id existe
-DO $$
+-- Primeiro, verificar se a função get_current_tenant_id existe e criá-la
+-- (Se já existir, isso vai substituir pela versão correta)
+CREATE OR REPLACE FUNCTION public.get_current_tenant_id()
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  current_user_id uuid;
+  tenant_uuid uuid;
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'get_current_tenant_id') THEN
-        CREATE OR REPLACE FUNCTION public.get_current_tenant_id()
-        RETURNS uuid
-        LANGUAGE plpgsql
-        SECURITY DEFINER
-        AS $$
-        DECLARE
-          current_user_id uuid;
-          tenant_uuid uuid;
-        BEGIN
-          current_user_id := (SELECT auth.uid());
-          IF current_user_id IS NULL THEN
-            RETURN NULL;
-          END IF;
-          SELECT u.tenant_id INTO tenant_uuid
-          FROM users u
-          WHERE u.id = current_user_id;
-          RETURN tenant_uuid;
-        EXCEPTION WHEN OTHERS THEN
-          RETURN NULL;
-        END;
-        $$;
-    END IF;
-END $$;
+  current_user_id := (SELECT auth.uid());
+  IF current_user_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+  SELECT u.tenant_id INTO tenant_uuid
+  FROM users u
+  WHERE u.id = current_user_id;
+  RETURN tenant_uuid;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NULL;
+END;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.get_current_tenant_id() TO authenticated, anon, service_role;
 
