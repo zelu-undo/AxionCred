@@ -26,7 +26,7 @@ export default function NewLoanPage() {
   const [showDropdown, setShowDropdown] = useState(false)
   
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
-    limit: 100,
+    limit: 5,
     search: customerSearch || undefined
   }, {
     enabled: customerSearch.length > 0 // Only fetch when searching
@@ -261,10 +261,10 @@ export default function NewLoanPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Searchable Customer Select */}
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label>Cliente *</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 z-10" />
                   <Input
                     placeholder="Buscar por nome ou CPF..."
                     value={customerSearch}
@@ -274,12 +274,24 @@ export default function NewLoanPage() {
                     }}
                     onFocus={() => setShowDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                    className="pl-9"
+                    className="pl-9 pr-9"
                   />
+                  {customerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerSearch("")
+                        setShowDropdown(false)
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                {/* Show dropdown only when focused and has results */}
-                {showDropdown && customerSearch && customers.length > 0 && (
-                  <div className="border rounded-md max-h-48 overflow-y-auto absolute z-10 bg-white w-[calc(100%-2rem)]">
+                {/* Show dropdown when focused and has results */}
+                {showDropdown && customers.length > 0 && (
+                  <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg">
                     {loadingCustomers ? (
                       <div className="p-2 text-center text-gray-500">
                         <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
@@ -289,8 +301,8 @@ export default function NewLoanPage() {
                       customers.map((customer: any) => (
                         <div
                           key={customer.id}
-                          className={`p-2 cursor-pointer hover:bg-[#22C55E]50 ${
-                            formData.customerId === customer.id ? "bg-[#22C55E]100" : ""
+                          className={`p-3 cursor-pointer hover:bg-green-50 border-b last:border-b-0 ${
+                            formData.customerId === customer.id ? "bg-green-100" : ""
                           }`}
                           onClick={() => {
                             setFormData({ ...formData, customerId: customer.id })
@@ -414,83 +426,120 @@ export default function NewLoanPage() {
               {/* Credit Info Card - Mostrar apenas quando cliente selecionado e com valor */}
               {formData.customerId && formData.principal && validationData && (
                 <Card className={`
-                  mt-4 border-l-4 
-                  ${!validationData.is_valid && !validationData.can_override ? 'border-l-red-500 bg-red-50' : 
-                    validationData.warnings?.length > 0 ? 'border-l-yellow-500 bg-yellow-50' : 
-                    'border-l-green-500 bg-green-50'}
+                  mt-4 border-2
+                  ${!validationData.is_valid && !validationData.can_override ? 'border-red-200 bg-red-50' : 
+                    validationData.warnings?.length > 0 ? 'border-yellow-200 bg-yellow-50' : 
+                    'border-green-200 bg-green-50'}
                 `}>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Calculator className="h-4 w-4" />
                       Análise de Crédito
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="py-2 space-y-3">
-                    {/* Score e Risco */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-2 bg-white rounded border">
-                        <p className="text-xs text-gray-500">Score do Cliente</p>
-                        <p className={`text-xl font-bold ${
-                          validationData.customer_score && validationData.customer_score >= 801 ? 'text-green-600' :
-                          validationData.customer_score && validationData.customer_score >= 601 ? 'text-yellow-600' :
-                          validationData.customer_score && validationData.customer_score >= 301 ? 'text-orange-600' :
-                          'text-red-600'
-                        }`}>
-                          {validationData.customer_score || "N/A"}
-                        </p>
+                  <CardContent className="space-y-4">
+                    {/* Score com Gauge Visual */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-20 h-20">
+                        <svg className="w-20 h-20 transform -rotate-90">
+                          <circle cx="40" cy="40" r="35" stroke="#e5e7eb" strokeWidth="8" fill="none" />
+                          <circle 
+                            cx="40" cy="40" r="35" 
+                            stroke={validationData.customer_score && validationData.customer_score >= 801 ? '#22c55e' : 
+                                   validationData.customer_score && validationData.customer_score >= 601 ? '#eab308' : 
+                                   validationData.customer_score && validationData.customer_score >= 301 ? '#f97316' : '#ef4444'}
+                            strokeWidth="8" fill="none"
+                            strokeDasharray={`${(validationData.customer_score || 0) / 1000 * 220} 220`}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-lg font-bold ${
+                            validationData.customer_score && validationData.customer_score >= 801 ? 'text-green-600' :
+                            validationData.customer_score && validationData.customer_score >= 601 ? 'text-yellow-600' :
+                            validationData.customer_score && validationData.customer_score >= 301 ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {validationData.customer_score || "—"}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-center p-2 bg-white rounded border">
-                        <p className="text-xs text-gray-500">Classificação de Risco</p>
-                        <p className={`text-sm font-bold px-2 py-1 rounded inline-block ${
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-600">Score de Crédito</div>
+                        <div className={`inline-block px-2 py-1 rounded text-xs font-bold mt-1 ${
                           validationData.customer_risk_level === 'low' ? 'bg-green-100 text-green-700' :
                           validationData.customer_risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                           validationData.customer_risk_level === 'high' ? 'bg-orange-100 text-orange-700' :
                           'bg-red-100 text-red-700'
                         }`}>
-                          {validationData.customer_risk_level === 'low' ? 'Baixo' :
-                           validationData.customer_risk_level === 'medium' ? 'Médio' :
-                           validationData.customer_risk_level === 'high' ? 'Alto' :
-                           validationData.customer_risk_level === 'very_high' ? 'Muito Alto' : 'N/A'}
-                        </p>
+                          Risco {validationData.customer_risk_level === 'low' ? 'Baixo' :
+                                 validationData.customer_risk_level === 'medium' ? 'Médio' :
+                                 validationData.customer_risk_level === 'high' ? 'Alto' :
+                                 validationData.customer_risk_level === 'very_high' ? 'Muito Alto' : '—'}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {validationData.customer_score && validationData.customer_score >= 801 ? '✓ Excelente pagador' :
+                           validationData.customer_score && validationData.customer_score >= 601 ? '✓ Bom pagador' :
+                           validationData.customer_score && validationData.customer_score >= 301 ? '⚠ Pagador regular' :
+                           '✗ Alto risco'}
+                        </div>
                       </div>
                     </div>
 
                     {/* Limite do Cliente */}
                     {validationData.client_limit && (
-                      <div className="text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Limite do Cliente:</span>
-                          <span className="font-medium">{formatCurrency(validationData.client_limit)}</span>
+                      <div className="bg-white rounded-lg p-3 border">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-700">Limite de Crédito</span>
+                          <span className="text-sm font-bold text-gray-900">{formatCurrency(validationData.client_limit)}</span>
                         </div>
-                        <div className="flex justify-between items-center text-xs text-gray-500">
-                          <span>Já utilizado:</span>
-                          <span>{formatCurrency(validationData.client_limit_used || 0)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span>Disponível:</span>
-                          <span className="font-medium text-green-600">{formatCurrency(validationData.client_limit_available || 0)}</span>
-                        </div>
-                        {/* Barra de progresso */}
-                        <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${((validationData.client_limit_used || 0) / validationData.client_limit) > 0.9 ? 'bg-red-500' : 
-                              ((validationData.client_limit_used || 0) / validationData.client_limit) > 0.7 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                            style={{ width: `${Math.min(100, ((validationData.client_limit_used || 0) / validationData.client_limit) * 100)}%` }}
-                          />
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Utilizado</span>
+                            <span className="text-gray-700">{formatCurrency(validationData.client_limit_used || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Disponível</span>
+                            <span className="font-medium text-green-600">{formatCurrency(validationData.client_limit_available || 0)}</span>
+                          </div>
+                          {/* Barra de progresso */}
+                          <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all ${
+                                ((validationData.client_limit_used || 0) / validationData.client_limit) > 0.9 ? 'bg-red-500' : 
+                                ((validationData.client_limit_used || 0) / validationData.client_limit) > 0.7 ? 'bg-yellow-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(100, ((validationData.client_limit_used || 0) / (validationData.client_limit || 1)) * 100)}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Empréstimos Ativos */}
-                    <div className="text-sm flex justify-between">
-                      <span className="text-gray-600">Empréstimos Ativos:</span>
-                      <span className="font-medium">{validationData.active_loans_count || 0}</span>
+                    {/* Informações do Cliente */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white rounded-lg p-3 border text-center">
+                        <div className="text-2xl font-bold text-gray-900">{validationData.active_loans_count || 0}</div>
+                        <div className="text-xs text-gray-500">Empréstimos Ativos</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border text-center">
+                        <div className={`text-2xl font-bold ${
+                          (validationData.checks?.box ?? true) ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {(validationData.checks?.box ?? true) ? '✓' : '✗'}
+                        </div>
+                        <div className="text-xs text-gray-500">Caixa Disponível</div>
+                      </div>
                     </div>
 
                     {/* Alertas/Warnings */}
                     {validationData.warnings && validationData.warnings.length > 0 && (
-                      <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
-                        <p className="font-medium text-yellow-700">⚠️ Atenção:</p>
-                        <ul className="list-disc list-inside text-yellow-600 text-xs">
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-600" />
+                          <span className="text-sm font-medium text-yellow-800">Atenção</span>
+                        </div>
+                        <ul className="list-disc list-inside text-yellow-700 text-xs space-y-1">
                           {validationData.warnings.map((warning, idx) => (
                             <li key={idx}>{warning}</li>
                           ))}
@@ -500,9 +549,22 @@ export default function NewLoanPage() {
 
                     {/* Mensagem de Bloqueio */}
                     {!validationData.is_valid && !validationData.can_override && (
-                      <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
-                        <p className="font-medium text-red-700">❌ Bloqueado:</p>
-                        <p className="text-red-600 text-xs">{validationData.message}</p>
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-800">Empréstimo Bloqueado</span>
+                        </div>
+                        <p className="text-red-700 text-xs">{validationData.message}</p>
+                      </div>
+                    )}
+
+                    {/* Status de Aprovação */}
+                    {validationData.is_valid && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">Pronto para aprovação</span>
+                        </div>
                       </div>
                     )}
                   </CardContent>
