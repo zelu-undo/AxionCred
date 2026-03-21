@@ -140,7 +140,7 @@ export const loanRouter = router({
           const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
 
           // Buscar score do cliente
-          const { data: scoreData } = await ctx.supabase.rpc("calculate_customer_score", {
+          const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
             p_tenant_id: ctx.tenantId,
             p_customer_document: document,
           })
@@ -149,7 +149,7 @@ export const loanRouter = router({
           const finalScore = score?.final_score || 500
 
           // Calcular limite do cliente
-          const { data: limitData } = await ctx.supabase.rpc("calculate_client_limit", {
+          const { data: limitData } = await ctx.supabase.rpc("calculate_client_credit_limit", {
             p_tenant_id: ctx.tenantId,
             p_customer_document: document,
             p_monthly_income: monthly_income || 0,

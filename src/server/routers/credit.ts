@@ -215,7 +215,7 @@ export const creditRouter = router({
       const monthlyIncome = input.monthly_income || 0
 
       // Buscar score
-      const scoreResult = await ctx.supabase.rpc("calculate_customer_score", {
+      const scoreResult = await ctx.supabase.rpc("calculate_credit_score", {
         p_tenant_id: ctx.tenantId,
         p_customer_document: document,
       })
@@ -231,7 +231,7 @@ export const creditRouter = router({
         .single()
 
       // Buscar caixa
-      const cashFlow = await ctx.supabase.rpc("calculate_tenant_cash", {
+      const cashFlow = await ctx.supabase.rpc("calculate_tenant_credit_cash", {
         p_tenant_id: ctx.tenantId,
       })
       const cashData = Array.isArray(cashFlow.data) ? cashFlow.data[0] : null
@@ -303,7 +303,7 @@ export const creditRouter = router({
       const usableCash = availableCash * ((settings?.max_box_percentage || 80) / 100)
 
       // Buscar score
-      const { data: scoreData } = await ctx.supabase.rpc("calculate_customer_score", {
+      const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
         p_tenant_id: ctx.tenantId,
         p_customer_document: document,
       })
@@ -312,7 +312,7 @@ export const creditRouter = router({
       const finalScore = score?.final_score || 500
 
       // Calcular limite do cliente
-      const { data: limitData } = await ctx.supabase.rpc("calculate_client_limit", {
+      const { data: limitData } = await ctx.supabase.rpc("calculate_client_credit_limit", {
         p_tenant_id: ctx.tenantId,
         p_customer_document: document,
         p_monthly_income: monthlyIncome,
@@ -496,7 +496,7 @@ export const creditRouter = router({
       const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
 
       // Buscar score
-      const { data: scoreData } = await ctx.supabase.rpc("calculate_customer_score", {
+      const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
         p_tenant_id: ctx.tenantId,
         p_customer_document: document,
       })
@@ -506,7 +506,7 @@ export const creditRouter = router({
       const riskLevel = score?.risk_level || "medium"
 
       // Calcular limite do cliente
-      const { data: limitData } = await ctx.supabase.rpc("calculate_client_limit", {
+      const { data: limitData } = await ctx.supabase.rpc("calculate_client_credit_limit", {
         p_tenant_id: ctx.tenantId,
         p_customer_document: document,
         p_monthly_income: monthlyIncome,

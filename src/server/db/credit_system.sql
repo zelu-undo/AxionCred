@@ -3,9 +3,9 @@
 -- ============================================
 
 -- Remover funções existentes para evitar conflitos
-DROP FUNCTION IF EXISTS calculate_customer_score(UUID, VARCHAR(20));
-DROP FUNCTION IF EXISTS calculate_client_limit(UUID, VARCHAR(20), DECIMAL);
-DROP FUNCTION IF EXISTS calculate_tenant_cash(UUID);
+DROP FUNCTION IF EXISTS calculate_credit_score(UUID, VARCHAR(20));
+DROP FUNCTION IF EXISTS calculate_client_credit_limit(UUID, VARCHAR(20), DECIMAL);
+DROP FUNCTION IF EXISTS calculate_tenant_credit_cash(UUID);
 
 -- 1. Tabela de configurações de crédito por tenant
 CREATE TABLE IF NOT EXISTS credit_settings (
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS tenant_cash_flow (
 );
 
 -- 5. Função para calcular score do cliente
-CREATE OR REPLACE FUNCTION calculate_customer_score(
+CREATE OR REPLACE FUNCTION calculate_credit_score(
     p_tenant_id UUID,
     p_customer_document VARCHAR(20)
 )
@@ -254,7 +254,7 @@ END;
 $$;
 
 -- 6. Função para calcular limite do cliente
-CREATE OR REPLACE FUNCTION calculate_client_limit(
+CREATE OR REPLACE FUNCTION calculate_client_credit_limit(
     p_tenant_id UUID,
     p_customer_document VARCHAR(20),
     p_monthly_income DECIMAL(15,2) DEFAULT 0
@@ -276,7 +276,7 @@ BEGIN
     WHERE tenant_id = p_tenant_id;
     
     SELECT * INTO v_cash
-    FROM calculate_tenant_cash(p_tenant_id);
+    FROM calculate_tenant_credit_cash(p_tenant_id);
     
     IF v_settings.max_box_percentage_per_client IS NOT NULL AND v_cash.usable_cash IS NOT NULL THEN
         v_max_limit := v_cash.usable_cash * v_settings.max_box_percentage_per_client / 100;
@@ -299,7 +299,7 @@ END;
 $$;
 
 -- 7. Função para calcular caixa do tenant
-CREATE OR REPLACE FUNCTION calculate_tenant_cash(p_tenant_id UUID)
+CREATE OR REPLACE FUNCTION calculate_tenant_credit_cash(p_tenant_id UUID)
 RETURNS TABLE (
     gross_cash DECIMAL(15,2),
     available_cash DECIMAL(15,2),
@@ -360,8 +360,8 @@ GRANT SELECT ON credit_settings TO authenticated;
 GRANT SELECT, INSERT ON customer_score TO authenticated;
 GRANT SELECT, INSERT ON credit_audit_log TO authenticated;
 GRANT SELECT ON tenant_cash_flow TO authenticated;
-GRANT EXECUTE ON FUNCTION calculate_customer_score TO authenticated;
-GRANT EXECUTE ON FUNCTION calculate_client_limit TO authenticated;
-GRANT EXECUTE ON FUNCTION calculate_tenant_cash TO authenticated;
+GRANT EXECUTE ON FUNCTION calculate_credit_score TO authenticated;
+GRANT EXECUTE ON FUNCTION calculate_client_credit_limit TO authenticated;
+GRANT EXECUTE ON FUNCTION calculate_tenant_credit_cash TO authenticated;
 
 SELECT 'Sistema de crédito implementado com sucesso!' AS status;
