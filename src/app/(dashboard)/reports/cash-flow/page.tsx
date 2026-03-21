@@ -300,7 +300,7 @@ export default function CashFlowPage() {
                     <YAxis stroke="#9CA3AF" tickFormatter={(value) => `R$ ${value/1000}k`} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                      formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, '']}
+                      formatter={(value: unknown) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, '']}
                     />
                     <Area type="monotone" dataKey="entrada" stroke="#22C55E" fillOpacity={1} fill="url(#colorEntrada)" name="Entradas" />
                     <Area type="monotone" dataKey="saida" stroke="#EF4444" fillOpacity={1} fill="url(#colorSaida)" name="Saídas" />
@@ -328,7 +328,7 @@ export default function CashFlowPage() {
                     <YAxis stroke="#9CA3AF" tickFormatter={(value) => `R$ ${value/1000}k`} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                      formatter={(value: number) => [`R$ ${value?.toLocaleString("pt-BR") || 0}`, '']}
+                      formatter={(value: unknown) => [`R$ ${Number(value || 0).toLocaleString("pt-BR")}`, '']}
                     />
                     <Line type="monotone" dataKey="projetado" stroke="#3B82F6" strokeWidth={2} name="Projetado" />
                     <Line type="monotone" dataKey="realizado" stroke="#22C55E" strokeWidth={2} name="Realizado" />
@@ -368,7 +368,7 @@ export default function CashFlowPage() {
                       </Pie>
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                        formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, '']}
+                        formatter={(value: unknown) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, '']}
                       />
                     </RechartsPieChart>
                   </ResponsiveContainer>
@@ -425,7 +425,7 @@ export default function CashFlowPage() {
                     <YAxis type="category" dataKey="category" stroke="#9CA3AF" width={100} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                      formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, '']}
+                      formatter={(value: unknown) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, '']}
                     />
                     <Bar dataKey="amount" fill="#6366F1" radius={[0, 4, 4, 0]} />
                   </BarChart>

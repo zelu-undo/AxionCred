@@ -322,7 +322,7 @@ export default function AnalyticsPage() {
                         <YAxis stroke="#9CA3AF" tickFormatter={(v) => `R$ ${v/1000}k`} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                          formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, 'Receita']}
+                          formatter={(value: unknown) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, 'Receita']}
                         />
                         <Bar dataKey="revenue" fill="#22C55E" radius={[4, 4, 0, 0]} />
                       </RechartsBarChart>
@@ -333,7 +333,7 @@ export default function AnalyticsPage() {
                         <YAxis stroke="#9CA3AF" tickFormatter={(v) => `R$ ${v/1000}k`} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                          formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, 'Receita']}
+                          formatter={(value: unknown) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, 'Receita']}
                         />
                         <Line type="monotone" dataKey="revenue" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E' }} />
                       </RechartsLineChart>
@@ -449,7 +449,7 @@ export default function AnalyticsPage() {
                     <YAxis stroke="#9CA3AF" tickFormatter={(v) => `R$ ${v/1000}k`} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                      formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, '']}
+                      formatter={(value: unknown) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, '']}
                     />
                     <Bar dataKey="previous" name="Período Anterior" fill="#6B7280" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="current" name="Período Atual" fill="#22C55E" radius={[4, 4, 0, 0]} />
