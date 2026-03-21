@@ -1103,3 +1103,54 @@ VALUES
     ('00000000-0000-0000-0000-000000000001', 'api_access', false, 0),
     ('00000000-0000-0000-0000-000000000001', 'white_label', false, 0)
 ON CONFLICT (tenant_id, feature_name) DO NOTHING;
+
+-- ============================================
+-- GUARANTORS
+-- ============================================
+CREATE TABLE guarantors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    document VARCHAR(20),
+    document_type VARCHAR(20) DEFAULT 'cpf',
+    phone VARCHAR(20),
+    email VARCHAR(255),
+    address TEXT,
+    guarantee_type VARCHAR(50) NOT NULL, -- 'property', 'vehicle', 'personal', 'payroll'
+    property_address TEXT,
+    property_type VARCHAR(50),
+    property_value DECIMAL(15,2),
+    vehicle_brand VARCHAR(50),
+    vehicle_model VARCHAR(50),
+    vehicle_year VARCHAR(4),
+    vehicle_plate VARCHAR(10),
+    vehicle_value DECIMAL(15,2),
+    linked_loan_id UUID REFERENCES loans(id),
+    status VARCHAR(20) DEFAULT 'active',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
+-- LOAN RENEGOTIATIONS
+-- ============================================
+CREATE TABLE loan_renegotiations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    loan_id UUID REFERENCES loans(id) ON DELETE CASCADE,
+    renegotiation_date DATE NOT NULL,
+    original_total_amount DECIMAL(15,2) NOT NULL,
+    original_installments_count INTEGER NOT NULL,
+    new_total_amount DECIMAL(15,2) NOT NULL,
+    new_installments_count INTEGER NOT NULL,
+    new_installment_amount DECIMAL(15,2) NOT NULL,
+    interest_rate DECIMAL(5,2),
+    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected', 'cancelled'
+    approved_by UUID REFERENCES users(id),
+    approved_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
