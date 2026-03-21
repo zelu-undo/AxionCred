@@ -411,7 +411,120 @@ export default function NewLoanPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal}>
+              {/* Credit Info Card - Mostrar apenas quando cliente selecionado e com valor */}
+              {formData.customerId && formData.principal && validationData && (
+                <Card className={`
+                  mt-4 border-l-4 
+                  ${!validationData.is_valid && !validationData.can_override ? 'border-l-red-500 bg-red-50' : 
+                    validationData.warnings?.length > 0 ? 'border-l-yellow-500 bg-yellow-50' : 
+                    'border-l-green-500 bg-green-50'}
+                `}>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      Análise de Crédito
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-2 space-y-3">
+                    {/* Score e Risco */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-2 bg-white rounded border">
+                        <p className="text-xs text-gray-500">Score do Cliente</p>
+                        <p className={`text-xl font-bold ${
+                          validationData.customer_score && validationData.customer_score >= 801 ? 'text-green-600' :
+                          validationData.customer_score && validationData.customer_score >= 601 ? 'text-yellow-600' :
+                          validationData.customer_score && validationData.customer_score >= 301 ? 'text-orange-600' :
+                          'text-red-600'
+                        }`}>
+                          {validationData.customer_score || "N/A"}
+                        </p>
+                      </div>
+                      <div className="text-center p-2 bg-white rounded border">
+                        <p className="text-xs text-gray-500">Classificação de Risco</p>
+                        <p className={`text-sm font-bold px-2 py-1 rounded inline-block ${
+                          validationData.customer_risk_level === 'low' ? 'bg-green-100 text-green-700' :
+                          validationData.customer_risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                          validationData.customer_risk_level === 'high' ? 'bg-orange-100 text-orange-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {validationData.customer_risk_level === 'low' ? 'Baixo' :
+                           validationData.customer_risk_level === 'medium' ? 'Médio' :
+                           validationData.customer_risk_level === 'high' ? 'Alto' :
+                           validationData.customer_risk_level === 'very_high' ? 'Muito Alto' : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Limite do Cliente */}
+                    {validationData.client_limit && (
+                      <div className="text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Limite do Cliente:</span>
+                          <span className="font-medium">{formatCurrency(validationData.client_limit)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>Já utilizado:</span>
+                          <span>{formatCurrency(validationData.client_limit_used || 0)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span>Disponível:</span>
+                          <span className="font-medium text-green-600">{formatCurrency(validationData.client_limit_available || 0)}</span>
+                        </div>
+                        {/* Barra de progresso */}
+                        <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${((validationData.client_limit_used || 0) / validationData.client_limit) > 0.9 ? 'bg-red-500' : 
+                              ((validationData.client_limit_used || 0) / validationData.client_limit) > 0.7 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                            style={{ width: `${Math.min(100, ((validationData.client_limit_used || 0) / validationData.client_limit) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Empréstimos Ativos */}
+                    <div className="text-sm flex justify-between">
+                      <span className="text-gray-600">Empréstimos Ativos:</span>
+                      <span className="font-medium">{validationData.active_loans_count || 0}</span>
+                    </div>
+
+                    {/* Alertas/Warnings */}
+                    {validationData.warnings && validationData.warnings.length > 0 && (
+                      <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                        <p className="font-medium text-yellow-700">⚠️ Atenção:</p>
+                        <ul className="list-disc list-inside text-yellow-600 text-xs">
+                          {validationData.warnings.map((warning, idx) => (
+                            <li key={idx}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Mensagem de Bloqueio */}
+                    {!validationData.is_valid && !validationData.can_override && (
+                      <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
+                        <p className="font-medium text-red-700">❌ Bloqueado:</p>
+                        <p className="text-red-600 text-xs">{validationData.message}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Override Reason - Only show when blocked but can override */}
+              {showOverride && (
+                <div className="space-y-2 mt-4">
+                  <Label className="text-orange-600">Justificativa para aprovação manual *</Label>
+                  <textarea
+                    className="w-full p-2 border rounded-md text-sm"
+                    rows={3}
+                    placeholder="Descreva o motivo da aprovação fora das regras..."
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={isSubmitting || !formData.customerId || !formData.principal || (showOverride && !overrideReason)}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
