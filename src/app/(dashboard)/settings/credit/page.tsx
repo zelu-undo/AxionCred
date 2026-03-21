@@ -336,7 +336,7 @@ export default function CreditSettingsPage() {
             </div>
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
               <p className="font-bold text-yellow-700">Médio</p>
-              <p name="text-sm text-yellow-600">Score 601-800</p>
+              <p className="text-sm text-yellow-600">Score 601-800</p>
               <p className="text-xs text-yellow-500">Fator: 0.70-0.89</p>
             </div>
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
