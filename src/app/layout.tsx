@@ -17,8 +17,49 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: "AXION - Gestão de Crédito",
-  description: "Plataforma de infraestrutura de crédito e confiança digital",
+  metadataBase: new URL('https://axioncredito.com.br'),
+  title: {
+    default: "AXION - Gestão de Crédito e Cobrança",
+    template: "%s | AXION",
+  },
+  description: "Sistema completo de gestão de crédito e cobrança para pequenas empresas. Controle clientes, emprésgimos, parcelas e recebimentos de forma simples e eficiente.",
+  keywords: ["gestão de crédito", "sistema de cobrança", "controle de parcelas", "empréstimo", "crédito para pequenos negócios", "software financeiro"],
+  authors: [{ name: "AXION" }],
+  creator: "AXION",
+  publisher: "AXION",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://axioncredito.com.br",
+    siteName: "AXION",
+    title: "AXION - Gestão de Crédito e Cobrança",
+    description: "Sistema completo de gestão de crédito e cobrança para pequenas empresas.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "AXION - Gestão de Crédito",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AXION - Gestão de Crédito e Cobrança",
+    description: "Sistema completo de gestão de crédito e cobrança para pequenas empresas.",
+    images: ["/og-image.png"],
+  },
   icons: {
     icon: "/favicon.ico",
     apple: "/logo-axion.png",
