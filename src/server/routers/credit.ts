@@ -429,4 +429,162 @@ export const creditRouter = router({
 
       return data || []
     }),
+
+  // 8. Pré-validar empréstimo (para UI em tempo real)
+  validateLoan: protectedProcedure
+    .input(
+      z.object({
+        customer_document: z.string(),
+        amount: z.number().positive(),
+        monthly_income: z.number().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const document = input.customer_document.replace(/\D/g, "")
+      const amount = input.amount
+      const monthlyIncome = input.monthly_income || 0
+
+      // Buscar configurações
+      const { data: settings } = await ctx.supabase
+        .from("credit_settings")
+        .select("*")
+        .eq("tenant_id", ctx.tenantId)
+        .single()
+
+      // Se não houver configurações, permitir tudo
+      if (!settings) {
+        return {
+          is_valid: true,
+          can_override: false,
+          message: "Sistema sem configurações de crédito",
+          box_available: null,
+          box_utilizable: null,
+          client_limit: null,
+          client_limit_used: null,
+          client_limit_available: null,
+          customer_score: null,
+          customer_risk_level: null,
+          active_loans_count: 0,
+          checks: {
+            box: true,
+            client_limit: true,
+            score: true,
+            max_loans: true,
+          },
+          warnings: [],
+        }
+      }
+
+      // Calcular caixa
+      const { data: payments } = await ctx.supabase
+        .from("payment_transactions")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("status", "completed")
+
+      const { data: loans } = await ctx.supabase
+        .from("loans")
+        .select("amount, status, customer_document")
+        .eq("tenant_id", ctx.tenantId)
+        .in("status", ["active", "overdue", "paid"])
+
+      const totalReceived = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
+      const totalDisbursed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+
+      const grossCash = totalReceived - totalDisbursed
+      const availableCash = Math.max(0, grossCash)
+      const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
+
+      // Buscar score
+      const { data: scoreData } = await ctx.supabase.rpc("calculate_customer_score", {
+        p_tenant_id: ctx.tenantId,
+        p_customer_document: document,
+      })
+
+      const score = Array.isArray(scoreData) ? scoreData[0] : null
+      const finalScore = score?.final_score || 500
+      const riskLevel = score?.risk_level || "medium"
+
+      // Calcular limite do cliente
+      const { data: limitData } = await ctx.supabase.rpc("calculate_client_limit", {
+        p_tenant_id: ctx.tenantId,
+        p_customer_document: document,
+        p_monthly_income: monthlyIncome,
+      })
+
+      const clientLimit = Array.isArray(limitData) ? limitData[0] || 5000 : 5000
+      const clientUsed = loans?.filter(l => l.customer_document === document).reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+
+      // Contar empréstimos ativos
+      const activeLoansCount = loans?.filter(l => l.customer_document === document && ["active", "overdue"].includes(l.status)).length || 0
+
+      // Verificações
+      const boxCheck = amount <= usableCash
+      const clientLimitCheck = (clientUsed + amount) <= clientLimit
+      const scoreCheck = finalScore >= (settings.min_score_for_approval || 500)
+      const maxLoansCheck = activeLoansCount < (settings.max_active_loans_per_customer || 5)
+
+      // Verificar bloqueios e warnings
+      let isValid = true
+      let canOverride = true
+      let message = "OK"
+      const warnings: string[] = []
+
+      if (!boxCheck) {
+        if (settings.block_on_box_limit) {
+          isValid = false
+          canOverride = false
+          message = "Bloqueado: Caixa insuficiente"
+        } else {
+          warnings.push("Valor excede caixa utilizável")
+        }
+      }
+
+      if (!clientLimitCheck) {
+        if (settings.client_limit_mandatory && isValid) {
+          isValid = false
+          canOverride = false
+          message = "Bloqueado: Limite do cliente excedido"
+        } else if (isValid) {
+          warnings.push("Valor excede limite recomendado do cliente")
+        }
+      }
+
+      if (!scoreCheck) {
+        if (settings.block_on_low_score && isValid) {
+          isValid = false
+          canOverride = false
+          message = "Bloqueado: Score abaixo do mínimo"
+        } else if (isValid) {
+          warnings.push("Score abaixo do mínimo")
+        }
+      }
+
+      if (!maxLoansCheck && isValid) {
+        isValid = false
+        canOverride = false
+        message = "Bloqueado: Número máximo de empréstimos ativos"
+      }
+
+      return {
+        is_valid: isValid,
+        can_override: canOverride,
+        message: isValid && warnings.length > 0 ? warnings.join(", ") : message,
+        box_available: availableCash,
+        box_utilizable: usableCash,
+        client_limit: clientLimit,
+        client_limit_used: clientUsed,
+        client_limit_available: Math.max(0, clientLimit - clientUsed),
+        customer_score: finalScore,
+        customer_risk_level: riskLevel,
+        active_loans_count: activeLoansCount,
+        checks: {
+          box: boxCheck,
+          client_limit: clientLimitCheck,
+          score: scoreCheck,
+          max_loans: maxLoansCheck,
+        },
+        warnings,
+      }
+    }),
 })

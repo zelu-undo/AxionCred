@@ -51,6 +51,7 @@ export default function NewLoanPage() {
     principal: "",
     installments: "6",
     firstPaymentDate: new Date().toISOString().split("T")[0],
+    monthlyIncome: "",
   })
   
   const [preview, setPreview] = useState<{
@@ -137,7 +138,66 @@ export default function NewLoanPage() {
       principal_amount: principal,
       installments_count: parseInt(formData.installments),
       first_due_date: formData.firstPaymentDate,
+      monthly_income: formData.monthlyIncome ? parseFloat(formData.monthlyIncome.replace(/[^0-9]/g, "")) / 100 : undefined,
+      override_reason: overrideReason || undefined,
     })
+  }
+
+  // ============================================
+  // CRÉDITO - Validação em tempo real
+  // ============================================
+  const [selectedCustomerDoc, setSelectedCustomerDoc] = useState("")
+  
+  // Buscar dados do cliente selecionado
+  const { data: selectedCustomer } = trpc.customer.byId.useQuery(
+    { id: formData.customerId },
+    { enabled: !!formData.customerId }
+  )
+
+  // Effect para atualizar documento quando cliente muda
+  useEffect(() => {
+    if (selectedCustomer?.document) {
+      setSelectedCustomerDoc(selectedCustomer.document)
+    }
+  }, [selectedCustomer])
+
+  // Validar crédito em tempo real
+  const { data: validationData, refetch: refetchValidation } = trpc.credit.validateLoan.useQuery(
+    {
+      customer_document: selectedCustomerDoc,
+      amount: formData.principal ? parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100 : 0,
+      monthly_income: formData.monthlyIncome ? parseFloat(formData.monthlyIncome.replace(/[^0-9]/g, "")) / 100 : undefined,
+    },
+    { 
+      enabled: !!selectedCustomerDoc && !!formData.principal && parseFloat(formData.principal.replace(/[^0-9]/g, "")) > 0 
+    }
+  )
+
+  // State for override
+  const [overrideReason, setOverrideReason] = useState("")
+
+  // Show override field if blocked but can override
+  const showOverride = validationData && !validationData.is_valid && validationData.can_override
+
+  // Risk level colors
+  const getRiskColor = (level: string) => {
+    switch (level) {
+      case "low": return "text-green-600 bg-green-50 border-green-200"
+      case "medium": return "text-yellow-600 bg-yellow-50 border-yellow-200"
+      case "high": return "text-orange-600 bg-orange-50 border-orange-200"
+      case "very_high": return "text-red-600 bg-red-50 border-red-200"
+      default: return "text-gray-600 bg-gray-50 border-gray-200"
+    }
+  }
+
+  const getRiskLabel = (level: string) => {
+    switch (level) {
+      case "low": return "Baixo"
+      case "medium": return "Médio"
+      case "high": return "Alto"
+      case "very_high": return "Muito Alto"
+      default: return "Não calculado"
+    }
   }
 
   const formatCurrency = (value: number) => {

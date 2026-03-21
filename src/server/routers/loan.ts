@@ -83,10 +83,187 @@ export const loanRouter = router({
         installments_count: z.number().positive().max(48),
         first_due_date: z.string(),
         notes: z.string().optional(),
+        monthly_income: z.number().optional(),
+        override_reason: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { customer_id, principal_amount, installments_count, first_due_date, notes } = input
+      const { customer_id, principal_amount, installments_count, first_due_date, notes, monthly_income, override_reason } = input
+
+      // Get customer document
+      const { data: customer, error: customerError } = await ctx.supabase
+        .from("customers")
+        .select("document, name")
+        .eq("id", customer_id)
+        .single()
+
+      if (customerError || !customer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Cliente não encontrado",
+        })
+      }
+
+      // ============================================
+      // VALIDAÇÃO DE CRÉDITO
+      // ============================================
+      const document = customer.document?.replace(/\D/g, "") || ""
+      
+      if (document) {
+        // Buscar configurações de crédito
+        const { data: settings } = await ctx.supabase
+          .from("credit_settings")
+          .select("*")
+          .eq("tenant_id", ctx.tenantId)
+          .single()
+
+        // Se houver configurações, fazer validação
+        if (settings) {
+          // Calcular caixa
+          const { data: payments } = await ctx.supabase
+            .from("payment_transactions")
+            .select("amount")
+            .eq("tenant_id", ctx.tenantId)
+            .eq("status", "completed")
+
+          const { data: loans } = await ctx.supabase
+            .from("loans")
+            .select("amount, status")
+            .eq("tenant_id", ctx.tenantId)
+            .in("status", ["active", "overdue", "paid"])
+
+          const totalReceived = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
+          const totalDisbursed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+
+          const grossCash = totalReceived - totalDisbursed
+          const availableCash = Math.max(0, grossCash)
+          const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
+
+          // Buscar score do cliente
+          const { data: scoreData } = await ctx.supabase.rpc("calculate_customer_score", {
+            p_tenant_id: ctx.tenantId,
+            p_customer_document: document,
+          })
+
+          const score = Array.isArray(scoreData) ? scoreData[0] : null
+          const finalScore = score?.final_score || 500
+
+          // Calcular limite do cliente
+          const { data: limitData } = await ctx.supabase.rpc("calculate_client_limit", {
+            p_tenant_id: ctx.tenantId,
+            p_customer_document: document,
+            p_monthly_income: monthly_income || 0,
+          })
+
+          const clientLimit = Array.isArray(limitData) ? limitData[0] || 5000 : 5000
+          const clientUsed = loans?.filter(l => l.customer_document === document).reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+
+          // Contar empréstimos ativos
+          const activeLoansCount = loans?.filter(l => l.customer_document === document && ["active", "overdue"].includes(l.status)).length || 0
+
+          // Verificações
+          const boxCheck = principal_amount <= usableCash
+          const clientLimitCheck = (clientUsed + principal_amount) <= clientLimit
+          const scoreCheck = finalScore >= (settings.min_score_for_approval || 500)
+          const maxLoansCheck = activeLoansCount < (settings.max_active_loans_per_customer || 5)
+
+          let isBlocked = false
+          let blockReason = ""
+          let isWarning = false
+          let warningMessage = ""
+
+          // Verificar caixa
+          if (!boxCheck) {
+            if (settings.block_on_box_limit) {
+              isBlocked = true
+              blockReason = "Caixa insuficiente para este empréstimo"
+            } else {
+              isWarning = true
+              warningMessage = "Valor excede caixa utilizável disponível"
+            }
+          }
+
+          // Verificar limite do cliente
+          if (!clientLimitCheck && settings.client_limit_mandatory && !isBlocked) {
+            isBlocked = true
+            blockReason = "Valor excede limite do cliente"
+          } else if (!clientLimitCheck && !isBlocked) {
+            isWarning = true
+            warningMessage = isWarning ? isWarning + ", " + "Valor excede limite recomendado do cliente" : "Valor excede limite recomendado do cliente"
+          }
+
+          // Verificar score
+          if (!scoreCheck && settings.block_on_low_score && !isBlocked) {
+            isBlocked = true
+            blockReason = "Score do cliente abaixo do mínimo configurado"
+          } else if (!scoreCheck && !isBlocked) {
+            isWarning = true
+            warningMessage = isWarning ? isWarning + ", " + "Score do cliente abaixo do mínimo" : "Score do cliente abaixo do mínimo"
+          }
+
+          // Verificar número de empréstimos
+          if (!maxLoansCheck && !isBlocked) {
+            isBlocked = true
+            blockReason = "Cliente atingiu número máximo de empréstimos ativos"
+          }
+
+          // Se não tem override_reason mas está bloqueado, rejeitar
+          if (isBlocked && !override_reason) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: blockReason,
+            })
+          }
+
+          // Se tem override_reason, registrar auditoria com override
+          if (override_reason) {
+            await ctx.supabase.from("credit_audit_log").insert({
+              tenant_id: ctx.tenantId,
+              customer_document: document,
+              customer_name: customer.name,
+              loan_id: null, // ainda não criado
+              decision_type: "manual_override",
+              decision_result: "approved",
+              box_available: availableCash,
+              box_utilizable: usableCash,
+              requested_amount: principal_amount,
+              client_limit: clientLimit,
+              client_limit_used: clientUsed,
+              customer_score: finalScore,
+              customer_risk_level: score?.risk_level || "medium",
+              active_loans_count: activeLoansCount,
+              box_limit_check: boxCheck,
+              client_limit_check: clientLimitCheck,
+              score_check: scoreCheck,
+              max_loans_check: maxLoansCheck,
+              override_by: ctx.user?.email || "unknown",
+              override_reason: override_reason,
+            })
+          } else {
+            // Registrar aprovação normal
+            await ctx.supabase.from("credit_audit_log").insert({
+              tenant_id: ctx.tenantId,
+              customer_document: document,
+              customer_name: customer.name,
+              loan_id: null,
+              decision_type: isWarning ? "auto_approve_with_warning" : "auto_approve",
+              decision_result: "approved",
+              box_available: availableCash,
+              box_utilizable: usableCash,
+              requested_amount: principal_amount,
+              client_limit: clientLimit,
+              client_limit_used: clientUsed,
+              customer_score: finalScore,
+              customer_risk_level: score?.risk_level || "medium",
+              active_loans_count: activeLoansCount,
+              box_limit_check: boxCheck,
+              client_limit_check: clientLimitCheck,
+              score_check: scoreCheck,
+              max_loans_check: maxLoansCheck,
+            })
+          }
+        }
+      }
 
       // Get interest rule automatically from business rules (mandatory)
       const { data: rule, error: ruleError } = await ctx.supabase
