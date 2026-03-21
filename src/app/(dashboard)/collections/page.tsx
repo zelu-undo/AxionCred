@@ -237,8 +237,12 @@ export default function CollectionsPage() {
           </div>
 
           {filteredOverdue.length === 0 && (
-            <div className="py-8 text-center text-gray-500">
-              Nenhum pagamento atrasado encontrado
+            <div className="py-16 text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-green-100 to-green-200 mb-4">
+                <CheckCircle className="h-10 w-10 text-green-500" />
+              </div>
+              <p className="text-gray-500 font-medium">Nenhum pagamento atrasado!</p>
+              <p className="text-gray-400 text-sm mt-1">Todos os clientes estão em dia</p>
             </div>
           )}
         </CardContent>

@@ -39,17 +39,18 @@ function createSupabaseClient() {
 }
 
 // Função para fazer fetch com timeout
-async function fetchWithTimeout(promise: Promise<any>, timeoutMs: number = 10000): Promise<any> {
-  let timeoutId: NodeJS.Timeout
+async function fetchWithTimeout<T>(promise: Promise<T>, timeoutMs: number = 10000): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined
   
-  const timeoutPromise = new Promise((_, reject) => {
+  const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error("Timeout excedido. Verifique sua conexão.")), timeoutMs)
   })
 
   try {
-    return await Promise.race([promise, timeoutPromise])
+    const result = await Promise.race([promise, timeoutPromise]) as T
+    return result
   } finally {
-    clearTimeout(timeoutId!)
+    if (timeoutId) clearTimeout(timeoutId)
   }
 }
 
@@ -137,15 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createSupabaseClient()
     
     try {
-      console.log("[Auth] signIn - starting...")
-      
       // Fazer signIn com timeout de 15 segundos
       const { data, error } = await fetchWithTimeout(
         supabase.auth.signInWithPassword({ email, password }),
         15000
       )
-
-      console.log("[Auth] signIn - got response, error:", error)
 
       if (error) {
         return { error: { message: error.message, code: error.code } }

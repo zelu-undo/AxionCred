@@ -15,8 +15,8 @@ const FloatingParticles = dynamic(
 )
 
 // WhatsApp number in format for wa.me links (country code 55 + DDD 44 + number)
-const WHATSAPP_NUMBER = "5544999152226"
-const WHATSAPP_FORMATTED = "44 99915-2226"
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5544999152226"
+const WHATSAPP_FORMATTED = process.env.NEXT_PUBLIC_WHATSAPP_FORMATTED || "44 99915-2226"
 
 // Dynamic WhatsApp messages for different contexts
 const WHATSAPP_MESSAGES = {
@@ -35,7 +35,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B1F3A] relative">
       {/* Floating Particles Background - behind content but above background */}
-      <FloatingParticles particleCount={300} className="z-0 fixed inset-0" />
+      {/* Particle count is automatically adjusted based on device (300 desktop, 180 mobile) */}
+      <FloatingParticles className="z-0 fixed inset-0" />
       
       {/* Header */}
       <header className="border-b border-white/10 bg-[#0B1F3A]/95 backdrop-blur-sm sticky top-0 z-50">
@@ -46,9 +47,9 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-[#22C55E] animate-gentle-bounce animate-subtle-glow inline-block">ON</span>
             </div>
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Como Funciona</a>
-              <a href="#beneficios" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Benefícios</a>
-              <a href="#planos" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Planos</a>
+              <Link href="#como-funciona" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Como Funciona</Link>
+              <Link href="#beneficios" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Benefícios</Link>
+              <Link href="#planos" className="text-white/70 hover:text-white font-medium transition-all duration-300 hover:-translate-y-1">Planos</Link>
             </nav>
             <div className="flex items-center gap-4">
               <Link href="/login">
@@ -521,9 +522,9 @@ export default function LandingPage() {
               <div>
                 <h4 className="font-semibold text-white mb-4">Produto</h4>
                 <ul className="space-y-2 text-sm text-white/50">
-                  <li><a href="#como-funciona" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Como Funciona</a></li>
-                  <li><a href="#beneficios" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Benefícios</a></li>
-                  <li><a href="#planos" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Planos</a></li>
+                  <li><Link href="#como-funciona" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Como Funciona</Link></li>
+                  <li><Link href="#beneficios" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Benefícios</Link></li>
+                  <li><Link href="#planos" className="hover:text-[#22C55E] transition-all duration-300 hover:-translate-y-1">Planos</Link></li>
                 </ul>
               </div>
               <div>

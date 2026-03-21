@@ -24,6 +24,10 @@ import {
   Handshake,
   DollarSign,
   AlertTriangle,
+  ChevronDown,
+  Zap,
+  Brain,
+  Gauge,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -46,6 +50,17 @@ import { motion } from "framer-motion"
 function NavigationItems() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const pathname = usePathname()
+  const [expandedCategories, setExpandedCategories] = React.useState<string[]>(["operations", "sales", "intelligence", "settings"])
+  
+  // Toggle category expansion
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    )
+  }
   
   // Define permissions for each role
   const permissions = {
@@ -69,25 +84,62 @@ function NavigationItems() {
     if (limit === false) return false
     return true
   }
-  
-  const navigation = [
-    { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
-    { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
-    { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
-    { name: "💰 Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
-    { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
-    { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
-    { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
-    { name: "📊 Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
-    { name: "🔄 Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
-    { name: "🛡️ Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
-    { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
-    { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
-    { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
-    { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
+
+  // Navigation organized by categories
+  const categories = [
+    {
+      id: "operations",
+      name: "Operações",
+      icon: Gauge,
+      items: [
+        { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
+        { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
+        { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
+        { name: "Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
+        { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
+      ]
+    },
+    {
+      id: "sales",
+      name: "Vendas",
+      icon: Zap,
+      items: [
+        { name: "Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
+        { name: "Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
+      ]
+    },
+    {
+      id: "intelligence",
+      name: "Inteligência",
+      icon: Brain,
+      items: [
+        { name: "Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
+        { name: "Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
+        { name: "Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
+      ]
+    },
+    {
+      id: "settings",
+      name: "Configurações",
+      icon: Settings,
+      items: [
+        { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
+        { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
+        { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
+        { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
+      ]
+    },
   ]
 
-  const pathname = usePathname()
+  // Auto-expand category if current path matches an item
+  React.useEffect(() => {
+    const currentCategory = categories.find(cat => 
+      cat.items.some(item => pathname === item.href || pathname.startsWith(item.href + "/"))
+    )
+    if (currentCategory && !expandedCategories.includes(currentCategory.id)) {
+      setExpandedCategories(prev => [...prev, currentCategory.id])
+    }
+  }, [pathname])
 
   // More precise active check - only highlight exact match OR direct children
   const isActiveRoute = (href: string, currentPath: string): boolean => {
@@ -104,33 +156,68 @@ function NavigationItems() {
   }
 
   return (
-    <>
-      {navigation.filter(item => hasPermission(item.permission)).map((item) => {
-        const isActive = isActiveRoute(item.href, pathname)
+    <div className="space-y-1">
+      {categories.filter(cat => cat.items.some(item => hasPermission(item.permission))).map((category) => {
+        const isExpanded = expandedCategories.includes(category.id)
+        const hasActiveItem = category.items.some(item => isActiveRoute(item.href, pathname) && hasPermission(item.permission))
+        const CategoryIcon = category.icon
+        
         return (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
-              isActive
-                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
-                : "text-blue-200 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            {/* Indicador visual para item ativo */}
-            {isActive && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
-            )}
-            <item.icon className={cn(
-              "h-5 w-5 transition-transform duration-200",
-              !isActive && "group-hover:scale-110"
-            )} />
-            <span className="relative z-10">{item.name}</span>
-          </Link>
+          <div key={category.id}>
+            {/* Category Header */}
+            <button
+              onClick={() => toggleCategory(category.id)}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200",
+                hasActiveItem || isExpanded
+                  ? "text-white bg-white/10"
+                  : "text-blue-300 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <CategoryIcon className="h-4 w-4" />
+              <span className="flex-1 text-left">{category.name}</span>
+              <ChevronDown className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                !isExpanded && "rotate-180"
+              )} />
+            </button>
+            
+            {/* Category Items */}
+            <div className={cn(
+              "overflow-hidden transition-all duration-300",
+              isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+            )}>
+              <div className="ml-2 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+                {category.items.filter(item => hasPermission(item.permission)).map((item) => {
+                  const isActive = isActiveRoute(item.href, pathname)
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 group relative",
+                        isActive
+                          ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
+                          : "text-blue-200 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />
+                      )}
+                      <item.icon className={cn(
+                        "h-4 w-4 transition-transform duration-200",
+                        !isActive && "group-hover:scale-110"
+                      )} />
+                      <span className="relative z-10">{item.name}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
         )
       })}
-    </>
+    </div>
   )
 }
 

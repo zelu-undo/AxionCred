@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,7 @@ import {
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
+import { useDebounce } from "@/hooks/use-debounce"
 
 interface Address {
   cep: string
@@ -42,6 +43,10 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  
+  // Debounce search query to prevent API calls on every keystroke
+  const debouncedSearch = useDebounce(searchQuery, 300)
   
   // Sync search query with URL params when coming from global search
   useEffect(() => {
@@ -50,6 +55,11 @@ export default function CustomersPage() {
       setSearchQuery(urlSearch)
     }
   }, [searchParams, searchQuery])
+  
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(0)
+  }, [debouncedSearch])
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null)
@@ -91,15 +101,21 @@ export default function CustomersPage() {
     }
   }
   
-  // Fetch customers from database
+  // Fetch customers from database with pagination and debounced search
   const { data, isLoading, error, refetch } = trpc.customer.list.useQuery({
-    search: searchQuery || undefined,
+    search: debouncedSearch || undefined,
     limit: 50,
-    offset: 0,
+    offset: currentPage * 50,
   }, {
     retry: 1,
     refetchOnWindowFocus: false,
   })
+  
+  // Calculate total pages
+  const totalPages = useMemo(() => {
+    if (!data?.total) return 0
+    return Math.ceil(data.total / 50)
+  }, [data?.total])
 
   const createMutation = trpc.customer.create.useMutation({
     onSuccess: () => {
@@ -550,9 +566,32 @@ export default function CustomersPage() {
                 </div>
               )}
 
-              <div className="mt-4 text-sm text-gray-500">
-                Total de {total} clientes
-              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    Página {currentPage + 1} de {totalPages} ({total} clientes)
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                      disabled={currentPage === 0}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                      disabled={currentPage >= totalPages - 1}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>

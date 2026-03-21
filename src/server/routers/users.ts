@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import bcrypt from "bcrypt"
 
 // Permission templates (system-defined)
 const SYSTEM_PERMISSIONS = {
@@ -108,14 +109,18 @@ export const usersRouter = router({
         })
       }
 
-      // Create user (in production, this would use Supabase Auth)
+      // Hash password with bcrypt
+      const saltRounds = 10
+      const passwordHash = await bcrypt.hash(password, saltRounds)
+
+      // Create user
       const { data, error } = await ctx.supabase
         .from("users")
         .insert({
           tenant_id: ctx.tenantId,
           email,
           name,
-          password_hash: password, // In production: bcrypt hash
+          password_hash: passwordHash,
           role,
           avatar_url,
         })
@@ -216,23 +221,35 @@ export const usersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // In production: verify current password hash
+      // Verify current password with bcrypt
       const { data: user } = await ctx.supabase
         .from("users")
         .select("password_hash")
         .eq("id", input.id)
         .single()
 
-      if (!user || user.password_hash !== input.current_password) {
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado",
+        })
+      }
+
+      // Compare password with bcrypt hash
+      const isValid = await bcrypt.compare(input.current_password, user.password_hash)
+      if (!isValid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Senha atual incorreta",
         })
       }
 
+      // Hash new password
+      const newPasswordHash = await bcrypt.hash(input.new_password, 10)
+
       const { error } = await ctx.supabase
         .from("users")
-        .update({ password_hash: input.new_password })
+        .update({ password_hash: newPasswordHash })
         .eq("id", input.id)
 
       if (error) {
