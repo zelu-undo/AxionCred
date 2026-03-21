@@ -180,10 +180,10 @@ export default function AnalyticsPage() {
   const [chartType, setChartType] = useState("bar")
 
   const defaultKPIs = [
-    { id: "total_clients", name: "Total de Clientes", value: "180", change: "+12%", trend: "up" as const, icon: Users },
-    { id: "revenue", name: "Receita Total", value: "R$ 328k", change: "+22%", trend: "up" as const, icon: DollarSign },
-    { id: "active_loans", name: "Empréstimos Ativos", value: "145", change: "+8%", trend: "up" as const, icon: CreditCard },
-    { id: "default_rate", name: "Taxa de Inadimplência", value: "2.3%", change: "-0.5%", trend: "down" as const, icon: TrendingDown },
+    { id: "total_clients", title: "Total de Clientes", value: "180", change: "+12%", trend: "up" as const, icon: Users },
+    { id: "revenue", title: "Receita Total", value: "R$ 328k", change: "+22%", trend: "up" as const, icon: DollarSign },
+    { id: "active_loans", title: "Empréstimos Ativos", value: "145", change: "+8%", trend: "up" as const, icon: CreditCard },
+    { id: "default_rate", title: "Taxa de Inadimplência", value: "2.3%", change: "-0.5%", trend: "down" as const, icon: TrendingDown },
   ]
 
   return (
