@@ -262,7 +262,7 @@ export default function CustomersPage() {
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Build address string
+    // Build address string (for backwards compatibility)
     const addressParts = [
       newCustomer.street,
       newCustomer.number,
@@ -279,6 +279,13 @@ export default function CustomersPage() {
       email: newCustomer.email || undefined,
       phone: newCustomer.phone,
       document: newCustomer.document,
+      cep: newCustomer.cep || undefined,
+      street: newCustomer.street || undefined,
+      number: newCustomer.number || undefined,
+      complement: newCustomer.complement || undefined,
+      neighborhood: newCustomer.neighborhood || undefined,
+      city: newCustomer.city || undefined,
+      state: newCustomer.state || undefined,
       address: fullAddress || undefined,
     })
   }

@@ -155,74 +155,18 @@ export default function CustomerDetailPage() {
   // Set form data when customer loads
   useEffect(() => {
     if (customer) {
-      // Parse address from full address string
-      let street = ""
-      let number = ""
-      let complement = ""
-      let neighborhood = ""
-      let city = ""
-      let state = ""
-      let cep = ""
+      // Use individual address fields from database
+      const street = customer.street || ""
+      const number = customer.number || ""
+      const complement = customer.complement || ""
+      const neighborhood = customer.neighborhood || ""
+      const city = customer.city || ""
+      const state = customer.state || ""
+      const cep = customer.cep || ""
       
-      // Brazilian states abbreviation check
-      const isStateAbbrev = (str: string) => {
-        const states = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
-        return states.includes(str.toUpperCase())
-      }
-      
-      if (customer.address) {
-        const parts = customer.address.split(",").map((p: string) => p.trim()).filter(Boolean)
-        
-        // If last part is 2-char state abbreviation, likely "City, State" or "Street, City, State"
-        if (parts.length >= 2 && isStateAbbrev(parts[parts.length - 1])) {
-          // Last part is a state - determine format
-          if (parts.length === 2) {
-            // "City, State" format
-            city = parts[0]
-            state = parts[1]
-          } else if (parts.length === 3) {
-            // Could be "Street, City, State" or "Number, City, State" - try to detect
-            if (parts[1].length === 2 && isStateAbbrev(parts[1])) {
-              // "State, StateAbbrev, Something" - unlikely, use default
-              street = parts[0]
-              number = parts[1]
-              complement = parts[2]
-            } else {
-              // Assume "Street, City, State"
-              street = parts[0]
-              city = parts[1]
-              state = parts[2]
-            }
-          } else if (parts.length >= 4) {
-            // Full format "Street, Number, Complement, Neighborhood, City, State"
-            street = parts[0]
-            number = parts[1]
-            complement = parts[2] || ""
-            neighborhood = parts[3] || ""
-            city = parts[4] || ""
-            state = parts[5] || ""
-          }
-        } else {
-          // No state abbreviation at end - use default parsing
-          if (parts.length === 1) {
-            street = parts[0]
-          } else if (parts.length === 2) {
-            street = parts[0]
-            number = parts[1]
-          } else if (parts.length === 3) {
-            street = parts[0]
-            number = parts[1]
-            complement = parts[2]
-          } else if (parts.length >= 4) {
-            street = parts[0]
-            number = parts[1]
-            complement = parts[2] || ""
-            neighborhood = parts[3] || ""
-            city = parts[4] || ""
-            state = parts[5] || ""
-          }
-        }
-      }
+      // Build address string for display
+      const addressParts = [street, number, complement, neighborhood, city, state].filter(Boolean)
+      const fullAddress = addressParts.join(", ")
       
       setFormData({
         name: customer.name || "",
@@ -376,6 +320,13 @@ export default function CustomerDetailPage() {
       name: formData.name,
       email: formData.email || undefined,
       phone: formData.phone,
+      cep: formData.cep || undefined,
+      street: formData.street || undefined,
+      number: formData.number || undefined,
+      complement: formData.complement || undefined,
+      neighborhood: formData.neighborhood || undefined,
+      city: formData.city || undefined,
+      state: formData.state || undefined,
       address: fullAddress || undefined,
       notes: formData.notes || undefined,
       status: formData.status,

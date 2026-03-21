@@ -124,6 +124,12 @@ export const customerRouter = router({
         phone: z.string().min(1),
         document: z.string().optional(),
         cep: z.string().optional(),
+        street: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
         address: z.string().optional(),
         notes: z.string().optional(),
         credit_limit: z.number().optional(),
@@ -160,7 +166,7 @@ export const customerRouter = router({
       // Check for existing customer with same CPF
       const { data: existing } = await ctx.supabase
         .from("customers")
-        .select("id, status, name, email, phone, address, notes")
+        .select("id, status, name, email, phone, address, cep, street, number, complement, neighborhood, city, state, notes")
         .eq("tenant_id", ctx.tenantId!)
         .eq("document", input.document || "")
         .in("status", ["active", "inactive", "blocked"])
@@ -183,6 +189,13 @@ export const customerRouter = router({
           email: input.email,
           phone: input.phone,
           document: input.document,
+          cep: input.cep,
+          street: input.street,
+          number: input.number,
+          complement: input.complement,
+          neighborhood: input.neighborhood,
+          city: input.city,
+          state: input.state,
           address: input.address,
           notes: input.notes,
           credit_limit: input.credit_limit,
@@ -212,6 +225,13 @@ export const customerRouter = router({
         email: z.string().email().optional().nullable(),
         phone: z.string().min(1).optional(),
         document: z.string().optional(),
+        cep: z.string().optional().nullable(),
+        street: z.string().optional().nullable(),
+        number: z.string().optional().nullable(),
+        complement: z.string().optional().nullable(),
+        neighborhood: z.string().optional().nullable(),
+        city: z.string().optional().nullable(),
+        state: z.string().optional().nullable(),
         address: z.string().optional().nullable(),
         notes: z.string().optional().nullable(),
         status: z.enum(["active", "inactive", "blocked"]).optional(),
@@ -224,7 +244,7 @@ export const customerRouter = router({
       // Get current customer data for audit
       const { data: current } = await ctx.supabase
         .from("customers")
-        .select("name, email, phone, address, notes, status")
+        .select("name, email, phone, address, cep, street, number, complement, neighborhood, city, state, notes, status")
         .eq("id", id)
         .single()
 

@@ -46,6 +46,13 @@ export interface Customer {
   phone: string
   document?: string
   address?: string
+  cep?: string
+  street?: string
+  number?: string
+  complement?: string
+  neighborhood?: string
+  city?: string
+  state?: string
   notes?: string
   global_identity_id?: string
   status: CustomerStatus
