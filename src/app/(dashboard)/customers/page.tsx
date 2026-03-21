@@ -429,12 +429,6 @@ export default function CustomersPage() {
                           {t("common.status")}
                         </div>
                       </th>
-                      <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-3.5 w-3.5" />
-                          {t("customers.creditLimit")}
-                        </div>
-                      </th>
                       <th className="px-4 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("common.actions")}</th>
                     </tr>
                   </thead>
@@ -454,17 +448,6 @@ export default function CustomersPage() {
                         >
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="
-                                h-10 w-10 rounded-full 
-                                bg-gradient-to-br from-gray-100 to-gray-200
-                                flex items-center justify-center
-                                text-gray-600 font-semibold
-                                ring-2 ring-white shadow-sm
-                                group-hover:ring-emerald-100 group-hover:scale-105
-                                transition-all duration-200
-                              ">
-                                {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                              </div>
                               <div>
                                 <p className="font-semibold text-gray-900">{customer.name}</p>
                               </div>
@@ -486,14 +469,6 @@ export default function CustomersPage() {
                           </td>
                           <td className="px-4 py-4">
                             {getStatusBadge(customer.status)}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className="font-medium text-gray-900">
-                              {customer.credit_limit && customer.credit_limit > 0 
-                                ? `R$ ${customer.credit_limit.toLocaleString("pt-BR")}`
-                                : "-"
-                              }
-                            </span>
                           </td>
                           <td className="px-4 py-4 text-right">
                             <DropdownMenu open={openDropdown === customer.id} onOpenChange={(open) => setOpenDropdown(open ? customer.id : null)}>
