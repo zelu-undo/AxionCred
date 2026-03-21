@@ -177,7 +177,9 @@ export default function CustomersPage() {
     setIsCheckingCpf(true)
     setCpfError("")
     try {
-      const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}`)
+      const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}`, {
+        credentials: "include",
+      })
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Erro de conexão" }))

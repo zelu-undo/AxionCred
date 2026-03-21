@@ -292,7 +292,9 @@ export default function CustomerDetailPage() {
     // Check for duplicate CPF (excluding current customer)
     setIsCheckingCpf(true)
     try {
-      const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}&excludeId=${customerId}`)
+      const response = await fetch(`/api/check-cpf?cpf=${cleanCpf}&excludeId=${customerId}`, {
+        credentials: "include",
+      })
       const result = await response.json()
       
       if (result.exists) {
