@@ -2,6 +2,11 @@
 -- SISTEMA DE ALOCAÇÃO DE CAIXA E CRÉDITO
 -- ============================================
 
+-- Remover funções existentes para evitar conflitos
+DROP FUNCTION IF EXISTS calculate_customer_score(UUID, VARCHAR(20));
+DROP FUNCTION IF EXISTS calculate_client_limit(UUID, VARCHAR(20), DECIMAL);
+DROP FUNCTION IF EXISTS calculate_tenant_cash(UUID);
+
 -- 1. Tabela de configurações de crédito por tenant
 CREATE TABLE IF NOT EXISTS credit_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
