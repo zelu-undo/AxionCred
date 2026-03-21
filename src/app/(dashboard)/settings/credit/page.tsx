@@ -522,7 +522,16 @@ export default function CreditSettingsPage() {
 
           {formData.allow_refinancing && (
             <div className="space-y-2">
-              <Label>Estratégia de Refinanciamento</Label>
+              <div className="flex items-center gap-2">
+                <Label>Estratégia de Refinanciamento</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p><strong>Quitar automaticamente:</strong> O sistema quita o empréstimo anterior e cria um novo com o valor solicitado.</p>
+                    <p className="mt-2"><strong>Somar saldo:</strong> O novo empréstimo inclui o saldo devedor anterior + novo valor solicitado.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Select
                 value={formData.refinancing_strategy}
                 onValueChange={(value) => setFormData({ ...formData, refinancing_strategy: value as "pay_off" | "add_balance" })}
