@@ -168,8 +168,10 @@ export const loanRouter = router({
         total_amount = (principal_amount * monthlyRate * factor) / (factor - 1)
       }
 
-      total_interest = total_amount - principal_amount
-      const installment_amount = total_amount / installments_count
+      // Arredondar valores para 2 casas decimais para evitar problemas de precisão
+      total_amount = Math.round(total_amount * 100) / 100
+      total_interest = Math.round((total_amount - principal_amount) * 100) / 100
+      const installment_amount = Math.round((total_amount / installments_count) * 100) / 100
 
       // Create loan
       const { data: loan, error: loanError } = await ctx.supabase
@@ -284,17 +286,60 @@ export const loanRouter = router({
         })
       }
 
-      // Validate minimum amount (80% of installment)
-      const minAmount = installment.amount * 0.8
+      // Verificar se parcela já está quitada
+      if (installment.status === "paid") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Esta parcela já foi quitada",
+        })
+      }
+
+      // Calcular juros de mora se parcela atrasada
+      const today = new Date()
+      const dueDate = new Date(installment.due_date)
+      const isOverdue = dueDate < today && installment.status !== "paid"
+      
+      let lateFee = 0
+      let lateInterest = 0
+      
+      if (isOverdue) {
+        // Buscar configuração de juros de mora
+        const { data: lateFeeConfig } = await ctx.supabase
+          .from("late_fee_config")
+          .select("*")
+          .eq("tenant_id", ctx.tenantId)
+          .single()
+        
+        if (lateFeeConfig) {
+          // Calcular dias de atraso
+          const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+          
+          // Calcular taxa fixa de multa
+          lateFee = lateFeeConfig.fixed_fee || 0
+          
+          // Calcular juros de mora diários
+          if (lateFeeConfig.daily_interest && daysOverdue > 0) {
+            lateInterest = installment.amount * lateFeeConfig.daily_interest * daysOverdue
+          }
+        }
+      }
+
+      // Valor total com juros de mora (se houver)
+      const totalWithLateFees = installment.amount + lateFee + lateInterest
+
+      // Validate minimum amount (80% of installment + late fees)
+      const minAmount = totalWithLateFees * 0.8
       if (amount < minAmount) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Valor mínimo para pagamento é R$ ${minAmount.toFixed(2)}`,
+          message: `Valor mínimo para pagamento é R$ ${minAmount.toFixed(2)}` +
+            (isOverdue ? ` (inclui R$ ${(lateFee + lateInterest).toFixed(2)} de juros de mora)` : ""),
         })
       }
 
       const loan = installment.loan
-      const isFullPayment = amount >= installment.amount
+      // Considerando juros de mora para quitação
+      const isFullPayment = amount >= totalWithLateFees
       const newStatus = isFullPayment ? "paid" : "partial"
       const paidAmount = installment.paid_amount || 0
       const newPaidAmount = paidAmount + amount
