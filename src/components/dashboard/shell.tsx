@@ -43,6 +43,12 @@ import {
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { motion } from "framer-motion"
 
+// Categorias do menu
+type NavCategory = {
+  title: string
+  items: { name: string; href: string; icon: React.ElementType; permission: string }[]
+}
+
 function NavigationItems() {
   const { t } = useI18n()
   const { user } = useAuth()
@@ -69,22 +75,53 @@ function NavigationItems() {
     if (limit === false) return false
     return true
   }
-  
-  const navigation = [
-    { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
-    { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
-    { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
-    { name: "💰 Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
-    { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
-    { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
-    { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
-    { name: "📊 Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
-    { name: "🔄 Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
-    { name: "🛡️ Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
-    { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
-    { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
-    { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
-    { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
+
+  // Menu organizado em categorias
+  const navigationCategories: NavCategory[] = [
+    {
+      title: "Principal",
+      items: [
+        { name: t("navigation.dashboard"), href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
+      ],
+    },
+    {
+      title: "Gestão",
+      items: [
+        { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
+        { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
+        { name: "💰 Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
+      ],
+    },
+    {
+      title: "Cobrança",
+      items: [
+        { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
+        { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
+      ],
+    },
+    {
+      title: "Operações",
+      items: [
+        { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
+      ],
+    },
+    {
+      title: "Financeiro",
+      items: [
+        { name: "📊 Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
+        { name: "🔄 Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
+        { name: "🛡️ Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
+      ],
+    },
+    {
+      title: "Configurações",
+      items: [
+        { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
+        { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
+        { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
+        { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
+      ],
+    },
   ]
 
   const pathname = usePathname()
@@ -103,34 +140,58 @@ function NavigationItems() {
     return false
   }
 
+  // Filtrar itens por permissão
+  const filterItems = (items: NavCategory["items"]) => {
+    return items.filter(item => hasPermission(item.permission))
+  }
+
   return (
-    <>
-      {navigation.filter(item => hasPermission(item.permission)).map((item) => {
-        const isActive = isActiveRoute(item.href, pathname)
+    <div className="space-y-6">
+      {navigationCategories.map((category) => {
+        const filteredItems = filterItems(category.items)
+        if (filteredItems.length === 0) return null
+        
         return (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
-              isActive
-                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
-                : "text-blue-200 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            {/* Indicador visual para item ativo */}
-            {isActive && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
-            )}
-            <item.icon className={cn(
-              "h-5 w-5 transition-transform duration-200",
-              !isActive && "group-hover:scale-110"
-            )} />
-            <span className="relative z-10">{item.name}</span>
-          </Link>
+          <div key={category.title}>
+            {/* Título da categoria */}
+            <div className="px-3 mb-2">
+              <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                {category.title}
+              </h3>
+            </div>
+            
+            {/* Itens da categoria */}
+            <div className="space-y-1">
+              {filteredItems.map((item) => {
+                const isActive = isActiveRoute(item.href, pathname)
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
+                      isActive
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30"
+                        : "text-blue-200 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    {/* Indicador visual para item ativo */}
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
+                    )}
+                    <item.icon className={cn(
+                      "h-5 w-5 transition-transform duration-200",
+                      !isActive && "group-hover:scale-110"
+                    )} />
+                    <span className="relative z-10">{item.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         )
       })}
-    </>
+    </div>
   )
 }
 
