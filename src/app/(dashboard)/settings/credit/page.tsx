@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Save, AlertTriangle } from "lucide-react"
+import { Loader2, Save, AlertTriangle, HelpCircle } from "lucide-react"
 import { trpc } from "@/trpc/client"
 
 export default function CreditSettingsPage() {
@@ -101,17 +102,18 @@ export default function CreditSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Configurações de Crédito</h1>
-          <p className="text-gray-500">Configure as regras de alocação de caixa e concessão de crédito</p>
+    <TooltipProvider>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Configurações de Crédito</h1>
+            <p className="text-gray-500">Configure as regras de alocação de caixa e concessão de crédito</p>
+          </div>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Salvar Configurações
+          </Button>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Salvar Configurações
-        </Button>
-      </div>
 
       {/* Resumo do Caixa */}
       <Card className="border-l-4 border-l-blue-500">
@@ -195,7 +197,15 @@ export default function CreditSettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Percentual Máximo do Caixa Utilizável (%)</Label>
+              <div className="flex items-center gap-2">
+                <Label>Percentual Máximo do Caixa Utilizável (%)</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Define a porcentagem do caixa disponível total que pode ser utilizada para novos empréstimos. Isso garante que sempre haja reserva para operações.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
                 min={1}
@@ -207,7 +217,16 @@ export default function CreditSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Comportamento ao Atingir Limite</Label>
+              <div className="flex items-center gap-2">
+                <Label>Comportamento ao Atingir Limite</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p><strong>Bloquear:</strong> Impede a criação de novos empréstimos quando o limite de caixa for atingido.</p>
+                    <p className="mt-2"><strong>Alertar:</strong> Permite criar o empréstimo, mas exibe um aviso ao operador.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Select
                 value={formData.block_on_box_limit ? "block" : "warn"}
                 onValueChange={(value) => setFormData({ ...formData, block_on_box_limit: value === "block" })}
@@ -220,7 +239,6 @@ export default function CreditSettingsPage() {
                   <SelectItem value="warn">Apenas alertar</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">O que fazer quando o caixa atingir o limite configurado</p>
             </div>
           </div>
         </CardContent>
@@ -235,7 +253,15 @@ export default function CreditSettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Score Mínimo para Aprovação Automática</Label>
+              <div className="flex items-center gap-2">
+                <Label>Score Mínimo para Aprovação Automática</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Score mínimo para que um empréstimo seja aprovado automaticamente. Clientes com score abaixo deste valor precisam de aprovação manual.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
                 min={0}
@@ -243,11 +269,19 @@ export default function CreditSettingsPage() {
                 value={formData.min_score_for_approval}
                 onChange={(e) => setFormData({ ...formData, min_score_for_approval: Number(e.target.value) })}
               />
-              <p className="text-xs text-gray-500">Clientes com score abaixo deste valor serão avaliados manualmente</p>
             </div>
 
             <div className="space-y-2">
-              <Label>Comportamento quando Score Abaixo do Mínimo</Label>
+              <div className="flex items-center gap-2">
+                <Label>Comportamento quando Score Abaixo do Mínimo</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p><strong>Negar automaticamente:</strong> Bloqueia o empréstimo se o score estiver abaixo do mínimo.</p>
+                    <p className="mt-2"><strong>Apenas alertar:</strong> Permite criar o empréstimo com aviso, mas precisa de aprovação manual.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Select
                 value={formData.below_score_action}
                 onValueChange={(value) => setFormData({ ...formData, below_score_action: value as "deny" | "warn" })}
@@ -260,17 +294,33 @@ export default function CreditSettingsPage() {
                   <SelectItem value="warn">Apenas alertar</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">O que fazer quando o score do cliente estiver abaixo do mínimo</p>
             </div>
           </div>
 
           {/* Pesos do Score */}
-          <div className="mt-6">
-            <h4 className="font-medium mb-3">Pesos do Cálculo de Score</h4>
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="font-medium">Pesos do Cálculo de Score</h4>
+              <Tooltip>
+                <TooltipTrigger><HelpCircle className="h-4 w-4 text-blue-500" /></TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Configure a importância de cada fator no cálculo do score final do cliente. A soma deve ser igual a 100%.</p>
+                  <p className="mt-2">Cada owner pode ter sua própria configuração de pesos.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <p className="text-xs text-gray-500 mb-4">Ajuste a importância de cada fator no cálculo do score. O total deve ser 100%.</p>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs">Pagamento (%)</Label>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Pagamento (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Peso do histórico de pagamentos. Clientes que pagam em dia têm score maior.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -280,7 +330,15 @@ export default function CreditSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Tempo (%)</Label>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Tempo (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Peso do tempo de relacionamento. Quanto mais tempo o cliente está com você, maior o score.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -290,7 +348,15 @@ export default function CreditSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Inadimplência (%)</Label>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Inadimplência (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Peso da ausência de inadimplência. Clientes sem débitos vencidos têm score maior.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -300,7 +366,15 @@ export default function CreditSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Uso Crédito (%)</Label>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Uso Crédito (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Peso do uso de crédito. Considera o limite utilizado vs disponível.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -310,7 +384,15 @@ export default function CreditSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Estabilidade (%)</Label>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Estabilidade (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Peso da estabilidade. Considera Consistency de pagamentos e tempo no cadastro.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -341,7 +423,15 @@ export default function CreditSettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Percentual Máximo do Caixa por Cliente (%)</Label>
+              <div className="flex items-center gap-2">
+                <Label>Percentual Máximo do Caixa por Cliente (%)</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Porcentagem do caixa total que pode ser alocada para um único cliente. Isso evita que um cliente comprometa todo o caixa da empresa.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
                 min={1}
@@ -349,11 +439,18 @@ export default function CreditSettingsPage() {
                 value={formData.max_box_percentage_per_client}
                 onChange={(e) => setFormData({ ...formData, max_box_percentage_per_client: Number(e.target.value) })}
               />
-              <p className="text-xs text-gray-500">Porcentagem do caixa total que pode ser alocada para um único cliente</p>
             </div>
 
             <div className="space-y-2">
-              <Label>Número Máximo de Empréstimos Ativos por Cliente</Label>
+              <div className="flex items-center gap-2">
+                <Label>Número Máximo de Empréstimos Ativos por Cliente</Label>
+                <Tooltip>
+                  <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Limite de empréstimos ativos que um cliente pode ter simultaneamente. Ajuda a controlar o risco de concentração.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
                 min={1}
@@ -361,12 +458,20 @@ export default function CreditSettingsPage() {
                 value={formData.max_active_loans_per_customer}
                 onChange={(e) => setFormData({ ...formData, max_active_loans_per_customer: Number(e.target.value) })}
               />
-              <p className="text-xs text-gray-500">Limite de empréstimos ativos por cliente</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Comportamento ao Exceder Limite do Cliente</Label>
+            <div className="flex items-center gap-2">
+              <Label>Comportamento ao Exceder Limite do Cliente</Label>
+              <Tooltip>
+                <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p><strong>Bloquear:</strong> Não permite criar empréstimo que exceda o limite do cliente.</p>
+                  <p className="mt-2"><strong>Alertar:</strong> Permite criar com aviso, mas exige aprovação manual.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Select
               value={formData.client_limit_mandatory ? "mandatory" : "optional"}
               onValueChange={(value) => setFormData({ ...formData, client_limit_mandatory: value === "mandatory" })}
@@ -379,11 +484,6 @@ export default function CreditSettingsPage() {
                 <SelectItem value="optional">Alertar - Permite aprovação manual</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">
-              {formData.client_limit_mandatory 
-                ? "O sistema bloqueará empréstimos que excedam o limite calculado" 
-                : "O sistema apenas alertará, mas permitirá a aprovação manual"}
-            </p>
           </div>
         </CardContent>
       </Card>
@@ -396,7 +496,16 @@ export default function CreditSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Permitir Refinanciamento</Label>
+            <div className="flex items-center gap-2">
+              <Label>Permitir Refinanciamento</Label>
+              <Tooltip>
+                <TooltipTrigger><HelpCircle className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p><strong>Sim:</strong> Permite criar novos empréstimos baseados em anteriores (refinanciamento).</p>
+                  <p className="mt-2"><strong>Não:</strong> Bloqueia a criação de novos empréstimos para clientes com empréstimos ativos.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Select
               value={formData.allow_refinancing ? "allow" : "disallow"}
               onValueChange={(value) => setFormData({ ...formData, allow_refinancing: value === "allow" })}
@@ -462,5 +571,6 @@ export default function CreditSettingsPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   )
 }
