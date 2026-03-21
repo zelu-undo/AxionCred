@@ -20,6 +20,22 @@ interface InterestRule {
   isActive: boolean;
 }
 
+interface DbInterestRule {
+  id: string;
+  name: string;
+  min_installments: number;
+  max_installments: number;
+  interest_rate: number;
+  interest_type: string;
+  is_active: boolean;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+type SelectValue = 'percentage' | 'fixed' | 'none';
+type LateInterestChargeType = 'daily' | 'weekly' | 'monthly';
+
 interface SystemConfig {
   lateFeeType: 'percentage' | 'fixed' | null;
   lateFeeValue: number;
@@ -72,13 +88,13 @@ export default function BusinessRulesPage() {
         if (rulesError) throw rulesError
         
         if (rulesData) {
-          setInterestRules(rulesData.map((r: any) => ({
+          setInterestRules(rulesData.map((r: DbInterestRule) => ({
             id: r.id,
             name: r.name,
             minInstallments: r.min_installments,
             maxInstallments: r.max_installments,
             interestRate: r.interest_rate,
-            interestType: r.interest_type || 'monthly',
+            interestType: (r.interest_type || 'monthly') as 'fixed' | 'weekly' | 'monthly',
             isActive: r.is_active !== false
           })))
         }
@@ -102,9 +118,9 @@ export default function BusinessRulesPage() {
             lateInterestChargeType: lateFeeData.late_interest_charge_type || 'daily'
           }))
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching data:", err)
-        setError(err.message)
+        setError(err instanceof Error ? err.message : 'Erro desconhecido')
       } finally {
         setLoading(false)
       }
@@ -157,18 +173,18 @@ export default function BusinessRulesPage() {
         .order("min_installments", { ascending: true })
       
       if (data) {
-        setInterestRules(data.map((r: any) => ({
+        setInterestRules(data.map((r: DbInterestRule) => ({
           id: r.id,
           name: r.name,
           minInstallments: r.min_installments,
           maxInstallments: r.max_installments,
           interestRate: r.interest_rate,
-          interestType: r.interest_type || 'monthly',
+          interestType: (r.interest_type || 'monthly') as 'fixed' | 'weekly' | 'monthly',
           isActive: r.is_active !== false
         })))
       }
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message })
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro desconhecido' })
     }
     
     setNewRule({}); setIsAddingNew(false);
@@ -188,8 +204,8 @@ export default function BusinessRulesPage() {
 
       setMessage({ type: 'success', text: 'Faixa excluída com sucesso!' })
       setInterestRules(prev => prev.filter(r => r.id !== id))
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message })
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro desconhecido' })
     }
     setTimeout(() => setMessage(null), 3000)
   };
@@ -226,8 +242,8 @@ export default function BusinessRulesPage() {
 
       setMessage({ type: 'success', text: 'Faixa atualizada com sucesso!' })
       setInterestRules(prev => prev.map(r => r.id === editingId ? ruleToUpdate : r))
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message })
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro desconhecido' })
     }
 
     setEditingId(null); setEditingRule({});
@@ -248,8 +264,8 @@ export default function BusinessRulesPage() {
 
       setInterestRules(prev => prev.map(r => r.id === rule.id ? { ...r, isActive: newStatus } : r))
       setMessage({ type: 'success', text: `Faixa ${newStatus ? 'ativada' : 'desativada'} com sucesso!` })
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message })
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro desconhecido' })
     }
     setTimeout(() => setMessage(null), 3000)
   };
@@ -294,8 +310,8 @@ export default function BusinessRulesPage() {
       }
 
       setMessage({ type: 'success', text: 'Configurações de multa salvas!' })
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message })
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro desconhecido' })
     }
     setTimeout(() => setMessage(null), 3000)
   };
@@ -573,7 +589,7 @@ export default function BusinessRulesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-2 block">Tipo</label>
-                <Select value={isLateFeeEnabled(config) ? config.lateFeeType! : 'none'} onValueChange={(v: any) => setConfig({...config, lateFeeType: v === 'none' ? null : v as 'percentage' | 'fixed', lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
+                <Select value={isLateFeeEnabled(config) ? config.lateFeeType! : 'none'} onValueChange={(v: SelectValue) => setConfig({...config, lateFeeType: v === 'none' ? null : v as 'percentage' | 'fixed', lateFeeValue: v === 'none' ? 0 : config.lateFeeValue})}>
                   <SelectTrigger className="bg-white border-gray-200/60 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
                     <SelectValue placeholder="Nenhuma" />
                   </SelectTrigger>
@@ -603,7 +619,7 @@ export default function BusinessRulesPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-2 block">Tipo</label>
-                <Select value={isLateInterestEnabled(config) ? config.lateInterestType! : 'none'} onValueChange={(v: any) => setConfig({...config, lateInterestType: v === 'none' ? null : v as 'percentage' | 'fixed', lateInterestValue: v === 'none' ? 0 : config.lateInterestValue})}>
+                <Select value={isLateInterestEnabled(config) ? config.lateInterestType! : 'none'} onValueChange={(v: SelectValue) => setConfig({...config, lateInterestType: v === 'none' ? null : v as 'percentage' | 'fixed', lateInterestValue: v === 'none' ? 0 : config.lateInterestValue})}>
                   <SelectTrigger className="bg-white border-gray-200/60 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
@@ -627,7 +643,7 @@ export default function BusinessRulesPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-2 block">Cobrar</label>
-                <Select value={config.lateInterestChargeType} onValueChange={(v: any) => setConfig({...config, lateInterestChargeType: v})}>
+                <Select value={config.lateInterestChargeType} onValueChange={(v: LateInterestChargeType) => setConfig({...config, lateInterestChargeType: v})}>
                   <SelectTrigger className="bg-white border-gray-200/60 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
                     <SelectValue />
                   </SelectTrigger>
