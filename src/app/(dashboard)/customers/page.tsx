@@ -229,33 +229,58 @@ export default function CustomersPage() {
     setCepError("")
   }
 
-  // Consulta CEP via ViaCEP
+  // Consulta CEP via ViaCEP (with fallback and timeout)
   const handleCepChange = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, "")
     setNewCustomer({ ...newCustomer, cep })
 
-    if (cleanCep.length === 8) {
-      setIsLoadingCep(true)
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-        const data = await response.json()
+    if (cleanCep.length !== 8) return
 
-        if (!data.erro) {
-          setNewCustomer((prev) => ({
-            ...prev,
-            cep: cleanCep,
-            street: data.logradouro || "",
-            // Don't auto-fill complement - it causes confusion
-            neighborhood: data.bairro || "",
-            city: data.localidade || "",
-            state: data.uf || "",
-          }))
+    setIsLoadingCep(true)
+    
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    
+    try {
+      let data = null
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, {
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+        data = await response.json()
+      } catch {
+        clearTimeout(timeoutId)
+        const fallbackController = new AbortController()
+        const fallbackTimeout = setTimeout(() => fallbackController.abort(), 5000)
+        
+        const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${cleanCep}`, {
+          signal: fallbackController.signal
+        })
+        clearTimeout(fallbackTimeout)
+        const apiData = await response.json()
+        data = {
+          logradouro: apiData.street || apiData.address || "",
+          bairro: apiData.neighborhood || "",
+          locality: apiData.city || "",
+          uf: apiData.state || ""
         }
-      } catch (error) {
-        console.error("Erro ao buscar CEP:", error)
-      } finally {
-        setIsLoadingCep(false)
       }
+
+      if (data && !data.erro) {
+        setNewCustomer((prev) => ({
+          ...prev,
+          cep: cleanCep,
+          street: data.logradouro || data.street || "",
+          neighborhood: data.bairro || data.neighborhood || "",
+          city: data.localidade || data.city || "",
+          state: data.uf || data.state || "",
+        }))
+      }
+    } catch (error) {
+      console.error("Erro ao buscar CEP:", error)
+    } finally {
+      setIsLoadingCep(false)
     }
   }
 
