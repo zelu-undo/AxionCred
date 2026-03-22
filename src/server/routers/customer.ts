@@ -74,7 +74,13 @@ export const customerRouter = router({
         let query = ctx.supabase
           .from("customers")
           .select("*", { count: "exact" })
-          .eq("tenant_id", ctx.tenantId!)
+        
+        // Only filter by tenant if we have a valid one
+        if (ctx.tenantId) {
+          query = query.eq("tenant_id", ctx.tenantId)
+        }
+        
+        query = query
           .or(`name.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
           .order("created_at", { ascending: false })
 
