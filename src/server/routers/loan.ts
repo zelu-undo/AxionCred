@@ -440,6 +440,25 @@ export const loanRouter = router({
         .update({ remaining_amount: total_amount })
         .eq("id", loan.id)
 
+      // Check and update overdue installments and loan status
+      await ctx.supabase.rpc("check_overdue_installments")
+      await ctx.supabase.rpc("update_loan_status_from_late_installments")
+
+      // Direct update to ensure late status is set for this loan
+      const { data: lateInstallments } = await ctx.supabase
+        .from("loan_installments")
+        .select("loan_id")
+        .eq("loan_id", loan.id)
+        .eq("status", "late")
+        .limit(1)
+      
+      if (lateInstallments && lateInstallments.length > 0) {
+        await ctx.supabase
+          .from("loans")
+          .update({ status: "late" })
+          .eq("id", loan.id)
+      }
+
       // Log event
       await ctx.supabase.from("customer_events").insert({
         customer_id,
