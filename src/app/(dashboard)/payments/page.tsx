@@ -83,6 +83,26 @@ interface LoanDetails {
   installments: Installment[]
 }
 
+// Type for loan search results
+interface LoanSearchResult {
+  id: string
+  contract_number: string | null
+  principal_amount: number
+  total_amount: number
+  paid_amount: number
+  remaining_amount: number
+  installments_count: number
+  paid_installments: number
+  status: string
+  created_at: string
+  customer: {
+    id: string
+    name: string | null
+    document: string | null
+    phone: string | null
+  } | null
+}
+
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -131,7 +151,7 @@ export default function PaymentsPage() {
   const debouncedLoanSearch = useDebounce(loanSearch, 400)
   
   // Fetch loans for payment
-  const { data: loansData, isLoading: loadingLoans } = trpc.loan.searchForPayment.useQuery({
+  const { data: loansData, isLoading: loadingLoans } = trpc.loan.searchForPayment.useQuery<LoanSearchResult[]>({
     search: debouncedLoanSearch || undefined,
   }, {
     enabled: isRegisterOpen,
