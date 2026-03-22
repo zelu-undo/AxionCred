@@ -266,10 +266,17 @@ export const loanRouter = router({
         .select("*")
         .eq("tenant_id", ctx.tenantId)
         .eq("is_active", true)
-        .lte("installments_min", installments_count)
-        .gte("installments_max", installments_count)
-        .order("priority", { ascending: false })
+        .lte("min_installments", installments_count)
+        .gte("max_installments", installments_count)
         .limit(1)
+
+      // Debug log
+      console.log("Looking for interest rule:", {
+        tenantId: ctx.tenantId,
+        installments_count,
+        rulesFound: rules,
+        error: ruleError
+      })
 
       if (ruleError || !rules || rules.length === 0) {
         throw new TRPCError({
