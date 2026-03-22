@@ -279,3 +279,110 @@ export interface CustomRole {
   created_at: string
   updated_at: string
 }
+
+// ============================================
+// Additional Types for frontend components
+// ============================================
+
+export interface InterestRule {
+  id: string
+  tenant_id: string
+  name: string
+  min_installments: number
+  max_installments: number
+  interest_rate: number
+  interest_type: "monthly" | "annual" | "flat"
+  created_at: string
+}
+
+export interface LateFeeConfig {
+  tenant_id: string
+  enabled: boolean
+  fixed_fee?: number
+  percentage?: number
+  daily_interest?: number
+  max_days?: number
+}
+
+export interface BusinessRules {
+  tenant_id: string
+  interestRules?: InterestRule[]
+  lateFeeConfig?: LateFeeConfig
+  lateInterestConfig?: LateFeeConfig
+  maxBoxPercentage?: number
+  minScoreForApproval?: number
+  clientLimitMandatory?: boolean
+  blockOnLowScore?: boolean
+  maxActiveLoansPerCustomer?: number
+}
+
+export interface AlertPayment {
+  id: string
+  loan_id: string
+  installment_id: string
+  customer_id: string
+  customer_name: string
+  amount: number
+  due_date: string
+  status: "pending" | "late" | "paid"
+}
+
+export interface AlertData {
+  payments: AlertPayment[]
+  total_amount: number
+  count: number
+}
+
+export interface PaymentRecord {
+  id: string
+  loan_id: string
+  customer_id: string
+  customer_name: string
+  installment_number: number
+  amount: number
+  paid_amount?: number
+  due_date: string
+  paid_date?: string
+  status: InstallmentStatus
+  method?: PaymentMethod
+}
+
+export interface Guarantor {
+  id: string
+  tenant_id: string
+  name: string
+  document?: string
+  document_type?: string
+  phone?: string
+  email?: string
+  address?: string
+  guarantee_type: "property" | "vehicle" | "personal" | "payroll"
+  property_address?: string
+  property_type?: string
+  property_value?: number
+  vehicle_brand?: string
+  vehicle_model?: string
+  vehicle_year?: string
+  vehicle_plate?: string
+  vehicle_value?: number
+  linked_loan_id?: string
+  status: "active" | "inactive"
+  notes?: string
+  created_at: string
+}
+
+export interface Renegotiation {
+  id: string
+  tenant_id: string
+  loan_id: string
+  renegotiation_date: string
+  original_total_amount: number
+  original_installments_count: number
+  new_total_amount: number
+  new_installments_count: number
+  new_installment_amount: number
+  interest_rate?: number
+  status: "pending" | "approved" | "rejected" | "cancelled"
+  notes?: string
+  created_at: string
+}

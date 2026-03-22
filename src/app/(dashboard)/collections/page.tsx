@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Search, Phone, MessageCircle, AlertCircle, CheckCircle, Clock, Loader2 } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import type { AlertPayment } from "@/types"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function CollectionsPage() {
@@ -36,7 +37,7 @@ export default function CollectionsPage() {
   })
   
   // Transform API data to collection format
-  const overduePayments = (overdueData?.payments || []).map((p: any) => ({
+  const overduePayments = (overdueData?.payments || []).map((p: AlertPayment) => ({
     id: p.id,
     customer: p.customer_name,
     phone: p.customer_phone || "",
@@ -46,7 +47,7 @@ export default function CollectionsPage() {
     loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
   }))
   
-  const todayPayments = (todayData?.payments || []).map((p: any) => ({
+  const todayPayments = (todayData?.payments || []).map((p: AlertPayment) => ({
     id: p.id,
     customer: p.customer_name,
     phone: p.customer_phone || "",

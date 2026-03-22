@@ -48,6 +48,7 @@ import {
   Loader2
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
+import type { Renegotiation } from "@/types"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 // Demo data for renegotiations
@@ -145,7 +146,7 @@ export default function RenegotiationsPage() {
   
   const renegotiations = renegotiationsData?.renegotiations || []
 
-  const filteredRenegotiations = renegotiations.filter((r: any) => {
+  const filteredRenegotiations = renegotiations.filter((r: Renegotiation) => {
     const customerName = r.loan?.customer?.name || ""
     const customerDoc = r.loan?.customer?.document || ""
     const matchesSearch = 

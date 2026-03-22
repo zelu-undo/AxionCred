@@ -10,6 +10,7 @@ import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, AlertCircle } from
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import { useLoanCalculator, type InterestType } from "@/hooks/use-loan-calculator"
+import type { Customer, InterestRule } from "@/types"
 
 interface InstallmentPreview {
   number: number
@@ -119,7 +120,7 @@ export default function NewLoanPage() {
     const rules = businessRulesData?.interestRules || []
     
     const rule = rules.find(
-      (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
+      (rule: InterestRule) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
     
     // Default interest rate if no rule found: 5% monthly
@@ -350,7 +351,7 @@ export default function NewLoanPage() {
                         Carregando...
                       </div>
                     ) : (
-                      customers.map((customer: any) => (
+                      customers.map((customer: Customer) => (
                         <div
                           key={customer.id}
                           className={`p-3 cursor-pointer hover:bg-green-50 border-b last:border-b-0 ${
@@ -435,7 +436,7 @@ export default function NewLoanPage() {
                       
                       if (rules.length > 0) {
                         // Find ranges and adjust to nearest valid
-                        const ranges = rules.map((r: any) => ({
+                        const ranges = rules.map((r: InterestRule) => ({
                           min: r.min_installments,
                           max: r.max_installments
                         }))
@@ -466,7 +467,7 @@ export default function NewLoanPage() {
                   {/* Show available ranges */}
                   <p className="text-xs text-gray-500">
                     {businessRulesData?.interestRules?.length ? (
-                      <>Faixas disponíveis: {businessRulesData.interestRules.map((r: any) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
+                      <>Faixas disponíveis: {businessRulesData.interestRules.map((r: InterestRule) => `${r.min_installments}-${r.max_installments}x`).join(", ")}</>
                     ) : (
                       "Máximo: 12x"
                     )}

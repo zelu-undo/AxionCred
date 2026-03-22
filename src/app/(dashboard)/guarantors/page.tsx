@@ -45,6 +45,7 @@ import {
   Loader2
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
+import type { Guarantor } from "@/types"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 // Demo data for guarantors
@@ -176,7 +177,7 @@ export default function GuarantorsPage() {
   })
   
   const guarantors = guarantorsData?.guarantors || []
-  const filteredGuarantors = guarantors.filter((g: any) => 
+  const filteredGuarantors = guarantors.filter((g: Guarantor) => 
     g.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     g.document?.includes(searchQuery) ||
     g.email?.toLowerCase().includes(searchQuery.toLowerCase())

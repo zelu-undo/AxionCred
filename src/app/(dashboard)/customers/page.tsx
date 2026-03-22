@@ -204,10 +204,10 @@ export default function CustomersPage() {
       } else {
         setCpfError("")
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao verificar CPF:", error)
       // Don't block submission on network errors - just warn
-      setCpfError(error.message ? `Aviso: ${error.message}` : "")
+      setCpfError((error as Error).message ? `Aviso: ${(error as Error).message}` : "")
     } finally {
       setIsCheckingCpf(false)
     }
@@ -467,7 +467,7 @@ export default function CustomersPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     <AnimatePresence>
-                      {customers.map((customer: Customer, index) => (
+                      {customers.map((customer: Customer, index: number) => (
                         <motion.tr 
                           key={customer.id} 
                           className="

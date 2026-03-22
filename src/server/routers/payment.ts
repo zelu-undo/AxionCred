@@ -1,9 +1,11 @@
 import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/types/supabase"
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
-async function logCustomerEvent(supabase: any, customerId: string, type: string, description: string) {
+async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: string, type: string, description: string) {
   try {
     await supabase.from("customer_events").insert({
       customer_id: customerId,
@@ -110,7 +112,7 @@ export const paymentRouter = router({
       
       // Filtrar por status (late inclui pending com vencimento < hoje)
       if (status && status !== "all") {
-        installments = installments.filter((inst: any) => {
+        installments = installments.filter((inst) => {
           const instStatus = inst.status
           
           if (status === "late") {
@@ -125,20 +127,20 @@ export const paymentRouter = router({
       
       // Filtrar hoje
       if (todayOnly) {
-        installments = installments.filter((inst: any) => 
+        installments = installments.filter((inst) => 
           inst.due_date === today || inst.paid_date === today
         )
       }
       
       // Filtrar atrasados
       if (overdueOnly) {
-        installments = installments.filter((inst: any) => 
+        installments = installments.filter((inst) => 
           inst.status === "late" || (inst.status === "pending" && inst.due_date < today)
         )
       }
 
       // Formata os dados para o frontend
-      const payments = installments.map((inst: any) => ({
+      const payments = installments.map((inst) => ({
         id: inst.id,
         customer_name: inst.loan?.customer?.name || "-",
         customer_document: inst.loan?.customer?.document || "-",
@@ -584,26 +586,26 @@ export const paymentRouter = router({
     ])
 
     // Handle nested installments structure from new query format
-    const todayToReceive = todayResult.data?.reduce((sum: number, loan: any) => {
+    const todayToReceive = todayResult.data?.reduce((sum: number, loan: unknown) => {
       const installments = loan.installments || []
-      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+      return sum + installments.reduce((s: number, i: unknown) => s + Number(i.amount || 0), 0)
     }, 0) || 0
-    const todayCount = todayResult.data?.reduce((sum: number, loan: any) => {
+    const todayCount = todayResult.data?.reduce((sum: number, loan: unknown) => {
       return sum + (loan.installments?.length || 0)
     }, 0) || 0
     const monthReceived = monthResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
-    const overdueAmount = overdueResult.data?.reduce((sum: number, loan: any) => {
+    const overdueAmount = overdueResult.data?.reduce((sum: number, loan: unknown) => {
       const installments = loan.installments || []
-      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+      return sum + installments.reduce((s: number, i: unknown) => s + Number(i.amount || 0), 0)
     }, 0) || 0
-    const overdueCount = overdueResult.data?.reduce((sum: number, loan: any) => {
+    const overdueCount = overdueResult.data?.reduce((sum: number, loan: unknown) => {
       return sum + (loan.installments?.length || 0)
     }, 0) || 0
-    const upcomingAmount = upcomingResult.data?.reduce((sum: number, loan: any) => {
+    const upcomingAmount = upcomingResult.data?.reduce((sum: number, loan: unknown) => {
       const installments = loan.installments || []
-      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+      return sum + installments.reduce((s: number, i: unknown) => s + Number(i.amount || 0), 0)
     }, 0) || 0
-    const upcomingCount = upcomingResult.data?.reduce((sum: number, loan: any) => {
+    const upcomingCount = upcomingResult.data?.reduce((sum: number, loan: unknown) => {
       return sum + (loan.installments?.length || 0)
     }, 0) || 0
 

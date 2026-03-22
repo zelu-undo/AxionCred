@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
+import type { PaymentRecord } from "@/types"
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -173,7 +174,7 @@ export default function PaymentsPage() {
   })
   
   // Use real payments data from API (already filtered by server)
-  const paginatedPayments: PaymentRecord[] = paymentsData?.payments?.map((p: any) => ({
+  const paginatedPayments: PaymentRecord[] = paymentsData?.payments?.map((p) => ({
     id: p.id,
     customer_name: p.customer_name,
     customer_document: p.customer_document,

@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { LucideIcon } from "lucide-react"
 import { trpc } from "@/trpc/client"
+import type { Customer, CustomerEvent, CustomerStatus } from "@/types"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
 import { motion } from "framer-motion"
@@ -94,14 +96,14 @@ export default function CustomerDetailPage() {
   })
 
   // Priority configuration
-  const priorityConfig: Record<number, { label: string; color: string; icon: any; bg: string; text: string }> = {
+  const priorityConfig: Record<number, { label: string; color: string; icon: LucideIcon; bg: string; text: string }> = {
     1: { label: "Alta", color: "red", icon: AlertTriangle, bg: "bg-red-100", text: "text-red-700" },
     2: { label: "Média", color: "yellow", icon: Clock, bg: "bg-yellow-100", text: "text-yellow-700" },
     3: { label: "Baixa", color: "green", icon: CheckCircle, bg: "bg-green-100", text: "text-green-700" },
   }
 
   // Payment status configuration  
-  const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  const statusConfig: Record<string, { label: string; color: string; icon: LucideIcon }> = {
     em_dia: { label: "Em Dia", color: "green", icon: CheckCircle },
     atencao: { label: "Atenção", color: "yellow", icon: Clock },
     inadimplente: { label: "Inadimplente", color: "red", icon: AlertTriangle },
@@ -481,7 +483,7 @@ export default function CustomerDetailPage() {
           <CardContent>
             {events && events.length > 0 ? (
               <div className="space-y-3">
-                {events.map((event: any) => (
+                {events.map((event: CustomerEvent) => (
                   <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                     <History className="h-4 w-4 text-gray-400 mt-1" />
                     <div>
@@ -540,7 +542,7 @@ export default function CustomerDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                  <Select value={formData.status} onValueChange={(value: CustomerStatus) => setFormData({ ...formData, status: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o status" />
                     </SelectTrigger>

@@ -16,6 +16,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import type { Loan } from "@/types"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -204,7 +205,7 @@ export default function LoansPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     <AnimatePresence>
-                      {displayLoans.map((loan: any, index: number) => (
+                      {displayLoans.map((loan: Loan, index: number) => (
                         <motion.tr 
                           key={loan.id} 
                           className="

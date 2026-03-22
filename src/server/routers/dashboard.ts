@@ -1,5 +1,6 @@
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import type { Loan, Customer } from "@/types"
 
 // Dashboard router - provides statistics for dashboard
 export const dashboardRouter = router({
@@ -123,7 +124,7 @@ export const dashboardRouter = router({
 
       // Group overdue by customer
       const customerOverdueMap = new Map<string, { name: string; count: number; amount: number }>()
-      overdueCustomers?.forEach((inst: any) => {
+      overdueCustomers?.forEach((inst) => {
         const customerId = inst.loan?.customer_id
         if (customerId) {
           const existing = customerOverdueMap.get(customerId)
@@ -152,7 +153,7 @@ export const dashboardRouter = router({
           overdue_amount: overdueAmount,
           overdue_count: overdueCount,
         },
-        recentLoans: recentLoans?.map((loan: any) => ({
+        recentLoans: recentLoans?.map((loan) => ({
           id: loan.id,
           name: loan.customer?.name || "Cliente",
           amount: loan.principal_amount,

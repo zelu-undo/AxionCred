@@ -9,6 +9,7 @@ import { ArrowLeft, DollarSign, Calendar, CheckCircle, Clock, AlertCircle, Loade
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import type { LoanInstallment } from "@/types"
 
 export default function LoanDetailPage() {
   const { t } = useI18n()
@@ -242,7 +243,7 @@ export default function LoanDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(loan.installments || []).map((inst: any) => (
+                {(loan.installments || []).map((inst: LoanInstallment) => (
                   <tr key={inst.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">#{inst.installment_number}</td>
                     <td className="px-4 py-3">{formatCurrency(inst.amount)}</td>

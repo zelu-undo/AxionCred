@@ -259,9 +259,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error: null }
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Auth] signIn exception:", error)
-      return { error: { message: error.message || "Erro de conexão. Tente novamente.", code: "TIMEOUT" } }
+      return { error: { message: (error as Error).message || "Erro de conexão. Tente novamente.", code: "TIMEOUT" } }
     }
   }
 
@@ -349,8 +349,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/dashboard")
 
       return { error: null }
-    } catch (error: any) {
-      return { error: { message: error.message || "Erro de conexão", code: "TIMEOUT" } }
+    } catch (error) {
+      return { error: { message: (error as Error).message || "Erro de conexão", code: "TIMEOUT" } }
     }
   }
 

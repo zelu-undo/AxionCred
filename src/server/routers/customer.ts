@@ -1,9 +1,11 @@
 import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/types/supabase"
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
-async function logCustomerEvent(supabase: any, customerId: string, type: string, description: string) {
+async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: string, type: string, description: string) {
   try {
     await supabase.from("customer_events").insert({
       customer_id: customerId,
