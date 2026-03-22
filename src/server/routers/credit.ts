@@ -50,6 +50,8 @@ export const creditRouter = router({
           tenant_id: ctx.tenantId,
           ...input,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'tenant_id'
         })
         .select()
         .single()
