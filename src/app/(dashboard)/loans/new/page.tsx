@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, AlertCircle } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import { showErrorToast } from "@/lib/toast"
 import { useLoanCalculator, type InterestType } from "@/hooks/use-loan-calculator"
 import type { Customer, InterestRule } from "@/types"
 
@@ -61,7 +62,7 @@ export default function NewLoanPage() {
       }, 2000)
     },
     onError: (error) => {
-      alert(error.message)
+      showErrorToast(error.message)
       setIsSubmitting(false)
     }
   })
@@ -126,9 +127,6 @@ export default function NewLoanPage() {
     // Default interest rate if no rule found: 5% monthly
     const interestRate = rule?.interest_rate ?? 5
     const interestType = (rule?.interest_type || 'monthly') as InterestType
-    
-    // Show final result
-    alert(`RESULT: interestRate=${interestRate}, interestType=${interestType}, rule=${JSON.stringify(rule)}`)
 
     // Use centralized calculation from hook
     const calculation = computeLoan(principal, interestRate, numInstallments, interestType)
