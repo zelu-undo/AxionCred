@@ -24,6 +24,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = supabaseServer()
     
+    // Debug: testar query simples sem filtros de tenant
+    const { data: testData, error: testError } = await supabase
+      .from("loans")
+      .select("id, tenant_id")
+      .limit(1)
+    
+    console.log("Test loans:", testData, testError)
+
+    // Se não consegue acessar, talvez seja RLS
+    if (!testData || testData.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Erro: não foi possível acessar os dados. Verifique RLS ou credenciais.",
+        debug: { 
+          test_error: testError?.message,
+          supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "missing",
+          supabase_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "missing"
+        },
+        processed: 0 
+      }, { status: 500 })
+    }
+
     // Primeira etapa: atualizar parcelas que estão com status "pending" mas a data de vencimento já passou para "late"
     console.log("Atualizando parcelas pending para late...")
     const today = new Date().toISOString().split('T')[0]
