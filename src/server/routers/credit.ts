@@ -355,7 +355,10 @@ export const creditRouter = router({
 
       // Caixa - apenas aviso (só mostra se tiver caixa cadastrado)
       const hasCashData = totalIn > 0 || totalOut > 0
-      if (!boxCheck && hasCashData) {
+      const isBoxPositive = availableCash > 0
+      if (!boxCheck && hasCashData && !isBoxPositive) {
+        warnings.push("Caixa negativo. Faça um aporte para continuar.")
+      } else if (!boxCheck && hasCashData) {
         warnings.push("Valor excede caixa utilizável disponível")
       }
 
@@ -562,7 +565,10 @@ export const creditRouter = router({
 
       // Caixa - apenas aviso (só mostra se tiver caixa cadastrado)
       const hasCashData = totalIn > 0 || totalOut > 0
-      if (!boxCheck && hasCashData) {
+      const isBoxPositive = availableCash > 0
+      if (!boxCheck && hasCashData && !isBoxPositive) {
+        warnings.push("Caixa negativo. Faça um aporte para continuar.")
+      } else if (!boxCheck && hasCashData) {
         warnings.push("Valor excede caixa utilizável disponível")
       }
 
