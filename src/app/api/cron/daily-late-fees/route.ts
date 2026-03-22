@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase"
+import { supabaseServer } from "@/server/supabase"
 
 /**
  * API Route para processar juros de mora diariamente
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = createClient()
+    const supabase = supabaseServer()
     
     // Primeira etapa: atualizar parcelas que estão com status "pending" mas a data de vencimento já passou para "late"
     console.log("Atualizando parcelas pending para late...")
