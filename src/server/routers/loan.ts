@@ -372,22 +372,24 @@ export const loanRouter = router({
       const installment_amount = Math.round((total_amount / installments_count) * 100) / 100
 
       // Create loan
+      const loanData = {
+        tenant_id: ctx.tenantId,
+        customer_id,
+        principal_amount,
+        interest_rate,
+        total_amount,
+        paid_amount: 0,
+        remaining_amount: total_amount,
+        installments_count,
+        paid_installments: 0,
+        status: "pending" as const,
+        notes,
+      }
+      
       const { data: loan, error: loanError } = await ctx.supabase
         .from("loans")
-        .insert({
-          tenant_id: ctx.tenantId,
-          customer_id,
-          principal_amount,
-          interest_rate,
-          total_amount,
-          paid_amount: 0,
-          remaining_amount: total_amount,
-          installments_count,
-          paid_installments: 0,
-          status: "pending",
-          notes,
-        })
-        .select()
+        .insert(loanData)
+        .select("*, remaining_amount")
         .single()
 
       if (loanError) {
@@ -424,6 +426,13 @@ export const loanRouter = router({
           message: installmentError.message,
         })
       }
+
+      // Force update remaining_amount after installments are created
+      // This ensures correct value regardless of trigger timing
+      await ctx.supabase
+        .from("loans")
+        .update({ remaining_amount: total_amount })
+        .eq("id", loan.id)
 
       // Log event
       await ctx.supabase.from("customer_events").insert({
