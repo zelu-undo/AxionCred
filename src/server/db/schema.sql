@@ -31,8 +31,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-    -- Clean search term: lowercase and remove accents
-    p_search := COALESCE(p_search, '');
+    -- Clean search term: trim, lowercase, and remove accents
+    p_search := TRIM(COALESCE(p_search, ''));
+    p_search := unaccent(LOWER(p_search));
     
     RETURN QUERY
     SELECT 
@@ -46,8 +47,8 @@ BEGIN
     FROM customers c
     WHERE c.tenant_id = p_tenant_id
     AND (
-        -- Search by name (accent insensitive)
-        unaccent(LOWER(c.name)) LIKE '%' || unaccent(LOWER(p_search)) || '%'
+        -- Search by normalized name (accent insensitive and space-trimmed)
+        COALESCE(c.name_normalized, unaccent(LOWER(c.name))) LIKE '%' || p_search || '%'
         -- OR search by document (normalize both: remove punctuation from search AND from DB)
         OR (
             -- Remove all non-digits from both search and stored document
@@ -72,13 +73,16 @@ AS $$
 DECLARE
     v_count INTEGER;
 BEGIN
-    p_search := COALESCE(p_search, '');
+    -- Clean search term: trim, lowercase, and remove accents
+    p_search := TRIM(COALESCE(p_search, ''));
+    p_search := unaccent(LOWER(p_search));
     
     SELECT COUNT(*) INTO v_count
     FROM customers c
     WHERE c.tenant_id = p_tenant_id
     AND (
-        unaccent(LOWER(c.name)) LIKE '%' || unaccent(LOWER(p_search)) || '%'
+        -- Search by normalized name
+        COALESCE(c.name_normalized, unaccent(LOWER(c.name))) LIKE '%' || p_search || '%'
         OR (
             REGEXP_REPLACE(COALESCE(c.document, ''), '[^0-9]', '', 'g') LIKE '%' || REGEXP_REPLACE(p_search, '[^0-9]', '', 'g') || '%'
         )
@@ -145,6 +149,7 @@ CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    name_normalized VARCHAR(255),
     email VARCHAR(255),
     phone VARCHAR(20) NOT NULL,
     document VARCHAR(20),

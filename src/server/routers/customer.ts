@@ -3,6 +3,7 @@ import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
+import { normalizeName } from "@/lib/utils"
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
 async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: string, type: string, description: string) {
@@ -137,7 +138,7 @@ export const customerRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        name: z.string().min(1),
+        name: z.string().min(4, "Nome deve ter no mínimo 4 caracteres"),
         email: z.string().email().optional(),
         phone: z.string().min(1),
         document: z.string().optional(),
@@ -203,7 +204,8 @@ export const customerRouter = router({
         .from("customers")
         .insert({
           tenant_id: ctx.tenantId,
-          name: input.name,
+          name: input.name.trim(),
+          name_normalized: normalizeName(input.name),
           email: input.email,
           phone: input.phone,
           document: input.document,
@@ -239,7 +241,7 @@ export const customerRouter = router({
     .input(
       z.object({
         id: z.string(),
-        name: z.string().min(1).optional(),
+        name: z.string().min(4, "Nome deve ter no mínimo 4 caracteres").optional(),
         email: z.string().email().optional().nullable(),
         phone: z.string().min(1).optional(),
         document: z.string().optional(),
@@ -258,6 +260,12 @@ export const customerRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...updates } = input
+
+      // Normalizar nome se estiver sendo atualizado
+      if (updates.name) {
+        updates.name = updates.name.trim()
+        ;(updates as any).name_normalized = normalizeName(updates.name)
+      }
 
       // Get current customer data for audit
       const { data: current } = await ctx.supabase

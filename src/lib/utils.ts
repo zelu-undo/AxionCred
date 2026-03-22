@@ -81,3 +81,21 @@ export function getScoreLabel(score: number): string {
   if (score >= 400) return "Regular"
   return "Ruim"
 }
+
+/**
+ * Normaliza um nome removendo acentos e espaços extras
+ * Exemplos:
+ * - "José" → "jose"
+ * - "Vyh " → "vyh"
+ * - "  João  Silva  " → "joao silva"
+ */
+export function normalizeName(name: string): string {
+  if (!name) return ""
+  
+  return name
+    .trim() // Remove espaços no início e fim
+    .replace(/\s+/g, " ") // Remove múltiplos espaços
+    .toLowerCase() // Converte para minúsculas
+    .normalize("NFD") // Decomposição de caracteres acentuados
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacríticos (acentos)
+}
