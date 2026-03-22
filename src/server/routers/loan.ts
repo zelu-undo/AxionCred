@@ -261,6 +261,8 @@ export const loanRouter = router({
       }
 
       // Get interest rule automatically from business rules
+      console.log("Looking for interest rule:", { tenantId: ctx.tenantId, installments_count })
+      
       const { data: rules, error: ruleError } = await ctx.supabase
         .from("interest_rules")
         .select("*")
@@ -269,6 +271,8 @@ export const loanRouter = router({
         .lte("min_installments", installments_count)
         .gte("max_installments", installments_count)
         .limit(1)
+
+      console.log("Interest rules result:", { rules, ruleError })
 
       if (ruleError || !rules || rules.length === 0) {
         throw new TRPCError({

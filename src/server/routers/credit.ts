@@ -353,8 +353,9 @@ export const creditRouter = router({
       let message = "OK"
       const warnings: string[] = []
 
-      // Caixa - apenas aviso
-      if (!boxCheck) {
+      // Caixa - apenas aviso (só mostra se tiver caixa cadastrado)
+      const hasCashData = totalIn > 0 || totalOut > 0
+      if (!boxCheck && hasCashData) {
         warnings.push("Valor excede caixa utilizável disponível")
       }
 
@@ -559,8 +560,9 @@ export const creditRouter = router({
       let message = "OK"
       const warnings: string[] = []
 
-      // Caixa - apenas aviso
-      if (!boxCheck) {
+      // Caixa - apenas aviso (só mostra se tiver caixa cadastrado)
+      const hasCashData = totalIn > 0 || totalOut > 0
+      if (!boxCheck && hasCashData) {
         warnings.push("Valor excede caixa utilizável disponível")
       }
 
