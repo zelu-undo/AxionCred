@@ -72,13 +72,29 @@ export const customerRouter = router({
         .order("created_at", { ascending: false })
 
       if (search) {
-        // Remove punctuation and accents for search
+        // Remove accents from search
         const cleanSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         
+        console.log("Search debug:", { search, cleanSearch })
+        
         if (cleanSearch.length > 0) {
-          // Use lowercase for case-insensitive search - search both name and document
-          const docSearch = search.replace(/[^0-9]/g, '')
-          query = query.or(`name.ilike.%${cleanSearch}%,document.ilike.%${docSearch}%`)
+          // Split search into words and search each one
+          const searchWords = cleanSearch.split(/\s+/).filter(w => w.length > 0)
+          
+          if (searchWords.length > 0) {
+            // Search in name - all words must be present (AND logic)
+            const nameFilters = searchWords.map(word => `name.ilike.%${word}%`)
+            const docSearch = search.replace(/[^0-9]/g, '')
+            
+            console.log("Search filters:", { nameFilters, docSearch })
+            
+            if (docSearch.length > 0) {
+              // Also search by document number
+              query = query.or(`${nameFilters.join(",")},document.ilike.%${docSearch}%`)
+            } else {
+              query = query.or(nameFilters.join(","))
+            }
+          }
         }
       }
 
