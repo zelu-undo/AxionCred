@@ -87,9 +87,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (!installments || installments.length === 0) {
+      // Retornar debug info
       return NextResponse.json({ 
         success: true, 
         message: "Nenhuma parcela atrasada para processar",
+        debug: {
+          data_hoje: today,
+          parcelas_atualizadas: updatedInstallments?.length || 0,
+          query_feita: `status=late E due_date < ${today}`
+        },
         processed: 0 
       })
     }
