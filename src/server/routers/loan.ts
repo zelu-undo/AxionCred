@@ -13,13 +13,31 @@ export const loanRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
+    .output(z.object({
+      loans: z.array(z.any()),
+      total: z.number(),
+    }))
     .query(async ({ ctx, input }) => {
       const { customerId, status, search, limit, offset } = input
 
       let query = ctx.supabase
         .from("loans")
         .select(`
-          *,
+          id,
+          tenant_id,
+          customer_id,
+          principal_amount,
+          interest_rate,
+          total_amount,
+          paid_amount,
+          remaining_amount,
+          installments_count,
+          paid_installments,
+          status,
+          notes,
+          parent_loan_id,
+          created_at,
+          updated_at,
           customer:customers(name, phone)
         `)
         .eq("tenant_id", ctx.tenantId!)
