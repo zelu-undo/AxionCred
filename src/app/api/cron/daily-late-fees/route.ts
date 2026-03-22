@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createSupabaseServerClient } from "@supabase/supabase-js"
+import { createNotification, NotificationTypes } from "@/lib/notifications"
 
 /**
  * API Route para processar juros de mora diariamente
@@ -156,6 +157,34 @@ export async function POST(request: NextRequest) {
 
       if (!updateError) {
         totalProcessed++
+        
+        // Enviar notificação apenas para novas parcelas atrasadas (primeira vez que recebe juros)
+        if (inst.late_fee_applied === 0 && inst.late_interest_applied === 0) {
+          // Buscar nome do cliente
+          const { data: customerData } = await supabase
+            .from("customers")
+            .select("name")
+            .eq("id", inst.loan?.customer_id)
+            .single()
+          
+          const customerName = customerData?.name || "Cliente"
+          
+          // Enviar notificação
+          await createNotification(
+            supabase,
+            inst.loan?.tenant_id,
+            NotificationTypes.PAYMENT_OVERDUE,
+            "Parcela Atrasada",
+            `${customerName} - ${daysLate} dia${daysLate > 1 ? "s" : ""} atrasado - R$ ${newTotal.toLocaleString("pt-BR")}`,
+            { 
+              customerName, 
+              daysLate, 
+              amount: newTotal,
+              installmentId: inst.id,
+              loanId: inst.loan?.id
+            }
+          )
+        }
       }
     }
 
