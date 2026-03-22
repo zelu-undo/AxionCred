@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseServer } from "@/server/supabase"
+import { createClient as createSupabaseServerClient } from "@supabase/supabase-js"
 
 /**
  * API Route para processar juros de mora diariamente
@@ -22,7 +22,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = supabaseServer()
+    // Usar service role key para bypass de RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    
+    const supabase = createSupabaseServerClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
     
     // Debug: testar query simples sem filtros de tenant
     const { data: testData, error: testError } = await supabase
