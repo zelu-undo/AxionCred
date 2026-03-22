@@ -63,34 +63,37 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       const { search, status, limit, offset } = input
 
-      console.log("Customer list query:", { search, status, limit, offset, tenantId: ctx.tenantId })
+      // Se há busca, usa a função RPC com accent-insensitive search
+      if (search && search.trim().length > 0) {
+        const { data, error } = await ctx.supabase.rpc("search_customers", {
+          p_tenant_id: ctx.tenantId,
+          p_search: search.trim(),
+          p_limit: limit,
+          p_offset: offset,
+        })
 
+        if (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message,
+          })
+        }
+
+        // Get total count
+        const { data: countData } = await ctx.supabase.rpc("search_customers_count", {
+          p_tenant_id: ctx.tenantId,
+          p_search: search.trim(),
+        })
+
+        return { customers: data || [], total: countData || 0 }
+      }
+
+      // Sem busca - usa query normal com filtros
       let query = ctx.supabase
         .from("customers")
         .select("*", { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
         .order("created_at", { ascending: false })
-
-      if (search) {
-        // Check if search contains only numbers (CPF search)
-        const isNumberOnly = /^\d+$/.test(search.replace(/[^0-9]/g, ""))
-        const cleanSearch = search.toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-        
-        console.log("Search debug:", { search, cleanSearch, isNumberOnly })
-        
-        if (cleanSearch.length > 0) {
-          if (isNumberOnly) {
-            // Search only by document (CPF)
-            query = query.ilike("document", `%${search}%`)
-          } else {
-            // Search only by name - use unaccent if available
-            // Try using ilike with the cleaned search
-            query = query.or(`name.ilike.%${cleanSearch}%,name.ilike.%${search}%`)
-          }
-        }
-      }
 
       if (status) {
         query = query.eq("status", status)

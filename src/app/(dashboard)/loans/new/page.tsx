@@ -21,8 +21,6 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
-  console.log(">>> NewLoanPage rendered")
-  
   // Get customers with search
   const [customerSearch, setCustomerSearch] = useState("")
   const [showDropdown, setShowDropdown] = useState(false)
@@ -34,7 +32,6 @@ export default function NewLoanPage() {
     const timer = setTimeout(() => {
       // Only search if more than 3 characters
       if (customerSearch.length > 3) {
-        console.log("Debounced search changed to:", customerSearch)
         setDebouncedSearch(customerSearch)
       } else {
         setDebouncedSearch("")
@@ -55,10 +52,6 @@ export default function NewLoanPage() {
   // Show dropdown when input is focused or has content
   const shouldShowDropdown = showDropdown && (customers.length > 0 || customerSearch.length > 0)
   
-  console.log(">>> shouldShowDropdown:", shouldShowDropdown, "showDropdown:", showDropdown, "customers.length:", customers.length, "customerSearch:", customerSearch)
-  
-  console.log("Customers query result:", customersData, "search:", debouncedSearch)
-
   const createMutation = trpc.loan.create.useMutation({
     onSuccess: () => {
       setIsSuccess(true)
@@ -262,17 +255,10 @@ export default function NewLoanPage() {
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments) || 1
     
-    console.log("=== Interest Rate Debug ===")
-    console.log("formData.installments:", formData.installments)
-    console.log("numInstallments:", numInstallments)
-    console.log("businessRulesData:", businessRulesData)
-    
     // Check if rules are available
     const rules = businessRulesData?.interestRules
-    console.log("interestRules:", rules)
     
     if (!rules || rules.length === 0) {
-      console.log("NO RULES FOUND - returning rate: 0")
       return { rate: 0, type: 'monthly' }
     }
     
@@ -280,10 +266,7 @@ export default function NewLoanPage() {
       r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
     )
     
-    console.log("Matched rule:", rule)
-    
     if (!rule) {
-      console.log("NO MATCHING RULE - returning rate: 0")
       return { rate: 0, type: 'monthly' }
     }
     

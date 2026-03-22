@@ -261,7 +261,7 @@ export const loanRouter = router({
       }
 
       // Get interest rule automatically from business rules
-      console.log("Looking for interest rule:", { tenantId: ctx.tenantId, installments_count })
+
       
       const { data: rules, error: ruleError } = await ctx.supabase
         .from("interest_rules")
@@ -272,7 +272,7 @@ export const loanRouter = router({
         .gte("max_installments", installments_count)
         .limit(1)
 
-      console.log("Interest rules result:", { rules, ruleError })
+
 
       if (ruleError || !rules || rules.length === 0) {
         throw new TRPCError({
@@ -440,7 +440,6 @@ export const loanRouter = router({
         })
       } catch (cashError) {
         // Não bloqueia criação do empréstimo se falhar no caixa
-        console.error("Erro ao registrar transação de caixa:", cashError)
       }
 
       return loan
