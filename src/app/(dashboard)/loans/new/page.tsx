@@ -21,6 +21,8 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
+  console.log(">>> NewLoanPage rendered")
+  
   // Get customers with search
   const [customerSearch, setCustomerSearch] = useState("")
   const [showDropdown, setShowDropdown] = useState(false)
@@ -66,10 +68,20 @@ export default function NewLoanPage() {
   const [formData, setFormData] = useState({
     customerId: "",
     principal: "",
-    installments: "6",
+    installments: "",
     firstPaymentDate: new Date().toISOString().split("T")[0],
     monthlyIncome: "",
   })
+  
+  // Debounce for validation
+  const [debouncedPrincipal, setDebouncedPrincipal] = useState("")
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPrincipal(formData.principal)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [formData.principal])
   
   const [preview, setPreview] = useState<{
     monthlyPayment: number
@@ -139,10 +151,10 @@ export default function NewLoanPage() {
   }
 
   useEffect(() => {
-    if (formData.principal && formData.installments && businessRulesData) {
+    if (debouncedPrincipal && formData.installments && businessRulesData) {
       calculateLoan()
     }
-  }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
+  }, [debouncedPrincipal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,15 +194,15 @@ export default function NewLoanPage() {
     }
   }, [selectedCustomer])
 
-  // Validar crédito em tempo real
+  // Validar crédito em tempo real (com debounce)
   const { data: validationData, refetch: refetchValidation } = trpc.credit.validateLoan.useQuery(
     {
       customer_document: selectedCustomerDoc,
-      amount: formData.principal ? parseFloat(formData.principal.replace(/[^0-9]/g, "")) / 100 : 0,
+      amount: debouncedPrincipal ? parseFloat(debouncedPrincipal.replace(/[^0-9]/g, "")) / 100 : 0,
       monthly_income: formData.monthlyIncome ? parseFloat(formData.monthlyIncome.replace(/[^0-9]/g, "")) / 100 : undefined,
     },
     { 
-      enabled: !!selectedCustomerDoc && !!formData.principal && parseFloat(formData.principal.replace(/[^0-9]/g, "")) > 0 
+      enabled: !!selectedCustomerDoc && !!debouncedPrincipal && parseFloat(debouncedPrincipal.replace(/[^0-9]/g, "")) > 0 
     }
   )
 
@@ -383,15 +395,27 @@ export default function NewLoanPage() {
                   <Input
                     type="number"
                     min={1}
+                    placeholder="Número de parcelas"
                     value={formData.installments}
                     onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1
-                      setFormData({ ...formData, installments: String(value) })
+                      const value = e.target.value
+                      if (value === "") {
+                        setFormData({ ...formData, installments: "" })
+                      } else {
+                        const num = parseInt(value) || 1
+                        setFormData({ ...formData, installments: String(num) })
+                      }
                     }}
                     onBlur={() => {
                       // Auto-adjust to nearest valid range
                       const rules = businessRulesData?.interestRules || []
-                      const num = parseInt(formData.installments)
+                      const num = parseInt(formData.installments) || 0
+                      
+                      // If empty or 0, set default
+                      if (!num || num < 1) {
+                        setFormData({ ...formData, installments: rules.length > 0 ? String(rules[0].min_installments) : "1" })
+                        return
+                      }
                       
                       if (rules.length > 0) {
                         // Find ranges and adjust to nearest valid
