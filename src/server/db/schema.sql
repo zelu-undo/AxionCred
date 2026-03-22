@@ -738,7 +738,7 @@ BEGIN
         r.late_interest_type,
         r.late_interest_percentage,
         r.priority
-    FROM loan_interest_rules r
+    FROM interest_rules r
     WHERE r.tenant_id = p_tenant_id
       AND r.is_active = true
       AND p_installments >= r.installments_min 

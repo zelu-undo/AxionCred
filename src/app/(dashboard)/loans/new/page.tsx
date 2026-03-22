@@ -518,16 +518,10 @@ export default function NewLoanPage() {
                     )}
 
                     {/* Informações do Cliente */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <div className="bg-white rounded-lg p-3 border text-center">
                         <div className="text-2xl font-bold text-gray-900">{validationData.active_loans_count || 0}</div>
                         <div className="text-xs text-gray-500">Empréstimos Ativos</div>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border text-center">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {validationData.customer_score || 0}
-                        </div>
-                        <div className="text-xs text-gray-500">Score</div>
                       </div>
                     </div>
 

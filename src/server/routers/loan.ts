@@ -260,21 +260,25 @@ export const loanRouter = router({
         }
       }
 
-      // Get interest rule automatically from business rules (mandatory)
-      const { data: rule, error: ruleError } = await ctx.supabase
-        .rpc("get_applicable_interest_rule", {
-          p_tenant_id: ctx.tenantId,
-          p_installments: installments_count,
-        })
+      // Get interest rule automatically from business rules
+      const { data: rules, error: ruleError } = await ctx.supabase
+        .from("interest_rules")
+        .select("*")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("is_active", true)
+        .lte("installments_min", installments_count)
+        .gte("installments_max", installments_count)
+        .order("priority", { ascending: false })
+        .limit(1)
 
-      if (ruleError || !rule || rule.length === 0) {
+      if (ruleError || !rules || rules.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Nenhuma regra de juros configurada para esta quantidade de parcelas. Configure as regras de juros primeiro.",
         })
       }
 
-      const appliedRule = rule[0]
+      const appliedRule = rules[0]
       const interest_rate = appliedRule.interest_rate
       const interest_type = appliedRule.interest_type
 
@@ -317,24 +321,25 @@ export const loanRouter = router({
       let total_amount: number
       let total_interest: number
 
-      if (interest_rate === 0 || interest_type === "fixed") {
-        // Fixed: taxa fixa aplicada sobre o valor total no ato
-        // Para fixed, a taxa é aplicada uma única vez sobre o principal
-        if (interest_type === "fixed") {
-          total_interest = principal_amount * (interest_rate / 100)
-          total_amount = principal_amount + total_interest
-        } else {
-          // Sem juros
-          total_amount = principal_amount
-        }
-      } else if (interest_type === "weekly") {
-        // Juros semanal (sistema Price com taxa semanal)
+      // No interest - just principal
+      if (interest_rate === 0) {
+        total_interest = 0
+        total_amount = principal_amount
+      } 
+      // Fixed: taxa fixa aplicada uma única vez sobre o principal
+      else if (interest_type === "fixed") {
+        total_interest = principal_amount * (interest_rate / 100)
+        total_amount = principal_amount + total_interest
+      }
+      // Weekly: sistema Price com taxa semanal
+      else if (interest_type === "weekly") {
         const weeklyRate = interest_rate / 100 / 4.33 // ~52 semanas/ano
         const totalWeeks = installments_count * 4
         const factor = Math.pow(1 + weeklyRate, totalWeeks)
         total_amount = (principal_amount * weeklyRate * factor) / (factor - 1)
-      } else {
-        // monthly: sistema Price com taxa mensal
+      }
+      // Monthly (default): sistema Price com taxa mensal
+      else {
         const monthlyRate = interest_rate / 100
         const factor = Math.pow(1 + monthlyRate, installments_count)
         total_amount = (principal_amount * monthlyRate * factor) / (factor - 1)
