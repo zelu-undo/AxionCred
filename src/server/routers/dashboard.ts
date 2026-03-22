@@ -124,7 +124,8 @@ export const dashboardRouter = router({
         .limit(5)
 
       // Get overdue customers (late or pending past due)
-      const { data: overdueCustomers } = await ctx.supabase
+      // First get all late/pending installments
+      const { data: overdueCustomersRaw } = await ctx.supabase
         .from("loan_installments")
         .select(`
           id,
@@ -132,36 +133,51 @@ export const dashboardRouter = router({
           paid_amount,
           due_date,
           status,
-          loan:loans(
-            id,
-            customer_id,
-            tenant_id,
-            customer:customers(name)
-          )
+          loan_id
         `)
-        .eq("loan.tenant_id", ctx.tenantId!)
         .in("status", ["late", "pending"])
         .lt("due_date", today)
         .order("due_date", { ascending: true })
-        .limit(5)
 
-      // Group overdue by customer using a plain object instead of Map
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Get loan and customer details
+      const overdueLoanIds = overdueCustomersRaw?.map(i => i.loan_id).filter(Boolean) || []
+      const { data: overdueLoansData } = overdueLoanIds.length > 0
+        ? await ctx.supabase
+            .from("loans")
+            .select("id, customer_id, tenant_id")
+            .in("id", overdueLoanIds)
+        : { data: [] }
+
+      // Get customer info for valid loans
+      const validOverdueLoans = overdueLoansData?.filter(l => l.tenant_id === ctx.tenantId) || []
+      const customerIds = validOverdueLoans.map(l => l.customer_id).filter(Boolean)
+      const { data: customerData } = customerIds.length > 0
+        ? await ctx.supabase
+            .from("customers")
+            .select("id, name")
+            .in("id", customerIds)
+        : { data: [] }
+
+      const customerMap = new Map(customerData?.map(c => [c.id, c.name]) || [])
+
+      // Build overdue customer list
       const customerOverdueObj = {} as Record<string, { name: string; count: number; amount: number }>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (overdueCustomers as any[])?.forEach((inst: any) => {
-        const customerId = inst.loan?.customer_id
-        if (customerId) {
-          const existing = customerOverdueObj[customerId]
-          const instAmount = (inst.amount || 0) - (inst.paid_amount || 0)
-          if (existing) {
-            existing.count += 1
-            existing.amount += instAmount
-          } else {
-            customerOverdueObj[customerId] = {
-              name: inst.loan?.customer?.name || "Cliente",
-              count: 1,
-              amount: instAmount
+      overdueCustomersRaw?.forEach((inst) => {
+        const loan = validOverdueLoans.find(l => l.id === inst.loan_id)
+        if (loan) {
+          const customerId = loan.customer_id
+          if (customerId) {
+            const existing = customerOverdueObj[customerId]
+            const instAmount = (inst.amount || 0) - (inst.paid_amount || 0)
+            if (existing) {
+              existing.count += 1
+              existing.amount += instAmount
+            } else {
+              customerOverdueObj[customerId] = {
+                name: customerMap.get(customerId) || "Cliente",
+                count: 1,
+                amount: instAmount
+              }
             }
           }
         }
