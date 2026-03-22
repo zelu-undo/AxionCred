@@ -68,9 +68,9 @@ export const customerRouter = router({
 
       // Se há busca, usa query direta com ilike (accent insensitive)
       if (search && search.trim().length > 0) {
-        const searchTerm = search.trim().toLowerCase()
+        const searchTerm = search.trim()
         
-        // Build query with search
+        // Build query with search - using lower() for case-insensitive
         let query = ctx.supabase
           .from("customers")
           .select("*", { count: "exact" })
