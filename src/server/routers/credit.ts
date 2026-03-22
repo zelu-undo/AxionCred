@@ -68,24 +68,25 @@ export const creditRouter = router({
 
   // 3. Obter caixa do tenant
   getCashFlow: protectedProcedure.query(async ({ ctx }) => {
-    // Calcular caixa em tempo real
-    const { data: payments } = await ctx.supabase
-      .from("payment_transactions")
+    // Calcular caixa em tempo real usando cash_transactions
+    const { data: cashIn } = await ctx.supabase
+      .from("cash_transactions")
       .select("amount")
       .eq("tenant_id", ctx.tenantId)
+      .eq("type", "in")
       .eq("status", "completed")
 
-    const { data: loans } = await ctx.supabase
-      .from("loans")
-      .select("amount, status, customer_document")
+    const { data: cashOut } = await ctx.supabase
+      .from("cash_transactions")
+      .select("amount")
       .eq("tenant_id", ctx.tenantId)
-      .in("status", ["active", "overdue", "paid"])
+      .eq("type", "out")
+      .eq("status", "completed")
 
-    const totalReceived = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-    const totalDisbursed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+    const totalIn = cashIn?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+    const totalOut = cashOut?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
-    const grossCash = totalReceived - totalDisbursed
-    const availableCash = Math.max(0, grossCash)
+    const availableCash = totalIn - totalOut
 
     // Buscar configuração de %
     const { data: settings } = await ctx.supabase
@@ -98,9 +99,9 @@ export const creditRouter = router({
     const usableCash = availableCash * (maxPercentage / 100)
 
     return {
-      total_received: totalReceived,
-      total_disbursed: totalDisbursed,
-      gross_cash: grossCash,
+      total_received: totalIn,
+      total_disbursed: totalOut,
+      gross_cash: availableCash,
       available_cash: availableCash,
       usable_cash: usableCash,
     }
@@ -290,25 +291,33 @@ export const creditRouter = router({
         .eq("tenant_id", ctx.tenantId)
         .single()
 
-      // Calcular caixa
-      const { data: payments } = await ctx.supabase
-        .from("payment_transactions")
+      // Calcular caixa usando cash_transactions (sistema de gestão de caixa)
+      const { data: cashIn } = await ctx.supabase
+        .from("cash_transactions")
         .select("amount")
         .eq("tenant_id", ctx.tenantId)
+        .eq("type", "in")
         .eq("status", "completed")
 
+      const { data: cashOut } = await ctx.supabase
+        .from("cash_transactions")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("type", "out")
+        .eq("status", "completed")
+
+      const totalIn = cashIn?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+      const totalOut = cashOut?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+
+      const availableCash = totalIn - totalOut
+      const usableCash = availableCash * ((settings?.max_box_percentage || 80) / 100)
+
+      // Buscar loans do cliente para calcular limite
       const { data: loans } = await ctx.supabase
         .from("loans")
-        .select("amount, status, customer_document")
+        .select("amount, customer_document, status")
         .eq("tenant_id", ctx.tenantId)
-        .in("status", ["active", "overdue", "paid"])
-
-      const totalReceived = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-      const totalDisbursed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
-
-      const grossCash = totalReceived - totalDisbursed
-      const availableCash = Math.max(0, grossCash)
-      const usableCash = availableCash * ((settings?.max_box_percentage || 80) / 100)
+        .in("status", ["active", "overdue"])
 
       // Buscar score
       const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
@@ -487,25 +496,33 @@ export const creditRouter = router({
         }
       }
 
-      // Calcular caixa
-      const { data: payments } = await ctx.supabase
-        .from("payment_transactions")
+      // Calcular caixa usando cash_transactions
+      const { data: cashIn } = await ctx.supabase
+        .from("cash_transactions")
         .select("amount")
         .eq("tenant_id", ctx.tenantId)
+        .eq("type", "in")
         .eq("status", "completed")
 
+      const { data: cashOut } = await ctx.supabase
+        .from("cash_transactions")
+        .select("amount")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("type", "out")
+        .eq("status", "completed")
+
+      const totalIn = cashIn?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+      const totalOut = cashOut?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+
+      const availableCash = totalIn - totalOut
+      const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
+
+      // Buscar loans do cliente para calcular limite
       const { data: loans } = await ctx.supabase
         .from("loans")
-        .select("amount, status, customer_document")
+        .select("amount, customer_document, status")
         .eq("tenant_id", ctx.tenantId)
-        .in("status", ["active", "overdue", "paid"])
-
-      const totalReceived = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-      const totalDisbursed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
-
-      const grossCash = totalReceived - totalDisbursed
-      const availableCash = Math.max(0, grossCash)
-      const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
+        .in("status", ["active", "overdue"])
 
       // Buscar score
       const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {

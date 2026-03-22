@@ -63,6 +63,8 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       const { search, status, limit, offset } = input
 
+      console.log("Customer list query:", { search, status, limit, offset, tenantId: ctx.tenantId })
+
       let query = ctx.supabase
         .from("customers")
         .select("*", { count: "exact" })
