@@ -336,33 +336,36 @@ export const creditRouter = router({
       const scoreCheck = finalScore >= (settings?.min_score_for_approval || 500)
       const maxLoansCheck = activeLoansCount < (settings?.max_active_loans_per_customer || 5)
 
-      // Decisão
+      // Decisão - caixa não bloqueia mais, apenas avisos
       let isValid = true
       let canOverride = true
       let message = "OK"
+      const warnings: string[] = []
 
+      // Caixa - apenas aviso
       if (!boxCheck) {
-        isValid = false
-        if (settings?.block_on_box_limit !== false) {
-          canOverride = false
-          message = "Bloqueado: Caixa insuficiente"
-        } else {
-          message = "Aviso: Valor excede caixa utilizável"
-        }
+        warnings.push("Valor excede caixa utilizável disponível")
       }
 
+      // Cliente limite - pode bloquear
       if (!clientLimitCheck && settings?.client_limit_mandatory) {
         isValid = false
         canOverride = false
         message = "Bloqueado: Limite do cliente excedido"
+      } else if (!clientLimitCheck) {
+        warnings.push("Valor excede limite recomendado do cliente")
       }
 
+      // Score - pode bloquear
       if (!scoreCheck && settings?.block_on_low_score) {
         isValid = false
         canOverride = false
         message = "Bloqueado: Score abaixo do mínimo"
+      } else if (!scoreCheck) {
+        warnings.push("Score abaixo do recomendado")
       }
 
+      // Máximo empréstimos
       if (!maxLoansCheck) {
         isValid = false
         canOverride = false
@@ -393,6 +396,7 @@ export const creditRouter = router({
         is_valid: isValid,
         can_override: canOverride,
         message,
+        warnings,
         box_available: availableCash,
         box_utilizable: usableCash,
         client_limit: clientLimit,
@@ -530,20 +534,15 @@ export const creditRouter = router({
       const scoreCheck = finalScore >= (settings.min_score_for_approval || 500)
       const maxLoansCheck = activeLoansCount < (settings.max_active_loans_per_customer || 5)
 
-      // Verificar bloqueios e warnings
+      // Verificar bloqueios e warnings - caixa nunca bloqueia
       let isValid = true
       let canOverride = true
       let message = "OK"
       const warnings: string[] = []
 
+      // Caixa - apenas aviso
       if (!boxCheck) {
-        if (settings.block_on_box_limit) {
-          isValid = false
-          canOverride = false
-          message = "Bloqueado: Caixa insuficiente"
-        } else {
-          warnings.push("Valor excede caixa utilizável")
-        }
+        warnings.push("Valor excede caixa utilizável disponível")
       }
 
       if (!clientLimitCheck) {

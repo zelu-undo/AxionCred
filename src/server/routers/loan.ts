@@ -172,15 +172,10 @@ export const loanRouter = router({
           let isWarning = false
           let warningMessage = ""
 
-          // Verificar caixa
+          // Verificar caixa - apenas aviso, não bloqueia
           if (!boxCheck) {
-            if (settings.block_on_box_limit) {
-              isBlocked = true
-              blockReason = "Caixa insuficiente para este empréstimo"
-            } else {
-              isWarning = true
-              warningMessage = "Valor excede caixa utilizável disponível"
-            }
+            isWarning = true
+            warningMessage = "Valor excede caixa utilizável disponível"
           }
 
           // Verificar limite do cliente

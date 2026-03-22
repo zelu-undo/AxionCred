@@ -101,8 +101,8 @@ export default function CashPage() {
   const [ajusteForm, setAjusteForm] = useState({ valor: "", descricao: "", justificativa: "", positivo: true })
 
   // Character limits
-  const MAX_DESC_LENGTH = 200
-  const MAX_JUST_LENGTH = 500
+  const MAX_DESC_LENGTH = 150
+  const MAX_JUST_LENGTH = 300
 
   // Queries
   const { data: summaryData, refetch: refetchSummary } = trpc.cash.getSummary.useQuery()

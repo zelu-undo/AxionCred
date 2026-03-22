@@ -524,12 +524,10 @@ export default function NewLoanPage() {
                         <div className="text-xs text-gray-500">Empréstimos Ativos</div>
                       </div>
                       <div className="bg-white rounded-lg p-3 border text-center">
-                        <div className={`text-2xl font-bold ${
-                          (validationData.checks?.box ?? true) ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {(validationData.checks?.box ?? true) ? '✓' : '✗'}
+                        <div className="text-2xl font-bold text-gray-900">
+                          {validationData.customer_score || 0}
                         </div>
-                        <div className="text-xs text-gray-500">Caixa Disponível</div>
+                        <div className="text-xs text-gray-500">Score</div>
                       </div>
                     </div>
 
