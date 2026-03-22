@@ -28,6 +28,9 @@ interface InstallmentWithLoan {
   paid_amount: number
   due_date: string
   status: string
+  late_fee_applied: number
+  late_interest_applied: number
+  days_in_delay: number
   loan: {
     id: string
     customer_id: string
