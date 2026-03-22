@@ -125,6 +125,80 @@ export const customerRouter = router({
       return { customers: data || [], total: count || 0 }
     }),
 
+  // Search customers for payment selection
+  searchForPayment: protectedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { search } = input
+
+      let query = ctx.supabase
+        .from("customers")
+        .select(`
+          id,
+          name,
+          document,
+          phone,
+          email
+        `)
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "active")
+        .order("name", { ascending: true })
+        .limit(20)
+
+      if (search && search.length >= 3) {
+        const searchTerm = normalizeName(search).toLowerCase()
+        query = query.or(`name_normalized.ilike.%${searchTerm}%,document.ilike.%${searchTerm}%`)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error("Error searching customers for payment:", error)
+        return []
+      }
+
+      return data || []
+    }),
+
+  // Get loans for a specific customer
+  loansForPayment: protectedProcedure
+    .input(
+      z.object({
+        customerId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase
+        .from("loans")
+        .select(`
+          id,
+          contract_number,
+          principal_amount,
+          total_amount,
+          paid_amount,
+          remaining_amount,
+          installments_count,
+          paid_installments,
+          status,
+          created_at
+        `)
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("customer_id", input.customerId)
+        .in("status", ["active", "late", "pending"])
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Error fetching customer loans for payment:", error)
+        return []
+      }
+
+      return data || []
+    }),
+
   byId: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {

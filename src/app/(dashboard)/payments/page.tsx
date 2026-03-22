@@ -144,17 +144,26 @@ export default function PaymentsPage() {
   const [selectedLoan, setSelectedLoan] = useState<LoanDetails | null>(null)
   const [paymentToReverse, setPaymentToReverse] = useState<PaymentRecord | null>(null)
   
-  // Payment form state - loan selection
-  const [loanSearch, setLoanSearch] = useState("")
+  // Payment form state - customer selection first
+  const [customerSearch, setCustomerSearch] = useState("")
+  const [selectedCustomerId, setSelectedCustomerId] = useState("")
+  const [selectedCustomerName, setSelectedCustomerName] = useState("")
   const [selectedLoanId, setSelectedLoanId] = useState("")
   const [selectedInstallmentId, setSelectedInstallmentId] = useState("")
-  const debouncedLoanSearch = useDebounce(loanSearch, 400)
+  const debouncedCustomerSearch = useDebounce(customerSearch, 400)
   
-  // Fetch loans for payment
-  const { data: loansData, isLoading: loadingLoans } = trpc.loan.searchForPayment.useQuery<LoanSearchResult[]>({
-    search: debouncedLoanSearch || undefined,
+  // Fetch customers for payment
+  const { data: customersData, isLoading: loadingCustomers } = trpc.customer.searchForPayment.useQuery({
+    search: debouncedCustomerSearch || undefined,
   }, {
     enabled: isRegisterOpen,
+  })
+  
+  // Fetch loans when customer is selected
+  const { data: loansData, isLoading: loadingLoans } = trpc.customer.loansForPayment.useQuery({
+    customerId: selectedCustomerId,
+  }, {
+    enabled: !!selectedCustomerId,
   })
   
   // Fetch installments when loan is selected
@@ -300,8 +309,8 @@ export default function PaymentsPage() {
 
   // Handle payment registration
   const handleRegisterPayment = async () => {
-    if (!selectedLoanId || !selectedInstallmentId) {
-      showErrorToast("Selecione um empréstimo e uma parcela")
+    if (!selectedCustomerId || !selectedLoanId || !selectedInstallmentId) {
+      showErrorToast("Selecione o cliente, contrato e parcela")
       return
     }
     
@@ -331,7 +340,9 @@ export default function PaymentsPage() {
       })
       setSelectedInstallmentId("")
       setSelectedLoanId("")
-      setLoanSearch("")
+      setCustomerSearch("")
+      setSelectedCustomerId("")
+      setSelectedCustomerName("")
     } catch (error) {
       // Error is handled by mutation onError
     } finally {
@@ -707,7 +718,9 @@ export default function PaymentsPage() {
         setIsRegisterOpen(open)
         if (!open) {
           // Reset form when modal closes
-          setLoanSearch("")
+          setCustomerSearch("")
+          setSelectedCustomerId("")
+          setSelectedCustomerName("")
           setSelectedLoanId("")
           setSelectedInstallmentId("")
           setPaymentForm({
@@ -725,62 +738,108 @@ export default function PaymentsPage() {
               Registrar Pagamento
             </DialogTitle>
             <DialogDescription>
-              Preencha os dados do pagamento da parcela
+              Preencha os dados do pagamento
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {/* Loan Selection - Real Data */}
+            {/* Step 1: Customer Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Empréstimo / Cliente *</label>
-              <Input
-                placeholder="Pesquisar por contrato, nome ou CPF..."
-                value={loanSearch}
-                onChange={(e) => {
-                  setLoanSearch(e.target.value)
-                  setSelectedLoanId("")
-                  setSelectedInstallmentId("")
-                }}
-                className="w-full"
-              />
-              {loanSearch && (
-                <div className="border rounded-lg max-h-48 overflow-y-auto">
-                  {loadingLoans ? (
-                    <div className="p-3 text-center text-gray-500">Carregando...</div>
-                  ) : loansData && loansData.length > 0 ? (
-                    loansData.map((loan) => (
+              <label className="text-sm font-medium">Cliente *</label>
+              {!selectedCustomerId ? (
+                <>
+                  <Input
+                    placeholder="Pesquisar por nome ou CPF..."
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    className="w-full"
+                  />
+                  {customerSearch && (
+                    <div className="border rounded-lg max-h-48 overflow-y-auto">
+                      {loadingCustomers ? (
+                        <div className="p-3 text-center text-gray-500">Carregando...</div>
+                      ) : customersData && customersData.length > 0 ? (
+                        customersData.map((customer) => (
+                          <button
+                            key={customer.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerId(customer.id)
+                              setSelectedCustomerName(customer.name || 'Cliente')
+                              setCustomerSearch(`${customer.name || 'Cliente'} - CPF: ${customer.document || '-'}`)
+                              setSelectedLoanId("")
+                              setSelectedInstallmentId("")
+                            }}
+                            className="w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors"
+                          >
+                            <div className="font-medium text-sm">
+                              {customer.name || 'Cliente'}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              CPF: {customer.document || '-'}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-3 text-center text-gray-500">Nenhum cliente encontrado</div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <span className="flex-1 text-sm font-medium">{selectedCustomerName}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomerId("")
+                      setSelectedCustomerName("")
+                      setCustomerSearch("")
+                      setSelectedLoanId("")
+                      setSelectedInstallmentId("")
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Alterar
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Step 2: Loan Selection - Show only after customer is selected */}
+            {selectedCustomerId && !selectedLoanId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Contrato *</label>
+                {loadingLoans ? (
+                  <div className="text-gray-500 text-sm">Carregando contratos...</div>
+                ) : loansData && loansData.length > 0 ? (
+                  <div className="border rounded-lg max-h-48 overflow-y-auto">
+                    {loansData.map((loan) => (
                       <button
                         key={loan.id}
                         type="button"
                         onClick={() => {
                           setSelectedLoanId(loan.id)
-                          setLoanSearch(`${loan.contract_number || loan.id.slice(0,8)} - ${loan.customer?.name || 'Cliente'} - CPF: ${loan.customer?.document || '-'}`)
                           setSelectedInstallmentId("")
-                          setPaymentForm({ ...paymentForm, amount: "" })
                         }}
-                        className={`w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors ${
-                          selectedLoanId === loan.id ? "bg-green-50" : ""
-                        }`}
+                        className="w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors"
                       >
                         <div className="font-medium text-sm">
                           {loan.contract_number || loan.id.slice(0,8)}
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {loan.customer?.name || 'Cliente'} - CPF: {loan.customer?.document || '-'}
-                        </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments_count} parcelas
+                          R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments_count} parcelas | Status: {loan.status}
                         </div>
                       </button>
-                    ))
-                  ) : (
-                    <div className="p-3 text-center text-gray-500">Nenhum empréstimo encontrado</div>
-                  )}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-sm">Nenhum contrato ativo encontrado</div>
+                )}
+              </div>
+            )}
             
-            {/* Installment Selection - Show only after loan is selected */}
+            {/* Step 3: Installment Selection - Show only after loan is selected */}
             {selectedLoanId && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Parcela *</label>
@@ -814,74 +873,75 @@ export default function PaymentsPage() {
               </div>
             )}
             
-            {/* Payment Amount */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Valor Pago *</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
-                <Input
-                  type="number"
-                  placeholder="0,00"
-                  value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                  className="pl-10"
-                  disabled={!selectedInstallmentId}
-                />
-              </div>
-              {selectedInstallmentId && (
-                <p className="text-xs text-gray-500">
-                  Valor remaining: R$ {installmentsData?.find(i => i.id === selectedInstallmentId) ? 
-                    ((installmentsData.find(i => i.id === selectedInstallmentId)?.amount || 0) - (installmentsData.find(i => i.id === selectedInstallmentId)?.paid_amount || 0)).toLocaleString('pt-BR') 
-                    : '0'}
-                </p>
-              )}
-            </div>
-            
-            {/* Payment Date */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Data do Pagamento *</label>
-              <Input
-                type="date"
-                value={paymentForm.payment_date}
-                onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
-              />
-            </div>
-            
-            {/* Payment Method */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Método de Pagamento *</label>
-              <div className="grid grid-cols-4 gap-2">
-                {(["cash", "pix", "transfer", "card"] as PaymentMethod[]).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setPaymentForm({ ...paymentForm, payment_method: method })}
-                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                      paymentForm.payment_method === method
-                        ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    {method === "cash" && "💵 Dinheiro"}
-                    {method === "pix" && "⚡ PIX"}
-                    {method === "transfer" && "🏦 Transfer"}
-                    {method === "card" && "💳 Cartão"}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Notes */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Observações</label>
-              <textarea
-                value={paymentForm.notes}
-                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                placeholder="Observações opcionais..."
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] resize-none"
-              />
-            </div>
+            {/* Step 4: Payment Amount - Show after installment is selected */}
+            {selectedInstallmentId && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Valor Pago *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                    <Input
+                      type="number"
+                      placeholder="0,00"
+                      value={paymentForm.amount}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Valor remaining: R$ {installmentsData?.find(i => i.id === selectedInstallmentId) ? 
+                      ((installmentsData.find(i => i.id === selectedInstallmentId)?.amount || 0) - (installmentsData.find(i => i.id === selectedInstallmentId)?.paid_amount || 0)).toLocaleString('pt-BR') 
+                      : '0'}
+                  </p>
+                </div>
+                
+                {/* Payment Date */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data do Pagamento *</label>
+                  <Input
+                    type="date"
+                    value={paymentForm.payment_date}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+                  />
+                </div>
+                
+                {/* Payment Method - Only show after amount and date */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Método de Pagamento</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["cash", "pix", "transfer", "card"] as PaymentMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentForm({ ...paymentForm, payment_method: method })}
+                        className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          paymentForm.payment_method === method
+                            ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        {method === "cash" && "💵 Dinheiro"}
+                        {method === "pix" && "⚡ PIX"}
+                        {method === "transfer" && "🏦 Transfer"}
+                        {method === "card" && "💳 Cartão"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Notes - Only show after payment method */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Observações</label>
+                  <textarea
+                    value={paymentForm.notes}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                    placeholder="Observações opcionais..."
+                    rows={3}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] resize-none"
+                  />
+                </div>
+              </>
+            )}
           </div>
           
           <DialogFooter>
@@ -890,7 +950,7 @@ export default function PaymentsPage() {
             </Button>
             <Button 
               onClick={handleRegisterPayment}
-              disabled={isSubmitting || !selectedLoanId || !selectedInstallmentId || !paymentForm.amount}
+              disabled={isSubmitting || !selectedCustomerId || !selectedLoanId || !selectedInstallmentId || !paymentForm.amount}
               className="bg-[#22C55E] hover:bg-[#16A34A]"
             >
               {isSubmitting ? (
