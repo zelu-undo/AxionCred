@@ -169,6 +169,11 @@ export default function NewLoanPage() {
   }
 
   useEffect(() => {
+    console.log("=== useEffect triggered ===")
+    console.log("debouncedPrincipal:", debouncedPrincipal)
+    console.log("formData.installments:", formData.installments)
+    console.log("businessRulesData:", businessRulesData)
+    
     if (debouncedPrincipal && formData.installments && businessRulesData) {
       calculateLoan()
     }
