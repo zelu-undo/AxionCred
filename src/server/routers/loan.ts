@@ -270,14 +270,6 @@ export const loanRouter = router({
         .gte("max_installments", installments_count)
         .limit(1)
 
-      // Debug log
-      console.log("Looking for interest rule:", {
-        tenantId: ctx.tenantId,
-        installments_count,
-        rulesFound: rules,
-        error: ruleError
-      })
-
       if (ruleError || !rules || rules.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
