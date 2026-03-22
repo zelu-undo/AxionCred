@@ -110,9 +110,11 @@ export default function NewLoanPage() {
   useEffect(() => {
     if (businessRulesData) {
       const rules = businessRulesData.interestRules || []
+      const installments = formData.installments
       alert(`Business rules loaded! 
 interestRules count: ${rules.length}
-Rules: ${rules.map(r => `${r.min_installments}-${r.max_installments}x: ${r.interest_rate}%`).join(', ')}`)
+Rules: ${rules.map(r => `${r.min_installments}-${r.max_installments}x: ${r.interest_rate}% (${typeof r.min_installments})`).join(', ')}
+Current installments: "${installments}" (${typeof installments})`)
     }
   }, [businessRulesData])
   
