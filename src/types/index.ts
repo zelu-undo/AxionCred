@@ -97,6 +97,13 @@ export interface Loan {
   parent_loan_id?: string
   created_at: string
   updated_at: string
+  // For tRPC joined queries
+  customer?: {
+    name?: string
+    document?: string
+    phone?: string
+    email?: string
+  }
 }
 
 export type InstallmentStatus = "pending" | "paid" | "late" | "cancelled"
@@ -385,6 +392,13 @@ export interface Renegotiation {
   status: "pending" | "approved" | "rejected" | "cancelled"
   notes?: string
   created_at: string
+  // For tRPC joined queries
+  loan?: {
+    customer?: {
+      name?: string
+      document?: string
+    }
+  }
 }
 
 // Dashboard-specific types

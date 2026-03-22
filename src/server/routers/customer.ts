@@ -6,7 +6,8 @@ import type { Database } from "@/types/supabase"
 import { normalizeName } from "@/lib/utils"
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
-async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: string, type: string, description: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function logCustomerEvent(supabase: SupabaseClient<any>, customerId: string, type: string, description: string) {
   try {
     await supabase.from("customer_events").insert({
       customer_id: customerId,

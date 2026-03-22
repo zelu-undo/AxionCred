@@ -122,27 +122,29 @@ export const dashboardRouter = router({
         .order("due_date", { ascending: true })
         .limit(5)
 
-      // Group overdue by customer
-      const customerOverdueMap = new Map<string, { name: string; count: number; amount: number }>()
-      overdueCustomers?.forEach((inst) => {
+      // Group overdue by customer using a plain object instead of Map
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const customerOverdueObj = {} as Record<string, { name: string; count: number; amount: number }>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (overdueCustomers as any[])?.forEach((inst: any) => {
         const customerId = inst.loan?.customer_id
         if (customerId) {
-          const existing = customerOverdueMap.get(customerId)
+          const existing = customerOverdueObj[customerId]
           const instAmount = (inst.amount || 0) - (inst.paid_amount || 0)
           if (existing) {
             existing.count += 1
             existing.amount += instAmount
           } else {
-            customerOverdueMap.set(customerId, {
+            customerOverdueObj[customerId] = {
               name: inst.loan?.customer?.name || "Cliente",
               count: 1,
               amount: instAmount
-            })
+            }
           }
         }
       })
 
-      const overdueCustomersList = Array.from(customerOverdueMap.values()).slice(0, 5)
+      const overdueCustomersList = Object.values(customerOverdueObj).slice(0, 5)
 
       return {
         stats: {
@@ -153,7 +155,7 @@ export const dashboardRouter = router({
           overdue_amount: overdueAmount,
           overdue_count: overdueCount,
         },
-        recentLoans: recentLoans?.map((loan) => ({
+        recentLoans: (recentLoans as any[])?.map((loan: any) => ({
           id: loan.id,
           name: loan.customer?.name || "Cliente",
           amount: loan.principal_amount,

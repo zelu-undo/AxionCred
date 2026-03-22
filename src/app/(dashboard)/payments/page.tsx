@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
-import type { PaymentRecord } from "@/types"
 import { trpc } from "@/trpc/client"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useDebounce } from "@/hooks/use-debounce"

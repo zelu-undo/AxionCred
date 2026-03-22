@@ -24,8 +24,17 @@ import {
 import { trpc } from "@/trpc/client";
 import { showSuccessToast, showErrorToast } from "@/lib/toast";
 
+// Basic customer interface for quick-sale
+interface CustomerBasic {
+  id: string
+  name: string
+  document?: string
+  phone?: string
+  credit_limit?: number
+}
+
 // Demo data for customers
-const demoCustomers = [
+const demoCustomers: CustomerBasic[] = [
   { id: '1', name: 'João Silva', document: '123.456.789-00', phone: '(11) 99999-8888', credit_limit: 5000 },
   { id: '2', name: 'Maria Santos', document: '987.654.321-00', phone: '(11) 98888-7777', credit_limit: 8000 },
   { id: '3', name: 'Pedro Costa', document: '456.789.123-00', phone: '(11) 97777-6666', credit_limit: 3000 },
@@ -56,7 +65,7 @@ export default function QuickSalePage() {
   });
 
   // Use demo data if no real data
-  const customers = customersData?.customers?.length ? customersData.customers : demoCustomers;
+  const customers: CustomerBasic[] = customersData?.customers?.length ? customersData.customers : demoCustomers;
   
   const customer = customers.find(c => c.id === selectedCustomer);
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
-import type { InterestRule, LateFeeConfig } from "@/types";
+import type { LateFeeConfig } from "@/types";
 import { motion } from "framer-motion";
 
 interface InterestRule {
@@ -628,7 +628,7 @@ export default function BusinessRulesPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-2 block">Cobrar</label>
-                <Select value={config.lateInterestChargeType} onValueChange={(v: string) => setConfig({...config, lateInterestChargeType: v})}>
+                <Select value={config.lateInterestChargeType} onValueChange={(v) => setConfig({...config, lateInterestChargeType: v as "daily" | "weekly" | "monthly"})}>
                   <SelectTrigger className="bg-white border-gray-200/60 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
                     <SelectValue />
                   </SelectTrigger>
