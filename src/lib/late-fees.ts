@@ -15,6 +15,7 @@
 import { createClient } from "@/lib/supabase"
 
 interface LateFeeConfig {
+  tenant_id: string
   fixed_fee: number
   daily_interest: number
   max_interest_rate: number
