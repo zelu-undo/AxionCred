@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     // Debug: testar query simples sem filtros de tenant
     const { data: testData, error: testError } = await supabase
       .from("loans")
-      .select("id, tenant_id")
-      .limit(1)
+      .select("id, tenant_id, status")
+      .limit(5)
     
     console.log("Test loans:", testData, testError)
 
@@ -40,11 +40,16 @@ export async function POST(request: NextRequest) {
         debug: { 
           test_error: testError?.message,
           supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "missing",
-          supabase_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "missing"
+          supabase_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "missing",
+          loans_found: testData?.length || 0,
+          sample_loans: testData?.map(l => ({ id: l.id, tenant: l.tenant_id, status: l.status }))
         },
         processed: 0 
       }, { status: 500 })
     }
+
+    // Mostrar loans no debug
+    console.log(" Loans found:", testData)
 
     // Primeira etapa: atualizar parcelas que estão com status "pending" mas a data de vencimento já passou para "late"
     console.log("Atualizando parcelas pending para late...")
