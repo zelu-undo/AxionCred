@@ -109,7 +109,10 @@ export default function NewLoanPage() {
   // Debug: show alert when data loads
   useEffect(() => {
     if (businessRulesData) {
-      alert(`Business rules loaded! interestRules count: ${businessRulesData.interestRules?.length || 0}`)
+      const rules = businessRulesData.interestRules || []
+      alert(`Business rules loaded! 
+interestRules count: ${rules.length}
+Rules: ${rules.map(r => `${r.min_installments}-${r.max_installments}x: ${r.interest_rate}%`).join(', ')}`)
     }
   }, [businessRulesData])
   
