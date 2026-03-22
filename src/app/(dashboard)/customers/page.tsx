@@ -466,7 +466,7 @@ export default function CustomersPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     <AnimatePresence>
-                      {customers.map((customer, index) => (
+                      {customers.map((customer: any, index) => (
                         <motion.tr 
                           key={customer.id} 
                           className="
