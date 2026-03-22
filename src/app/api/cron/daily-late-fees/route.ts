@@ -10,11 +10,6 @@ import { createClient } from "@/lib/supabase"
  * O endpoint requer uma chave de API configurada como CRON_SECRET
  */
 
-// Valores padrão se não houver configuração
-const DEFAULT_LATE_FEE = 0
-const DEFAULT_DAILY_INTEREST = 0.001 // 0.1% ao dia
-const DEFAULT_MAX_INTEREST_RATE = 0.10 // 10% máximo
-
 export async function POST(request: NextRequest) {
   try {
     // Verificar chave de segurança do cron
@@ -72,6 +67,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Se não há configurações, não processar
+    if (!configs || configs.length === 0) {
+      return NextResponse.json({ 
+        success: true, 
+        message: "Nenhuma configuração de juros encontrada. Configure em Regras de Negócio.",
+        processed: 0 
+      })
+    }
+
     let totalProcessed = 0
 
     // Processar cada parcela
@@ -79,19 +83,33 @@ export async function POST(request: NextRequest) {
       // Encontrar configuração do tenant
       const config = configs?.find((c: any) => c.tenant_id === inst.loan?.tenant_id)
       
-      // Usar os campos corretos do banco
-      const fixedFee = config?.fixed_fee ?? config?.percentage ?? DEFAULT_LATE_FEE
+      // Se não há configuração para este tenant, pular
+      if (!config) {
+        continue
+      }
+
+      // Verificar se há configuração de multa ou juros
+      const hasLateFeeConfig = config.fixed_fee || config.percentage
+      const hasLateInterestConfig = config.late_interest_type && config.late_interest_value
+
+      // Se não tem nada configurado, pular
+      if (!hasLateFeeConfig && !hasLateInterestConfig) {
+        continue
+      }
+
+      // Usar os campos do banco
+      const fixedFee = config.fixed_fee || config.percentage || 0
       
       // Calcular juros diários a partir da configuração
-      let dailyInterest = DEFAULT_DAILY_INTEREST
-      if (config?.late_interest_type === 'percentage' && config?.late_interest_value) {
+      let dailyInterest = 0
+      if (config.late_interest_type === 'percentage' && config.late_interest_value) {
         // Converter taxa percentual para taxa diária
         if (config.late_interest_charge_type === 'daily') {
-          dailyInterest = (config.late_interest_value / 100) / 30 // mensal para diário
+          dailyInterest = (config.late_interest_value / 100) // já é diário
         } else if (config.late_interest_charge_type === 'weekly') {
           dailyInterest = (config.late_interest_value / 100) / 7 // semanal para diário
         } else {
-          dailyInterest = config.late_interest_value / 100 // mensal
+          dailyInterest = (config.late_interest_value / 100) / 30 // mensal para diário
         }
       }
 
@@ -113,12 +131,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Calcular juros diários progressivos
-      if (dailyInterest > 0 && daysLate > 0) {
+      if (dailyInterest > 0 && daysLate > 0 && hasLateInterestConfig) {
         lateInterest = originalAmount * dailyInterest * daysLate
-
-        // Aplicar limite máximo de 10%
-        const maxInterest = originalAmount * DEFAULT_MAX_INTEREST_RATE
-        lateInterest = Math.min(lateInterest, maxInterest)
       }
 
       const newTotal = originalAmount + lateFee + lateInterest
