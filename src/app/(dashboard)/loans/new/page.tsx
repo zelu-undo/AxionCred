@@ -430,27 +430,19 @@ export default function NewLoanPage() {
                             setFormData({ ...formData, installments: "" })
                           } else {
                             const num = parseInt(value) || 0
-                            // Allow any number while typing, but limit to max on blur
-                            setFormData({ ...formData, installments: String(num) })
+                            // Limit to max in real-time
+                            const limitedNum = num > maxInstallments ? maxInstallments : num
+                            setFormData({ ...formData, installments: String(limitedNum) })
                           }
                         }}
                         onBlur={() => {
-                          // Auto-adjust to valid range or max
+                          // Final adjustment - ensure within valid range
                           const rules = businessRulesData?.interestRules || []
-                          const maxInst = rules.length > 0 
-                            ? Math.max(...rules.map((r: InterestRule) => r.max_installments))
-                            : 12
                           const num = parseInt(formData.installments) || 0
                           
                           // If empty or 0, set to minimum
                           if (!num || num < 1) {
                             setFormData({ ...formData, installments: rules.length > 0 ? String(rules[0].min_installments) : "1" })
-                            return
-                          }
-                          
-                          // Limit to max
-                          if (num > maxInst) {
-                            setFormData({ ...formData, installments: String(maxInst) })
                             return
                           }
                           
