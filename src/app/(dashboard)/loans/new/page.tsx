@@ -109,6 +109,11 @@ export default function NewLoanPage() {
   console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
 
   const calculateLoan = () => {
+    console.log("=== calculateLoan called ===")
+    console.log("formData.principal:", formData.principal)
+    console.log("formData.installments:", formData.installments)
+    console.log("businessRulesData:", businessRulesData)
+    
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
     const principalStr = formData.principal.replace(/[^0-9]/g, "")
     const principal = principalStr.length > 2 
@@ -117,6 +122,8 @@ export default function NewLoanPage() {
     
     const numInstallments = parseInt(formData.installments)
     
+    console.log("principal:", principal, "numInstallments:", numInstallments)
+    
     if (!principal || !numInstallments) {
       setPreview(null)
       return
@@ -124,13 +131,18 @@ export default function NewLoanPage() {
 
     // Get interest rate and type from business rules
     const rules = businessRulesData?.interestRules || []
+    console.log("rules in calculateLoan:", rules)
+    
     const rule = rules.find(
       (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
+    console.log("matched rule:", rule)
     
     // Default interest rate if no rule found: 5% monthly
     const interestRate = rule?.interest_rate ?? 5
     const interestType = (rule?.interest_type || 'monthly') as InterestType
+    
+    console.log("interestRate:", interestRate, "interestType:", interestType)
 
     // Use centralized calculation from hook
     const calculation = computeLoan(principal, interestRate, numInstallments, interestType)
@@ -258,19 +270,17 @@ export default function NewLoanPage() {
     console.log("formData.installments:", formData.installments)
     console.log("numInstallments:", numInstallments)
     console.log("businessRulesData:", businessRulesData)
-    console.log("interestRules:", businessRulesData?.interestRules)
     
-    alert(`Interest calculation:
-formData.installments = "${formData.installments}"
-numInstallments = ${numInstallments}
-Rules: ${(businessRulesData?.interestRules || []).map(r => `${r.min_installments}-${r.max_installments}x`).join(', ')}`)
+    // Check if rules are available
+    const rules = businessRulesData?.interestRules
+    console.log("interestRules:", rules)
     
-    if (!businessRulesData?.interestRules || businessRulesData.interestRules.length === 0) {
+    if (!rules || rules.length === 0) {
       console.log("NO RULES FOUND - returning rate: 0")
       return { rate: 0, type: 'monthly' }
     }
     
-    const rule = businessRulesData.interestRules.find(
+    const rule = rules.find(
       r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
     )
     
