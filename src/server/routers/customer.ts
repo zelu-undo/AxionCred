@@ -70,14 +70,24 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       const { search, status, limit, offset } = input
 
-      // Se há busca, usa a função RPC com accent-insensitive search
+      // Se há busca, usa query direta com ilike (accent-sensitive no frontend)
       if (search && search.trim().length > 0) {
-        const { data, error } = await ctx.supabase.rpc("search_customers", {
-          p_tenant_id: ctx.tenantId,
-          p_search: search.trim(),
-          p_limit: limit,
-          p_offset: offset,
-        })
+        const searchTerm = search.trim().toLowerCase()
+        
+        // Query direta - busca por nome ou documento
+        let query = ctx.supabase
+          .from("customers")
+          .select("*", { count: "exact" })
+          .eq("tenant_id", ctx.tenantId!)
+          .or(`name.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
+          .order("created_at", { ascending: false })
+
+        if (status) {
+          query = query.eq("status", status)
+        }
+
+        const { data, error, count } = await query
+          .range(offset, offset + limit - 1)
 
         if (error) {
           throw new TRPCError({
@@ -86,13 +96,7 @@ export const customerRouter = router({
           })
         }
 
-        // Get total count
-        const { data: countData } = await ctx.supabase.rpc("search_customers_count", {
-          p_tenant_id: ctx.tenantId,
-          p_search: search.trim(),
-        })
-
-        return { customers: data || [], total: countData || 0 }
+        return { customers: data || [], total: count || 0 }
       }
 
       // Sem busca - usa query normal com filtros
