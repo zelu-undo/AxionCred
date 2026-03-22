@@ -728,8 +728,23 @@ BEGIN
     AND due_date < CURRENT_DATE;
     
     UPDATE loans
-    SET status = 'active'
-    WHERE status = 'pending'
+    SET status = 'late'
+    WHERE status IN ('pending', 'active')
+    AND EXISTS (
+        SELECT 1 FROM loan_installments 
+        WHERE loan_id = loans.id 
+        AND status = 'late'
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to update loan status from late installments (RPC)
+CREATE OR REPLACE FUNCTION update_loan_status_from_late_installments()
+RETURNS void AS $$
+BEGIN
+    UPDATE loans
+    SET status = 'late'
+    WHERE status IN ('pending', 'active')
     AND EXISTS (
         SELECT 1 FROM loan_installments 
         WHERE loan_id = loans.id 

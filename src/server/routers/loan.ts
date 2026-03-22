@@ -20,6 +20,12 @@ export const loanRouter = router({
     .query(async ({ ctx, input }) => {
       const { customerId, status, search, limit, offset } = input
 
+      // First, check and update any overdue installments
+      await ctx.supabase.rpc("check_overdue_installments")
+      
+      // Also update loan statuses based on late installments
+      await ctx.supabase.rpc("update_loan_status_from_late_installments")
+
       let query = ctx.supabase
         .from("loans")
         .select(`
