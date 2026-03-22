@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -308,10 +309,10 @@ export default function CashPage() {
             <div className="space-y-4">
               <div>
                 <Label>Valor</Label>
-                <Input
+                <CurrencyInput
                   placeholder="0,00"
                   value={aporteForm.valor}
-                  onChange={(e) => setAporteForm({ ...aporteForm, valor: e.target.value })}
+                  onChange={(value) => setAporteForm({ ...aporteForm, valor: value })}
                 />
               </div>
               <div>
@@ -349,10 +350,10 @@ export default function CashPage() {
             <div className="space-y-4">
               <div>
                 <Label>Valor</Label>
-                <Input
+                <CurrencyInput
                   placeholder="0,00"
                   value={retiradaForm.valor}
-                  onChange={(e) => setRetiradaForm({ ...retiradaForm, valor: e.target.value })}
+                  onChange={(value) => setRetiradaForm({ ...retiradaForm, valor: value })}
                 />
               </div>
               <div>
@@ -413,10 +414,10 @@ export default function CashPage() {
               </div>
               <div>
                 <Label>Valor</Label>
-                <Input
+                <CurrencyInput
                   placeholder="0,00"
                   value={ajusteForm.valor}
-                  onChange={(e) => setAjusteForm({ ...ajusteForm, valor: e.target.value })}
+                  onChange={(value) => setAjusteForm({ ...ajusteForm, valor: value })}
                 />
               </div>
               <div>
