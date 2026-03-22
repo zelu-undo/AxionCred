@@ -30,6 +30,7 @@ export default function NewLoanPage() {
   
   useEffect(() => {
     const timer = setTimeout(() => {
+      console.log("Debounced search changed to:", customerSearch)
       setDebouncedSearch(customerSearch)
     }, 300)
     return () => clearTimeout(timer)
@@ -41,6 +42,8 @@ export default function NewLoanPage() {
   }, {
     enabled: debouncedSearch.length > 0
   })
+  
+  console.log("Customers query result:", customersData, "search:", debouncedSearch)
   const customers = customersData?.customers || []
 
   const createMutation = trpc.loan.create.useMutation({
