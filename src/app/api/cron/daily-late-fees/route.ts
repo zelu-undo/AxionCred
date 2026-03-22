@@ -22,10 +22,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = createClient()
+    // Primeira etapa: atualizar parcelas que estão com status "pending" mas a data de vencimento já passou para "late"
+    console.log("Atualizando parcelas pending para late...")
     const today = new Date().toISOString().split('T')[0]
+    console.log("Data de hoje (Brasil):", today)
     
-    // Buscar todas as configurações de juros de mora
+    // Primeiro, atualizar parcelas que estão atrasadas (pending com data vencida)
+    const { data: updatedInstallments, error: updateStatusError } = await supabase
+      .from("loan_installments")
+      .update({ status: "late" })
+      .eq("status", "pending")
+      .lt("due_date", today)
+      .select("id")
+
+    console.log("Parcelas atualizadas para 'late':", updatedInstallments?.length || 0)
+    
+    if (updateStatusError) {
+      console.error("Erro ao atualizar status:", updateStatusError)
+    }
+
+    // Agora buscarParcelas atrasadas (status = 'late')
+    console.log("Buscando parcelas com status 'late'...")
     const { data: configs, error: configError } = await supabase
       .from("late_fee_config")
       .select("*")
@@ -36,6 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar todas as parcelas atrasadas
+    console.log("Query: status=late, due_date <", today)
     const { data: installments, error: instError } = await supabase
       .from("loan_installments")
       .select(`
@@ -46,10 +64,16 @@ export async function POST(request: NextRequest) {
         late_fee_applied,
         late_interest_applied,
         days_in_delay,
+        status,
         loan:loans(id, customer_id, tenant_id)
       `)
       .eq("status", "late")
       .lt("due_date", today)
+
+    console.log("Parcelas encontradas:", installments?.length || 0)
+    if (installments && installments.length > 0) {
+      console.log("Primeira parcela:", installments[0])
+    }
 
     if (instError) {
       console.error("Erro ao buscar parcelas:", instError)
