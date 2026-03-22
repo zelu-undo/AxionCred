@@ -386,3 +386,27 @@ export interface Renegotiation {
   notes?: string
   created_at: string
 }
+
+// Dashboard-specific types
+export interface DashboardRecentLoan {
+  id: string
+  name: string
+  amount: number
+  totalAmount: number
+  installments: number
+  paidInstallments: number
+  status: LoanStatus
+  createdAt: string
+}
+
+export interface DashboardOverdueCustomer {
+  name: string
+  count: number
+  amount: number
+}
+
+export interface DashboardResponse {
+  stats: DashboardStats
+  recentLoans: DashboardRecentLoan[]
+  overdueCustomers: DashboardOverdueCustomer[]
+}
