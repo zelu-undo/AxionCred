@@ -85,14 +85,14 @@ export const dashboardRouter = router({
 
       // Get loan details to filter by tenant
       const loanIds = overdueInstallments?.map(i => i.loan_id).filter(Boolean) || []
-      const { data: loansData } = loanIds.length > 0 
+      const { data: overdueLoansData } = loanIds.length > 0 
         ? await ctx.supabase
             .from("loans")
             .select("id, tenant_id")
             .in("id", loanIds)
         : { data: [] }
 
-      const validLoanIds = new Set(loansData?.filter(l => l.tenant_id === ctx.tenantId).map(l => l.id) || [])
+      const validLoanIds = new Set(overdueLoansData?.filter(l => l.tenant_id === ctx.tenantId).map(l => l.id) || [])
 
       // Filter installments by tenant
       const filteredOverdueInstallments = overdueInstallments?.filter(
