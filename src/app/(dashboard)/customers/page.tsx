@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
+import type { Customer } from "@/types"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 
 interface Address {
@@ -466,7 +467,7 @@ export default function CustomersPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     <AnimatePresence>
-                      {customers.map((customer: any, index) => (
+                      {customers.map((customer: Customer, index) => (
                         <motion.tr 
                           key={customer.id} 
                           className="
