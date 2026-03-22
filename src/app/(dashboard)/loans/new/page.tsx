@@ -50,6 +50,8 @@ export default function NewLoanPage() {
   // Show dropdown when input is focused or has content
   const shouldShowDropdown = showDropdown && (customers.length > 0 || customerSearch.length > 0)
   
+  console.log(">>> shouldShowDropdown:", shouldShowDropdown, "showDropdown:", showDropdown, "customers.length:", customers.length, "customerSearch:", customerSearch)
+  
   console.log("Customers query result:", customersData, "search:", debouncedSearch)
 
   const createMutation = trpc.loan.create.useMutation({
@@ -325,8 +327,8 @@ export default function NewLoanPage() {
                     </button>
                   )}
                 </div>
-                {/* Show dropdown when focused and has results */}
-                {shouldShowDropdown && (
+                  {/* Show dropdown when focused and has results */}
+                {shouldShowDropdown && customers.length > 0 && (
                   <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg">
                     {loadingCustomers ? (
                       <div className="p-2 text-center text-gray-500">
