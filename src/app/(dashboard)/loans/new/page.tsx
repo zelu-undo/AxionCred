@@ -175,6 +175,13 @@ export default function NewLoanPage() {
     console.log("debouncedPrincipal:", debouncedPrincipal)
     console.log("formData.installments:", formData.installments)
     console.log("businessRulesData:", businessRulesData)
+    console.log("formData.firstPaymentDate:", formData.firstPaymentDate)
+    
+    alert(`useEffect: 
+debouncedPrincipal="${debouncedPrincipal}"
+installments="${formData.installments}"
+firstPaymentDate="${formData.firstPaymentDate}"
+businessRulesData=${businessRulesData ? 'loaded' : 'null'}`)
     
     if (debouncedPrincipal && formData.installments && businessRulesData) {
       calculateLoan()
@@ -324,7 +331,13 @@ export default function NewLoanPage() {
     <div className="space-y-6">
       {/* DEBUG INFO */}
       <div className="bg-yellow-100 p-2 text-xs text-black">
-        DEBUG: {debugInfo}
+        DEBUG: 
+        businessRulesData loaded: {businessRulesData ? 'YES' : 'NO'}, 
+        interestRules: {businessRulesData?.interestRules?.length || 0}
+        <br/>
+        formData: principal="{formData.principal}", installments="{formData.installments}", firstPaymentDate="{formData.firstPaymentDate}"
+        <br/>
+        debouncedPrincipal: "{debouncedPrincipal}"
       </div>
       
       <div className="flex items-center gap-4">
