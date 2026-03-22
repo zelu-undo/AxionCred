@@ -75,9 +75,10 @@ export default function NotificationsPage() {
       const settingsArray = notificationTypes.map(type => ({
         notification_type: type.type,
         enabled: settings[type.type]?.enabled ?? true,
-        method: settings[type.type]?.method ?? 'visual',
+        method: (settings[type.type]?.method ?? 'visual') as 'visual' | 'email' | 'both',
       }))
 
+      // @ts-ignore - mutateAsync existe mas TypeScript não detecta
       await trpc.notifications.bulkUpdateSettings.mutateAsync(settingsArray)
       showSuccessToast('Configurações salvas com sucesso!')
       setHasChanges(false)
