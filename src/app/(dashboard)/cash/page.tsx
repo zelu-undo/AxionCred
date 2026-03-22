@@ -206,13 +206,13 @@ export default function CashPage() {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
     }
-    if (!retiradaForm.descricao || !retiradaForm.justificativa) {
-      toast({ title: "Descrição e justificativa obrigatórias", variant: "destructive" })
+    if (!retiradaForm.justificativa) {
+      toast({ title: "Justificativa obrigatória", variant: "destructive" })
       return
     }
     registerWithdrawal.mutate({
       valor,
-      descricao: retiradaForm.descricao,
+      descricao: retiradaForm.descricao || "Retirada",
       justificativa: retiradaForm.justificativa,
     })
   }

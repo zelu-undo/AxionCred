@@ -88,35 +88,16 @@ export default function DashboardPage() {
           <p className="text-gray-500 mt-1">{t("dashboard.subtitle")}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            asChild 
-            className="group relative overflow-hidden border-2 border-[#1E3A8A]/20 hover:border-[#22C55E] bg-white hover:bg-[#22C55E]/5 transition-all duration-300 hover:shadow-lg hover:shadow-[#22C55E]/20"
-          >
-            <Link href="/customers" className="flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#22C55E]/0 via-[#22C55E]/5 to-[#22C55E]/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <span className="relative flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-[#1E3A8A]/10 group-hover:bg-[#22C55E]/20 transition-colors duration-300">
-                  <Users className="h-4 w-4 text-[#1E3A8A] group-hover:text-[#22C55E] transition-colors duration-300" />
-                </span>
-                <span className="text-[#1E3A8A] group-hover:text-[#22C55E] font-medium transition-colors duration-300">
-                  {t("dashboard.viewCustomers")}
-                </span>
-              </span>
-              <ArrowRight className="ml-2 h-4 w-4 text-[#1E3A8A]/50 group-hover:text-[#22C55E] group-hover:translate-x-1 transition-all duration-300" />
+          <Button variant="outline" asChild>
+            <Link href="/customers">
+              <Users className="mr-2 h-4 w-4" />
+              {t("dashboard.viewCustomers")}
             </Link>
           </Button>
-          <Button 
-            asChild 
-            className="group relative overflow-hidden bg-[#22C55E] hover:bg-[#16A34A] hover:shadow-xl hover:shadow-[#22C55E]/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-          >
+          <Button asChild>
             <Link href="/loans/new">
-              <span className="relative flex items-center">
-                <span className="p-1.5 rounded-lg bg-white/20 mr-2 group-hover:bg-white/30 transition-colors duration-300">
-                  <Plus className="h-4 w-4" />
-                </span>
-                {t("dashboard.newLoan")}
-              </span>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("dashboard.newLoan")}
             </Link>
           </Button>
         </div>
