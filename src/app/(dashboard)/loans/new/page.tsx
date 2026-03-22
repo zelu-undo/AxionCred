@@ -106,10 +106,9 @@ export default function NewLoanPage() {
   // Calculate loan preview using business rules
   const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
   
+  // DEBUG: Show data on screen
+  const debugInfo = `businessRulesData: ${JSON.stringify(businessRulesData)}, isLoadingRules: ${isLoadingRules}`
   console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
-
-  // Force a console.warn to see if it's visible
-  console.warn("DEBUG: businessRulesData =", businessRulesData)
 
   const calculateLoan = () => {
     console.log("=== calculateLoan called ===")
@@ -304,6 +303,11 @@ export default function NewLoanPage() {
       type: rule.interest_type || 'monthly' 
     }
   }, [formData.installments, businessRulesData])
+
+  {/* DEBUG INFO */}
+  <div className="bg-yellow-100 p-2 text-xs text-black fixed bottom-0 left-0 z-50">
+    DEBUG: {debugInfo}
+  </div>
 
   if (isSuccess) {
     return (
