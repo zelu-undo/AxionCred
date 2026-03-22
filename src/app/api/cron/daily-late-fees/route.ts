@@ -86,7 +86,32 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Buscar todas as parcelas para debug
+    const { data: allInstallments, error: allInstError } = await supabase
+      .from("loan_installments")
+      .select(`
+        id,
+        amount,
+        paid_amount,
+        due_date,
+        status
+      `)
+      .order("due_date", { ascending: false })
+      .limit(10)
+
+    if (allInstError) {
+      console.error("Erro ao buscar todas:", allInstError)
+    }
+
+    // Se não encontrou com a query original, tentar sem filtro de data
     if (!installments || installments.length === 0) {
+      // Ver se existem parcelas com status "late" ou "pending"
+      const { data: lateOrPending } = await supabase
+        .from("loan_installments")
+        .select("id, status, due_date")
+        .in("status", ["late", "pending"])
+        .limit(5)
+      
       // Retornar debug info
       return NextResponse.json({ 
         success: true, 
@@ -94,7 +119,10 @@ export async function POST(request: NextRequest) {
         debug: {
           data_hoje: today,
           parcelas_atualizadas: updatedInstallments?.length || 0,
-          query_feita: `status=late E due_date < ${today}`
+          query_feita: `status=late E due_date < ${today}`,
+          sample_dates: lateOrPending?.map(i => ({ id: i.id, status: i.status, due_date: i.due_date })) || [],
+          total_installments_sample: allInstallments?.length || 0,
+          sample_all: allInstallments?.slice(0, 3).map(i => ({ id: i.id, status: i.status, due_date: i.due_date, amount: i.amount }))
         },
         processed: 0 
       })
