@@ -106,18 +106,6 @@ export default function NewLoanPage() {
   // Calculate loan preview using business rules
   const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
   
-  // Debug: show alert when data loads
-  useEffect(() => {
-    if (businessRulesData) {
-      const rules = businessRulesData.interestRules || []
-      const installments = formData.installments
-      alert(`Business rules loaded! 
-interestRules count: ${rules.length}
-Rules: ${rules.map(r => `${r.min_installments}-${r.max_installments}x: ${r.interest_rate}% (${typeof r.min_installments})`).join(', ')}
-Current installments: "${installments}" (${typeof installments})`)
-    }
-  }, [businessRulesData])
-  
   console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
 
   const calculateLoan = () => {
@@ -271,6 +259,11 @@ Current installments: "${installments}" (${typeof installments})`)
     console.log("numInstallments:", numInstallments)
     console.log("businessRulesData:", businessRulesData)
     console.log("interestRules:", businessRulesData?.interestRules)
+    
+    alert(`Interest calculation:
+formData.installments = "${formData.installments}"
+numInstallments = ${numInstallments}
+Rules: ${(businessRulesData?.interestRules || []).map(r => `${r.min_installments}-${r.max_installments}x`).join(', ')}`)
     
     if (!businessRulesData?.interestRules || businessRulesData.interestRules.length === 0) {
       console.log("NO RULES FOUND - returning rate: 0")
