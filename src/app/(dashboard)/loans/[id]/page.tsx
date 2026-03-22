@@ -235,8 +235,10 @@ export default function LoanDetailPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parcela</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Original</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Juros Multa</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Atual</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimento</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Pagamento</th>
@@ -246,7 +248,16 @@ export default function LoanDetailPage() {
                 {(loan.installments || []).map((inst: LoanInstallment) => (
                   <tr key={inst.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">#{inst.installment_number}</td>
-                    <td className="px-4 py-3">{formatCurrency(inst.amount)}</td>
+                    <td className="px-4 py-3">{formatCurrency(inst.amount - (inst.late_fee_applied || 0) - (inst.late_interest_applied || 0))}</td>
+                    <td className="px-4 py-3">
+                      {((inst.late_fee_applied || 0) + (inst.late_interest_applied || 0)) > 0 ? (
+                        <span className="text-red-600 font-medium">
+                          +{formatCurrency((inst.late_fee_applied || 0) + (inst.late_interest_applied || 0))}
+                          {inst.days_in_delay ? ` (${inst.days_in_delay}d)` : ''}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-4 py-3 font-medium">{formatCurrency(inst.amount)}</td>
                     <td className="px-4 py-3">{formatDate(inst.due_date)}</td>
                     <td className="px-4 py-3">{getInstallmentStatusBadge(inst.status)}</td>
                     <td className="px-4 py-3 text-gray-500">

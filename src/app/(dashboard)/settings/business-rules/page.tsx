@@ -672,6 +672,7 @@ export default function BusinessRulesPage() {
           <Button 
             onClick={async () => {
               const btn = document.activeElement as HTMLButtonElement
+              const originalText = btn.textContent
               btn.disabled = true
               btn.textContent = 'Processando...'
               
@@ -680,18 +681,16 @@ export default function BusinessRulesPage() {
                   method: 'POST',
                 })
                 const data = await response.json()
-                console.log('Response:', data)
                 if (data.success) {
-                  alert(`Sucesso! ${data.message}`)
+                  alert(data.message)
                 } else {
-                  alert(`Erro: ${data.message || 'Erro desconhecido'}`)
+                  alert(`Erro: ${data.message}`)
                 }
               } catch (err) {
-                console.error('Erro ao processar:', err)
-                alert('Erro ao processar: ' + (err as Error).message || 'Erro de conexão')
+                alert('Erro ao processar')
               } finally {
                 btn.disabled = false
-                btn.textContent = 'Processar Juros Agora'
+                btn.textContent = originalText
               }
             }}
             className="bg-[#1E3A8A] hover:bg-[#2D4BA0] shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300"

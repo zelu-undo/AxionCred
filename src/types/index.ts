@@ -118,6 +118,10 @@ export interface LoanInstallment {
   paid_date?: string
   status: InstallmentStatus
   notes?: string
+  // Late fee fields
+  late_fee_applied?: number
+  late_interest_applied?: number
+  days_in_delay?: number
   created_at: string
   updated_at: string
 }
