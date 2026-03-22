@@ -21,6 +21,19 @@ interface UserData {
 }
 
 /**
+ * Interface para notificação do banco
+ */
+interface NotificationData {
+  user_id: string
+  tenant_id: string
+  type: string
+  title: string
+  message: string
+  data: string
+  is_read: boolean
+}
+
+/**
  * Cria notificações para usuários baseado em suas preferências
  * Suporta both: visual (banco) + email (Resend)
  * 
@@ -96,7 +109,7 @@ export async function createNotification(
 
   // 1. Criar notificações visuais no banco
   if (usersForVisual.length > 0) {
-    const notifications = usersForVisual.map((userId) => ({
+    const notifications: NotificationData[] = usersForVisual.map((userId) => ({
       user_id: userId,
       tenant_id: tenantId,
       type: notificationType,
@@ -108,7 +121,7 @@ export async function createNotification(
 
     const { error: insertError } = await supabase
       .from("notifications")
-      .insert(notifications)
+      .insert(notifications as unknown as never)
 
     if (insertError) {
       console.error("Erro ao criar notificações visuais:", insertError)
