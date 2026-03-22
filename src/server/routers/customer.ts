@@ -70,16 +70,16 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       const { search, status, limit, offset } = input
 
-      // Se há busca, usa query direta com ilike (accent-sensitive no frontend)
+      // Se há busca, usa o campo normalizado para busca sem acento
       if (search && search.trim().length > 0) {
-        const searchTerm = search.trim().toLowerCase()
+        const searchTerm = normalizeName(search).toLowerCase()
         
-        // Query direta - busca por nome ou documento
+        // Query direta - busca por nome_normalized ou documento
         let query = ctx.supabase
           .from("customers")
           .select("*", { count: "exact" })
           .eq("tenant_id", ctx.tenantId!)
-          .or(`name.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
+          .or(`name_normalized.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
           .order("created_at", { ascending: false })
 
         if (status) {
