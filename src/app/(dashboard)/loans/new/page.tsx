@@ -107,15 +107,8 @@ export default function NewLoanPage() {
   const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
-  
-  // DEBUG: Show data on screen
-  const debugInfo = `businessRulesData: ${JSON.stringify(businessRulesData)}, isLoadingRules: ${isLoadingRules}`
-  console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
 
   const calculateLoan = () => {
-    console.log("=== calculateLoan called ===")
-    alert("calculateLoan EXECUTED!")
-    
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
     const principalStr = formData.principal.replace(/[^0-9]/g, "")
     const principal = principalStr.length > 2 
@@ -124,8 +117,6 @@ export default function NewLoanPage() {
     
     const numInstallments = parseInt(formData.installments)
     
-    console.log("principal:", principal, "numInstallments:", numInstallments)
-    
     if (!principal || !numInstallments) {
       setPreview(null)
       return
@@ -133,21 +124,17 @@ export default function NewLoanPage() {
 
     // Get interest rate and type from business rules
     const rules = businessRulesData?.interestRules || []
-    console.log("rules in calculateLoan:", rules)
-    alert("rules: " + JSON.stringify(rules))
     
     const rule = rules.find(
       (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
-    console.log("matched rule:", rule)
-    alert("matched rule: " + JSON.stringify(rule))
     
     // Default interest rate if no rule found: 5% monthly
     const interestRate = rule?.interest_rate ?? 5
     const interestType = (rule?.interest_type || 'monthly') as InterestType
     
-    console.log("interestRate:", interestRate, "interestType:", interestType)
-    alert("interestRate: " + interestRate)
+    // Show final result
+    alert(`RESULT: interestRate=${interestRate}, interestType=${interestType}, rule=${JSON.stringify(rule)}`)
 
     // Use centralized calculation from hook
     const calculation = computeLoan(principal, interestRate, numInstallments, interestType)
@@ -177,12 +164,8 @@ export default function NewLoanPage() {
     // Use direct values, not debounced
     const principal = formData.principal
     const installments = formData.installments
-    const firstPaymentDate = formData.firstPaymentDate
-    
-    console.log("useEffect:", { principal, installments, firstPaymentDate, hasRules: !!businessRulesData })
     
     if (principal && installments && businessRulesData) {
-      alert("Calling calculateLoan! principal=" + principal + ", installments=" + installments)
       calculateLoan()
     }
   }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
@@ -328,17 +311,6 @@ export default function NewLoanPage() {
 
   return (
     <div className="space-y-6">
-      {/* DEBUG INFO */}
-      <div className="bg-yellow-100 p-2 text-xs text-black">
-        DEBUG: 
-        businessRulesData loaded: {businessRulesData ? 'YES' : 'NO'}, 
-        interestRules: {businessRulesData?.interestRules?.length || 0}
-        <br/>
-        formData: principal="{formData.principal}", installments="{formData.installments}", firstPaymentDate="{formData.firstPaymentDate}"
-        <br/>
-        debouncedPrincipal: "{debouncedPrincipal}"
-      </div>
-      
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
