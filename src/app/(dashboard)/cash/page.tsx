@@ -81,11 +81,28 @@ export default function CashPage() {
 
   // Handler for filter changes
   const handleFilterTipoChange = (value: string) => {
-    setFilterTipo(value as "entrada" | "saida" | "")
+    const newValue = value === "all" ? "" : value as "entrada" | "saida" | ""
+    setFilterTipo(newValue)
+    // Refresh transactions with new filter
+    refetchTransactions()
   }
 
   const handleFilterCategoriaChange = (value: string) => {
-    setFilterCategoria(value as "aporte" | "pagamento_recebido" | "emprestimo_liberado" | "retirada" | "ajuste" | "")
+    const newValue = value === "all" ? "" : value as "aporte" | "pagamento_recebido" | "emprestimo_liberado" | "retirada" | "ajuste" | ""
+    setFilterCategoria(newValue)
+    // Refresh transactions with new filter
+    refetchTransactions()
+  }
+
+  // Get display value for Select (use "all" instead of empty string)
+  const getFilterTipoDisplay = () => filterTipo || "all"
+  const getFilterCategoriaDisplay = () => filterCategoria || "all"
+
+  // Handle clear filter
+  const clearFilters = () => {
+    setFilterTipo("")
+    setFilterCategoria("")
+    refetchTransactions()
   }
 
   // Dialog states
@@ -499,22 +516,22 @@ export default function CashPage() {
         <CardContent>
           {/* Filtros */}
           <div className="flex gap-4 mb-4">
-            <Select value={filterTipo} onValueChange={handleFilterTipoChange}>
+            <Select value={getFilterTipoDisplay()} onValueChange={handleFilterTipoChange}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="entrada">Entrada</SelectItem>
                 <SelectItem value="saida">Saída</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterCategoria} onValueChange={handleFilterCategoriaChange}>
+            <Select value={getFilterCategoriaDisplay()} onValueChange={handleFilterCategoriaChange}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 <SelectItem value="aporte">Aporte</SelectItem>
                 <SelectItem value="pagamento_recebido">Pagamento Recebido</SelectItem>
                 <SelectItem value="emprestimo_liberado">Empréstimo Liberado</SelectItem>
@@ -522,6 +539,11 @@ export default function CashPage() {
                 <SelectItem value="ajuste">Ajuste</SelectItem>
               </SelectContent>
             </Select>
+            {(filterTipo || filterCategoria) && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                Limpar
+              </Button>
+            )}
           </div>
 
           {/* Lista de Transações */}
