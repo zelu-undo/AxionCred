@@ -304,11 +304,6 @@ export default function NewLoanPage() {
     }
   }, [formData.installments, businessRulesData])
 
-  {/* DEBUG INFO */}
-  <div className="bg-yellow-100 p-2 text-xs text-black fixed bottom-0 left-0 z-50">
-    DEBUG: {debugInfo}
-  </div>
-
   if (isSuccess) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -327,6 +322,11 @@ export default function NewLoanPage() {
 
   return (
     <div className="space-y-6">
+      {/* DEBUG INFO */}
+      <div className="bg-yellow-100 p-2 text-xs text-black">
+        DEBUG: {debugInfo}
+      </div>
+      
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
