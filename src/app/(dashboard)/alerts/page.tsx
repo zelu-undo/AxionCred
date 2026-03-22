@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import { AlertTriangle, CreditCard, Settings, TrendingUp, Bell, DollarSign, Clock, UserX, Loader2 } from "lucide-react"
 import { trpc } from "@/trpc/client"
-import type { AlertPayment } from "@/types"
 
 interface Alert {
   id: string;
@@ -35,7 +34,7 @@ export default function AlertsPage() {
     
     // Add overdue payment alerts
     if (overdueData?.payments) {
-      overdueData.payments.forEach((p: AlertPayment) => {
+      overdueData.payments.forEach((p) => {
         const dueDate = new Date(p.due_date)
         const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
         
@@ -52,7 +51,7 @@ export default function AlertsPage() {
     
     // Add today's payment alerts
     if (todayData?.payments) {
-      todayData.payments.forEach((p: AlertPayment) => {
+      todayData.payments.forEach((p) => {
         result.push({
           id: p.id + '-today',
           type: 'operational',
