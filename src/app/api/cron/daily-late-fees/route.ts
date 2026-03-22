@@ -12,11 +12,13 @@ import { createClient } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar chave de segurança do cron
+    // Verificar chave de segurança do cron (apenas para chamadas automatizadas)
     const cronSecret = process.env.CRON_SECRET
     const authHeader = request.headers.get("authorization")
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Se tem CRON_SECRET configurado, verificar apenas se for uma chamada automatizada
+    // (com Authorization header). Chamadas manuais (sem header) são permitidas.
+    if (cronSecret && authHeader && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
