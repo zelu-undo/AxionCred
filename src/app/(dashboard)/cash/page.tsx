@@ -100,6 +100,10 @@ export default function CashPage() {
   const [retiradaForm, setRetiradaForm] = useState({ valor: "", descricao: "", justificativa: "" })
   const [ajusteForm, setAjusteForm] = useState({ valor: "", descricao: "", justificativa: "", positivo: true })
 
+  // Character limits
+  const MAX_DESC_LENGTH = 200
+  const MAX_JUST_LENGTH = 500
+
   // Queries
   const { data: summaryData, refetch: refetchSummary } = trpc.cash.getSummary.useQuery()
   const { data: transactionsData, refetch: refetchTransactions, isRefetching } = trpc.cash.listTransactions.useQuery({
@@ -316,11 +320,17 @@ export default function CashPage() {
                 />
               </div>
               <div>
-                <Label>Descrição</Label>
+                <div className="flex justify-between items-center">
+                  <Label>Descrição</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {aporteForm.descricao.length}/{MAX_DESC_LENGTH}
+                  </span>
+                </div>
                 <Input
                   placeholder="Ex: Depósito inicial"
                   value={aporteForm.descricao}
-                  onChange={(e) => setAporteForm({ ...aporteForm, descricao: e.target.value })}
+                  onChange={(e) => setAporteForm({ ...aporteForm, descricao: e.target.value.slice(0, MAX_DESC_LENGTH) })}
+                  maxLength={MAX_DESC_LENGTH}
                 />
               </div>
             </div>
@@ -357,19 +367,32 @@ export default function CashPage() {
                 />
               </div>
               <div>
-                <Label>Descrição</Label>
+                <div className="flex justify-between items-center">
+                  <Label>Descrição</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {retiradaForm.descricao.length}/{MAX_DESC_LENGTH}
+                  </span>
+                </div>
                 <Input
                   placeholder="Ex: Retirada de lucro"
                   value={retiradaForm.descricao}
-                  onChange={(e) => setRetiradaForm({ ...retiradaForm, descricao: e.target.value })}
+                  onChange={(e) => setRetiradaForm({ ...retiradaForm, descricao: e.target.value.slice(0, MAX_DESC_LENGTH) })}
+                  maxLength={MAX_DESC_LENGTH}
                 />
               </div>
               <div>
-                <Label>Justificativa (obrigatória)</Label>
+                <div className="flex justify-between items-center">
+                  <Label>Justificativa (obrigatória)</Label>
+                  <span className={`text-xs ${retiradaForm.justificativa.length >= MAX_JUST_LENGTH ? "text-red-500" : "text-muted-foreground"}`}>
+                    {retiradaForm.justificativa.length}/{MAX_JUST_LENGTH}
+                  </span>
+                </div>
                 <Textarea
                   placeholder="Explique o motivo..."
                   value={retiradaForm.justificativa}
-                  onChange={(e) => setRetiradaForm({ ...retiradaForm, justificativa: e.target.value })}
+                  onChange={(e) => setRetiradaForm({ ...retiradaForm, justificativa: e.target.value.slice(0, MAX_JUST_LENGTH) })}
+                  maxLength={MAX_JUST_LENGTH}
+                  className={retiradaForm.justificativa.length >= MAX_JUST_LENGTH ? "border-red-500" : ""}
                 />
               </div>
             </div>
@@ -421,19 +444,32 @@ export default function CashPage() {
                 />
               </div>
               <div>
-                <Label>Descrição</Label>
+                <div className="flex justify-between items-center">
+                  <Label>Descrição</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {ajusteForm.descricao.length}/{MAX_DESC_LENGTH}
+                  </span>
+                </div>
                 <Input
                   placeholder="Ex: Correção de saldo"
                   value={ajusteForm.descricao}
-                  onChange={(e) => setAjusteForm({ ...ajusteForm, descricao: e.target.value })}
+                  onChange={(e) => setAjusteForm({ ...ajusteForm, descricao: e.target.value.slice(0, MAX_DESC_LENGTH) })}
+                  maxLength={MAX_DESC_LENGTH}
                 />
               </div>
               <div>
-                <Label>Justificativa (obrigatória)</Label>
+                <div className="flex justify-between items-center">
+                  <Label>Justificativa (obrigatória)</Label>
+                  <span className={`text-xs ${ajusteForm.justificativa.length >= MAX_JUST_LENGTH ? "text-red-500" : "text-muted-foreground"}`}>
+                    {ajusteForm.justificativa.length}/{MAX_JUST_LENGTH}
+                  </span>
+                </div>
                 <Textarea
                   placeholder="Explique o motivo..."
                   value={ajusteForm.justificativa}
-                  onChange={(e) => setAjusteForm({ ...ajusteForm, justificativa: e.target.value })}
+                  onChange={(e) => setAjusteForm({ ...ajusteForm, justificativa: e.target.value.slice(0, MAX_JUST_LENGTH) })}
+                  maxLength={MAX_JUST_LENGTH}
+                  className={ajusteForm.justificativa.length >= MAX_JUST_LENGTH ? "border-red-500" : ""}
                 />
               </div>
             </div>

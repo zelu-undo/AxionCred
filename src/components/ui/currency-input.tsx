@@ -13,70 +13,91 @@ export interface CurrencyInputRef {
   focus: () => void
 }
 
-const formatCurrencyValue = (value: string): string => {
-  // Remove all non-digit characters
-  const digits = value.replace(/\D/g, "")
-  
+// Format raw digits to Brazilian currency (last 2 digits are cents)
+const formatToCurrency = (digits: string): string => {
   if (!digits) return ""
   
-  // Convert to number and divide by 100 to get cents
-  const numberValue = parseInt(digits, 10) / 100
+  // Pad with zeros if less than 3 digits (less than 1 cent)
+  const padded = digits.padStart(3, "0")
   
-  // Format as Brazilian currency
-  return numberValue.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+  // Split into integer and decimal parts
+  const integerPart = padded.slice(0, -2)
+  const decimalPart = padded.slice(-2)
+  
+  // Format integer part with dots for thousands
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+  
+  return `${formattedInteger},${decimalPart}`
 }
 
-const parseCurrencyValue = (value: string): number => {
+// Parse currency string to numeric value (in cents)
+const parseToCents = (value: string): number => {
+  // Remove all non-digit characters
   const digits = value.replace(/\D/g, "")
-  return parseInt(digits, 10) / 100
+  if (!digits) return 0
+  return parseInt(digits, 10)
 }
 
 export const CurrencyInput = forwardRef<CurrencyInputRef, CurrencyInputProps>(
   ({ value, onChange, prefix = "R$", ...props }, ref) => {
     const [displayValue, setDisplayValue] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
+    const isFocusedRef = useRef(false)
 
     useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
     }))
 
+    // Update display when external value changes
     useEffect(() => {
-      if (value !== undefined && value !== null) {
+      if (!isFocusedRef.current && value !== undefined && value !== null) {
         const stringValue = typeof value === "number" ? value.toString() : value
-        setDisplayValue(formatCurrencyValue(stringValue))
+        const cents = parseToCents(stringValue)
+        if (cents > 0) {
+          setDisplayValue(formatToCurrency(cents.toString()))
+        } else {
+          setDisplayValue("")
+        }
       }
     }, [value])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value
-      // Allow only digits and comma
-      const filtered = inputValue.replace(/[^\d,]/g, "")
       
-      setDisplayValue(filtered)
+      // Keep only digits (allow typing freely)
+      const digits = inputValue.replace(/\D/g, "")
       
+      // Limit to reasonable length (max 15 digits = billions)
+      const limitedDigits = digits.slice(0, 15)
+      
+      // Format for display while typing
+      const formatted = formatToCurrency(limitedDigits)
+      setDisplayValue(formatted)
+      
+      // Send cents value to parent
       if (onChange) {
-        const numericValue = parseCurrencyValue(filtered)
-        onChange(numericValue.toString())
+        const cents = parseToCents(limitedDigits)
+        onChange(cents.toString())
       }
     }
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      isFocusedRef.current = true
       // Select all on focus for easy replacement
       e.target.select()
     }
 
     const handleBlur = () => {
-      // Format on blur
-      if (displayValue) {
-        const formatted = formatCurrencyValue(displayValue)
+      isFocusedRef.current = false
+      // Format on blur - ensure proper display
+      const digits = displayValue.replace(/\D/g, "")
+      if (digits) {
+        const formatted = formatToCurrency(digits)
         setDisplayValue(formatted)
         
         if (onChange) {
-          const numericValue = parseCurrencyValue(displayValue)
-          onChange(numericValue.toString())
+          const cents = parseToCents(digits)
+          onChange(cents.toString())
         }
       }
     }
@@ -97,6 +118,7 @@ export const CurrencyInput = forwardRef<CurrencyInputRef, CurrencyInputProps>(
           onBlur={handleBlur}
           className={prefix ? "pl-10" : ""}
           placeholder={prefix ? "0,00" : "0,00"}
+          inputMode="decimal"
         />
       </div>
     )
