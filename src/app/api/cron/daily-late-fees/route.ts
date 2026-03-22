@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       `)
       .eq("status", "late")
       .lt("due_date", today)
-      .or("paid_amount.is.null,paid_amount.lt.amount")
 
     if (instError) {
       console.error("Erro ao buscar parcelas:", instError)
