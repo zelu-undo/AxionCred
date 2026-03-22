@@ -63,6 +63,10 @@ export const customerRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
+    .output(z.object({
+      customers: z.array(z.any()),
+      total: z.number(),
+    }))
     .query(async ({ ctx, input }) => {
       const { search, status, limit, offset } = input
 
