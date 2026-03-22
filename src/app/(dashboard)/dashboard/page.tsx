@@ -11,7 +11,6 @@ import { redirect } from "next/navigation"
 import { useEffect } from "react"
 import { motion } from "framer-motion"
 import { trpc } from "@/trpc/client"
-import type { Loan, Customer } from "@/types"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -72,8 +71,8 @@ export default function DashboardPage() {
     overdue_count: 0,
   }
 
-  const recentLoans = dashboardData?.recentLoans || []
-  const overdueCustomers = dashboardData?.overdueCustomers || []
+  const recentLoans = (dashboardData?.recentLoans || []) as { id: string; name: string; amount: number; totalAmount: number; installments: number; paidInstallments: number; status: string; createdAt: string }[]
+  const overdueCustomers = (dashboardData?.overdueCustomers || []) as { name: string; count: number; amount: number }[]
   
   return (
     <motion.div 
@@ -127,7 +126,7 @@ export default function DashboardPage() {
                 {recentLoans.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">Nenhum empréstimo recente</p>
                 ) : (
-                  recentLoans.map((loan: Loan) => (
+                  recentLoans.map((loan) => (
                     <div key={loan.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50/80 transition-colors group">
                       <div className="flex items-center gap-3">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center font-medium text-sm ${
@@ -177,7 +176,7 @@ export default function DashboardPage() {
                 {overdueCustomers.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">Nenhum cliente inadimplente</p>
                 ) : (
-                  overdueCustomers.map((customer: Customer, i: number) => (
+                  overdueCustomers.map((customer, i) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-red-50/50 transition-colors group">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center font-medium text-sm text-red-700">

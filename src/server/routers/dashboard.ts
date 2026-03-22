@@ -1,6 +1,5 @@
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
-import type { Loan, Customer } from "@/types"
 
 // Dashboard router - provides statistics for dashboard
 export const dashboardRouter = router({
@@ -123,26 +122,26 @@ export const dashboardRouter = router({
         .limit(5)
 
       // Group overdue by customer
-      const customerOverdueMap = new Map<string, { name: string; count: number; amount: number }>()
-      overdueCustomers?.forEach((inst) => {
+      const customerOverdueMap = {} as Record<string, { name: string; count: number; amount: number }>
+      (overdueCustomers as any[])?.forEach((inst: any) => {
         const customerId = inst.loan?.customer_id
         if (customerId) {
-          const existing = customerOverdueMap.get(customerId)
+          const existing = customerOverdueMap[customerId]
           const instAmount = (inst.amount || 0) - (inst.paid_amount || 0)
           if (existing) {
             existing.count += 1
             existing.amount += instAmount
           } else {
-            customerOverdueMap.set(customerId, {
+            customerOverdueMap[customerId] = {
               name: inst.loan?.customer?.name || "Cliente",
               count: 1,
               amount: instAmount
-            })
+            }
           }
         }
       })
 
-      const overdueCustomersList = Array.from(customerOverdueMap.values()).slice(0, 5)
+      const overdueCustomersList = Object.values(customerOverdueMap).slice(0, 5)
 
       return {
         stats: {
@@ -153,9 +152,9 @@ export const dashboardRouter = router({
           overdue_amount: overdueAmount,
           overdue_count: overdueCount,
         },
-        recentLoans: recentLoans?.map((loan) => ({
+        recentLoans: (recentLoans as any[])?.map((loan: any) => ({
           id: loan.id,
-          name: loan.customer?.name || "Cliente",
+          name: loan.customer?.[0]?.name || "Cliente",
           amount: loan.principal_amount,
           totalAmount: loan.total_amount,
           installments: loan.installments_count,

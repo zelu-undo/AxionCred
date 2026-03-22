@@ -48,8 +48,34 @@ import {
   Loader2
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
-import type { Renegotiation } from "@/types"
 import { formatCurrency, formatDate } from "@/lib/utils"
+
+// Renegotiation type with loan relationship (from API)
+interface CustomerInfo {
+  name: string;
+  document?: string;
+  phone?: string;
+  email?: string;
+}
+
+interface RenegotiationData {
+  id: string
+  originalLoan?: string
+  loan?: {
+    customer?: CustomerInfo
+  }
+  customer?: CustomerInfo
+  originalValue?: number
+  currentDebt?: number
+  newValue?: number
+  newInstallments?: number
+  newInterest?: number
+  status?: "pending" | "completed" | "rejected"
+  requestedBy?: string
+  requestedAt?: string
+  completedAt?: string | null
+  notes?: string
+}
 
 // Demo data for renegotiations
 const renegotiationsData = [
@@ -146,7 +172,7 @@ export default function RenegotiationsPage() {
   
   const renegotiations = renegotiationsData?.renegotiations || []
 
-  const filteredRenegotiations = renegotiations.filter((r: Renegotiation) => {
+  const filteredRenegotiations = renegotiations.filter((r: RenegotiationData) => {
     const customerName = r.loan?.customer?.name || ""
     const customerDoc = r.loan?.customer?.document || ""
     const matchesSearch = 

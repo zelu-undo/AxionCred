@@ -2,7 +2,9 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Database } from "@/types/supabase"
+
+// Use any type for Supabase client to avoid missing type definition
+type Database = any
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
 async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: string, type: string, description: string) {

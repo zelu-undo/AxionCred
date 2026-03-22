@@ -38,6 +38,15 @@ interface InstallmentOption {
   interestRate: number;
 }
 
+// Customer type from API (simplified)
+interface CustomerData {
+  id: string;
+  name: string;
+  document?: string;
+  phone?: string;
+  credit_limit?: number;
+}
+
 export default function QuickSalePage() {
   const router = useRouter();
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
@@ -56,9 +65,9 @@ export default function QuickSalePage() {
   });
 
   // Use demo data if no real data
-  const customers = customersData?.customers?.length ? customersData.customers : demoCustomers;
+  const customers: CustomerData[] = customersData?.customers?.length ? customersData.customers : demoCustomers;
   
-  const customer = customers.find(c => c.id === selectedCustomer);
+  const customer = customers.find((c: CustomerData) => c.id === selectedCustomer);
 
   // Installment options with interest rates
   const installmentOptions: InstallmentOption[] = [

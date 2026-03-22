@@ -2,7 +2,9 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Database } from "@/types/supabase"
+
+// Use any type for Supabase client to avoid missing type definition
+type Database = any
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
 async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: string, type: string, description: string) {
@@ -107,11 +109,11 @@ export const paymentRouter = router({
       }
 
       // Filtros adicionais no backend
-      let installments = data || []
+      let installments = (data as any[]) || []
       
       // Filtrar por status (late inclui pending com vencimento < hoje)
       if (status && status !== "all") {
-        installments = installments.filter((inst) => {
+        installments = installments.filter((inst: any) => {
           const instStatus = inst.status
           
           if (status === "late") {
@@ -585,26 +587,26 @@ export const paymentRouter = router({
     ])
 
     // Handle nested installments structure from new query format
-    const todayToReceive = todayResult.data?.reduce((sum: number, loan: unknown) => {
+    const todayToReceive = (todayResult.data as any[])?.reduce((sum: number, loan: any) => {
       const installments = loan.installments || []
-      return sum + installments.reduce((s: number, i: unknown) => s + Number(i.amount || 0), 0)
+      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
     }, 0) || 0
-    const todayCount = todayResult.data?.reduce((sum: number, loan: unknown) => {
+    const todayCount = (todayResult.data as any[])?.reduce((sum: number, loan: any) => {
       return sum + (loan.installments?.length || 0)
     }, 0) || 0
-    const monthReceived = monthResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
-    const overdueAmount = overdueResult.data?.reduce((sum: number, loan: unknown) => {
+    const monthReceived = (monthResult.data as any[])?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0
+    const overdueAmount = (overdueResult.data as any[])?.reduce((sum: number, loan: any) => {
       const installments = loan.installments || []
-      return sum + installments.reduce((s: number, i: unknown) => s + Number(i.amount || 0), 0)
+      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
     }, 0) || 0
-    const overdueCount = overdueResult.data?.reduce((sum: number, loan: unknown) => {
+    const overdueCount = (overdueResult.data as any[])?.reduce((sum: number, loan: any) => {
       return sum + (loan.installments?.length || 0)
     }, 0) || 0
-    const upcomingAmount = upcomingResult.data?.reduce((sum: number, loan: unknown) => {
+    const upcomingAmount = (upcomingResult.data as any[])?.reduce((sum: number, loan: any) => {
       const installments = loan.installments || []
-      return sum + installments.reduce((s: number, i: unknown) => s + Number(i.amount || 0), 0)
+      return sum + installments.reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
     }, 0) || 0
-    const upcomingCount = upcomingResult.data?.reduce((sum: number, loan: unknown) => {
+    const upcomingCount = (upcomingResult.data as any[])?.reduce((sum: number, loan: any) => {
       return sum + (loan.installments?.length || 0)
     }, 0) || 0
 
