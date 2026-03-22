@@ -124,8 +124,9 @@ export default function NewLoanPage() {
       (rule: InterestRule) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
     
-    // Default interest rate if no rule found: 5% monthly
-    const interestRate = rule?.interest_rate ?? 5
+    // Se fora da faixa configurada, não deve calcular juros (0%)
+    // Apenas calcula juros se estiver dentro de uma faixa válida
+    const interestRate = rule ? rule.interest_rate : 0
     const interestType = (rule?.interest_type || 'monthly') as InterestType
 
     // Use centralized calculation from hook
@@ -265,6 +266,7 @@ export default function NewLoanPage() {
       r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
     )
     
+    // Se fora da faixa configurada, retorna 0% (sem juros)
     if (!rule) {
       return { rate: 0, type: 'monthly' }
     }
@@ -407,61 +409,79 @@ export default function NewLoanPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Número de Parcelas</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    placeholder="Número de parcelas"
-                    value={formData.installments}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      if (value === "") {
-                        setFormData({ ...formData, installments: "" })
-                      } else {
-                        const num = parseInt(value) || 1
-                        setFormData({ ...formData, installments: String(num) })
-                      }
-                    }}
-                    onBlur={() => {
-                      // Auto-adjust to nearest valid range
-                      const rules = businessRulesData?.interestRules || []
-                      const num = parseInt(formData.installments) || 0
-                      
-                      // If empty or 0, set default
-                      if (!num || num < 1) {
-                        setFormData({ ...formData, installments: rules.length > 0 ? String(rules[0].min_installments) : "1" })
-                        return
-                      }
-                      
-                      if (rules.length > 0) {
-                        // Find ranges and adjust to nearest valid
-                        const ranges = rules.map((r: InterestRule) => ({
-                          min: r.min_installments,
-                          max: r.max_installments
-                        }))
-                        
-                        // Check if within any range
-                        const inRange = ranges.some(r => num >= r.min && num <= r.max)
-                        
-                        if (!inRange) {
-                          // Find nearest range
-                          let nearestMax = ranges[0].max
-                          let minDiff = Math.abs(num - ranges[0].max)
+                  {/* Get max installments from rules */}
+                  {(() => {
+                    const rules = businessRulesData?.interestRules || []
+                    const maxInstallments = rules.length > 0 
+                      ? Math.max(...rules.map((r: InterestRule) => r.max_installments))
+                      : 12
+                    
+                    return (
+                      <Input
+                        type="number"
+                        min={1}
+                        max={maxInstallments}
+                        placeholder={`Máximo: ${maxInstallments}x`}
+                        value={formData.installments}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (value === "") {
+                            // Allow empty while typing
+                            setFormData({ ...formData, installments: "" })
+                          } else {
+                            const num = parseInt(value) || 0
+                            // Allow any number while typing, but limit to max on blur
+                            setFormData({ ...formData, installments: String(num) })
+                          }
+                        }}
+                        onBlur={() => {
+                          // Auto-adjust to valid range or max
+                          const rules = businessRulesData?.interestRules || []
+                          const maxInst = rules.length > 0 
+                            ? Math.max(...rules.map((r: InterestRule) => r.max_installments))
+                            : 12
+                          const num = parseInt(formData.installments) || 0
                           
-                          for (const r of ranges) {
-                            const diff = Math.abs(num - r.max)
-                            if (diff < minDiff) {
-                              minDiff = diff
-                              nearestMax = r.max
+                          // If empty or 0, set to minimum
+                          if (!num || num < 1) {
+                            setFormData({ ...formData, installments: rules.length > 0 ? String(rules[0].min_installments) : "1" })
+                            return
+                          }
+                          
+                          // Limit to max
+                          if (num > maxInst) {
+                            setFormData({ ...formData, installments: String(maxInst) })
+                            return
+                          }
+                          
+                          // Check if within any configured range
+                          if (rules.length > 0) {
+                            const ranges = rules.map((r: InterestRule) => ({
+                              min: r.min_installments,
+                              max: r.max_installments
+                            }))
+                            
+                            const inRange = ranges.some(r => num >= r.min && num <= r.max)
+                            
+                            if (!inRange) {
+                              // Find nearest range
+                              let nearestMax = ranges[0].max
+                              let minDiff = Math.abs(num - ranges[0].max)
+                              
+                              for (const r of ranges) {
+                                const diff = Math.abs(num - r.max)
+                                if (diff < minDiff) {
+                                  minDiff = diff
+                                  nearestMax = r.max
+                                }
+                              }
+                              setFormData({ ...formData, installments: String(nearestMax) })
                             }
                           }
-                          setFormData({ ...formData, installments: String(nearestMax) })
-                        }
-                      } else if (num > 12) {
-                        // No rules, use default max of 12
-                        setFormData({ ...formData, installments: "12" })
-                      }
-                    }}
-                  />
+                        }}
+                      />
+                    )
+                  })()}
                   {/* Show available ranges */}
                   <p className="text-xs text-gray-500">
                     {businessRulesData?.interestRules?.length ? (
