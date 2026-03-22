@@ -43,9 +43,16 @@ export function calculateInstallmentAmount(
   periods: number,
   type: InterestType = "monthly"
 ): number {
-  if (rate === 0 || type === "fixed") {
-    // Sem juros ou juros fixo: simplesmente divide o principal
+  if (rate === 0) {
+    // Sem juros: simplesmente divide o principal
     return principal / periods
+  }
+
+  if (type === "fixed") {
+    // Juros fixo: soma o percentual ao principal e divide pelas parcelas
+    // Ex: 80% de juros em 5x = (principal * 1.80) / 5
+    const totalWithInterest = principal * (1 + rate / 100)
+    return totalWithInterest / periods
   }
 
   let periodicRate: number
