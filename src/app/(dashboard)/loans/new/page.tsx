@@ -32,9 +32,14 @@ export default function NewLoanPage() {
   
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log("Debounced search changed to:", customerSearch)
-      setDebouncedSearch(customerSearch)
-    }, 300)
+      // Only search if more than 3 characters
+      if (customerSearch.length > 3) {
+        console.log("Debounced search changed to:", customerSearch)
+        setDebouncedSearch(customerSearch)
+      } else {
+        setDebouncedSearch("")
+      }
+    }, 500)  // 500ms debounce
     return () => clearTimeout(timer)
   }, [customerSearch])
   
@@ -81,7 +86,7 @@ export default function NewLoanPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedPrincipal(formData.principal)
-    }, 300)
+    }, 500)  // 500ms debounce
     return () => clearTimeout(timer)
   }, [formData.principal])
   
