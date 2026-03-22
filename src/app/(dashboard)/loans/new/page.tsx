@@ -25,11 +25,21 @@ export default function NewLoanPage() {
   const [customerSearch, setCustomerSearch] = useState("")
   const [showDropdown, setShowDropdown] = useState(false)
   
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(customerSearch)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [customerSearch])
+  
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
     limit: 5,
-    search: customerSearch || undefined
+    search: debouncedSearch || undefined
   }, {
-    enabled: customerSearch.length > 0 // Only fetch when searching
+    enabled: debouncedSearch.length > 0
   })
   const customers = customersData?.customers || []
 
