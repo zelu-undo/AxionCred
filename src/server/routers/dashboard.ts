@@ -23,19 +23,19 @@ export const dashboardRouter = router({
         .eq("tenant_id", tenantId)
         .eq("status", "active")
 
-      // Get active loans count
+      // Get active loans count (including late)
       const { count: activeLoans } = await ctx.supabase
         .from("loans")
         .select("*", { count: "exact", head: true })
         .eq("tenant_id", tenantId)
-        .eq("status", "active")
+        .in("status", ["active", "late"])
 
-      // Get total to receive (sum of remaining_amount for active loans)
+      // Get total to receive (sum of remaining_amount for active and late loans)
       const { data: loansData } = await ctx.supabase
         .from("loans")
         .select("remaining_amount, total_amount, paid_amount")
         .eq("tenant_id", tenantId)
-        .eq("status", "active")
+        .in("status", ["active", "late"])
 
       const totalToReceive = loansData?.reduce((sum, loan) => {
         return sum + (loan.remaining_amount || 0)
@@ -48,6 +48,14 @@ export const dashboardRouter = router({
       // Get total received this month
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]
+      const today = now.toISOString().split("T")[0]
+      
+      // First, update late installments
+      await ctx.supabase
+        .from("loan_installments")
+        .update({ status: "late" })
+        .eq("status", "pending")
+        .lt("due_date", today)
       
       const { data: paymentsThisMonth } = await ctx.supabase
         .from("payment_transactions")
@@ -60,9 +68,7 @@ export const dashboardRouter = router({
         return sum + (payment.amount || 0)
       }, 0) || 0
 
-      // Get overdue data
-      const today = new Date().toISOString().split("T")[0]
-      
+      // Get overdue data (late installments or pending past due date)
       const { data: overdueInstallments } = await ctx.supabase
         .from("loan_installments")
         .select(`
@@ -74,7 +80,7 @@ export const dashboardRouter = router({
           loan:loans(customer_id, tenant_id)
         `)
         .eq("loan.tenant_id", ctx.tenantId!)
-        .eq("status", "pending")
+        .in("status", ["late", "pending"])
         .lt("due_date", today)
 
       const overdueAmount = overdueInstallments?.reduce((sum, inst) => {
@@ -83,7 +89,7 @@ export const dashboardRouter = router({
 
       const overdueCount = overdueInstallments?.length || 0
 
-      // Get recent loans with customer info
+      // Get recent loans with customer info (all statuses)
       const { data: recentLoans } = await ctx.supabase
         .from("loans")
         .select(`
@@ -97,10 +103,11 @@ export const dashboardRouter = router({
           customer:customers(name)
         `)
         .eq("tenant_id", tenantId)
+        .in("status", ["pending", "active", "late", "paid"])
         .order("created_at", { ascending: false })
         .limit(5)
 
-      // Get overdue customers
+      // Get overdue customers (late or pending past due)
       const { data: overdueCustomers } = await ctx.supabase
         .from("loan_installments")
         .select(`
@@ -117,7 +124,7 @@ export const dashboardRouter = router({
           )
         `)
         .eq("loan.tenant_id", ctx.tenantId!)
-        .eq("status", "pending")
+        .in("status", ["late", "pending"])
         .lt("due_date", today)
         .order("due_date", { ascending: true })
         .limit(5)
