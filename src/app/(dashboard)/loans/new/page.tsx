@@ -21,11 +21,6 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
-  // Test alert to see if component renders
-  useEffect(() => {
-    alert("NewLoanPage rendered!")
-  }, [])
-  
   console.log(">>> NewLoanPage rendered")
   
   // Get customers with search
@@ -112,6 +107,9 @@ export default function NewLoanPage() {
   const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
   
   console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
+
+  // Force a console.warn to see if it's visible
+  console.warn("DEBUG: businessRulesData =", businessRulesData)
 
   const calculateLoan = () => {
     console.log("=== calculateLoan called ===")
