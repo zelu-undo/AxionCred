@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { 
@@ -17,14 +16,10 @@ import {
   ArrowDownCircle, 
   TrendingUp, 
   TrendingDown,
-  Plus, 
-  Minus,
   RefreshCw,
-  Filter,
-  Calendar,
-  ArrowRight,
   History,
-  DollarSign
+  DollarSign,
+  Loader2
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
 
@@ -51,8 +46,6 @@ interface Transaction {
   saldo_antes: number
   saldo_depois: number
   justificativa: string | null
-  referencia_id: string | null
-  referencia_tipo: string | null
 }
 
 const categoryLabels: Record<string, string> = {
@@ -64,11 +57,24 @@ const categoryLabels: Record<string, string> = {
 }
 
 const categoryColors: Record<string, string> = {
-  aporte: "bg-green-100 text-green-800",
-  pagamento_recebido: "bg-blue-100 text-blue-800",
-  emprestimo_liberado: "bg-red-100 text-red-800",
-  retirada: "bg-orange-100 text-orange-800",
-  ajuste: "bg-purple-100 text-purple-800",
+  aporte: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  pagamento_recebido: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  emprestimo_liberado: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  retirada: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100",
+  ajuste: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
+}
+
+const categoriesByType: Record<string, { value: string; label: string }[]> = {
+  entrada: [
+    { value: "pagamento_recebido", label: "Pagamento Recebido" },
+    { value: "aporte", label: "Aporte" },
+    { value: "ajuste", label: "Ajuste (positivo)" },
+  ],
+  saida: [
+    { value: "emprestimo_liberado", label: "Empréstimo Liberado" },
+    { value: "retirada", label: "Retirada" },
+    { value: "ajuste", label: "Ajuste (negativo)" },
+  ],
 }
 
 export default function CashPage() {
@@ -76,40 +82,17 @@ export default function CashPage() {
   const [summary, setSummary] = useState<CashSummary | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterTipo, setFilterTipo] = useState<"entrada" | "saida" | "">("")
-  const [filterCategoria, setFilterCategoria] = useState<"aporte" | "pagamento_recebido" | "emprestimo_liberado" | "retirada" | "ajuste" | "">("")
 
-  // Handler for filter changes
-  const handleFilterTipoChange = (value: string) => {
-    const newValue = value === "all" ? "" : value as "entrada" | "saida" | ""
-    setFilterTipo(newValue)
-    // Refresh transactions with new filter
-    refetchTransactions()
-  }
-
-  const handleFilterCategoriaChange = (value: string) => {
-    const newValue = value === "all" ? "" : value as "aporte" | "pagamento_recebido" | "emprestimo_liberado" | "retirada" | "ajuste" | ""
-    setFilterCategoria(newValue)
-    // Refresh transactions with new filter
-    refetchTransactions()
-  }
-
-  // Get display value for Select (use "all" instead of empty string)
-  const getFilterTipoDisplay = () => filterTipo || "all"
-  const getFilterCategoriaDisplay = () => filterCategoria || "all"
-
-  // Handle clear filter
-  const clearFilters = () => {
-    setFilterTipo("")
-    setFilterCategoria("")
-    refetchTransactions()
-  }
+  // Filters
+  const [filterTipo, setFilterTipo] = useState<string>("all")
+  const [filterCategoria, setFilterCategoria] = useState<string>("all")
+  const [filterDataInicio, setFilterDataInicio] = useState<string>("")
+  const [filterDataFim, setFilterDataFim] = useState<string>("")
 
   // Dialog states
   const [aporteOpen, setAporteOpen] = useState(false)
   const [retiradaOpen, setRetiradaOpen] = useState(false)
   const [ajusteOpen, setAjusteOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form states
   const [aporteForm, setAporteForm] = useState({ valor: "", descricao: "" })
@@ -118,26 +101,14 @@ export default function CashPage() {
 
   // Queries
   const { data: summaryData, refetch: refetchSummary } = trpc.cash.getSummary.useQuery()
-
-  const { data: transactionsData, refetch: refetchTransactions } = trpc.cash.listTransactions.useQuery({
+  const { data: transactionsData, refetch: refetchTransactions, isRefetching } = trpc.cash.listTransactions.useQuery({
     limit: 50,
     offset: 0,
-    tipo: filterTipo === "" ? undefined : filterTipo,
-    categoria: filterCategoria === "" ? undefined : filterCategoria,
+    tipo: filterTipo === "all" ? undefined : filterTipo as "entrada" | "saida",
+    categoria: filterCategoria === "all" ? undefined : filterCategoria as any,
+    dataInicio: filterDataInicio || undefined,
+    dataFim: filterDataFim || undefined,
   })
-
-  // Handle data updates
-  useEffect(() => {
-    if (summaryData) {
-      setSummary(summaryData as CashSummary)
-    }
-  }, [summaryData])
-
-  useEffect(() => {
-    if (transactionsData) {
-      setTransactions(transactionsData as Transaction[])
-    }
-  }, [transactionsData])
 
   const registerContribution = trpc.cash.registerContribution.useMutation({
     onSuccess: () => {
@@ -178,12 +149,7 @@ export default function CashPage() {
     },
   })
 
-  useEffect(() => {
-    if (transactionsData) {
-      setTransactions(transactionsData as Transaction[])
-    }
-  }, [transactionsData])
-
+  // Update data when queries return
   useEffect(() => {
     if (summaryData) {
       setSummary(summaryData as CashSummary)
@@ -191,11 +157,23 @@ export default function CashPage() {
     setLoading(false)
   }, [summaryData])
 
-  const formatCurrency = (value: number) => {
+  useEffect(() => {
+    if (transactionsData) {
+      setTransactions(transactionsData as Transaction[])
+    }
+  }, [transactionsData])
+
+  // Handle tipo change - reset categoria
+  const handleTipoChange = (value: string) => {
+    setFilterTipo(value)
+    setFilterCategoria("all")
+  }
+
+  const formatCurrency = (value: number | undefined | null) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    }).format(value)
+    }).format(value || 0)
   }
 
   const formatDate = (date: string) => {
@@ -256,17 +234,25 @@ export default function CashPage() {
     })
   }
 
+  const clearFilters = () => {
+    setFilterTipo("all")
+    setFilterCategoria("all")
+    setFilterDataInicio("")
+    setFilterDataFim("")
+  }
+
+  const availableCategories = filterTipo === "all" 
+    ? Object.entries(categoryLabels).map(([v, l]) => ({ value: v, label: l }))
+    : categoriesByType[filterTipo as keyof typeof categoriesByType] || []
+
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
-          </div>
+      <div className="container mx-auto p-6 space-y-4">
+        <div className="h-8 bg-muted animate-pulse rounded w-1/4"></div>
+        <div className="grid grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 bg-muted animate-pulse rounded"></div>
+          ))}
         </div>
       </div>
     )
@@ -274,55 +260,55 @@ export default function CashPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Wallet className="h-8 w-8" />
-            Gestão de Caixa
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Wallet className="h-6 w-6" />
+            Caixa
           </h1>
-          <p className="text-gray-500">Controle de entradas e saídas do caixa</p>
+          <p className="text-sm text-muted-foreground">Controle de entradas e saídas</p>
         </div>
         <Button variant="outline" size="icon" onClick={() => { refetchSummary(); refetchTransactions() }}>
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
       {/* Saldo Atual */}
       <Card className="border-l-4 border-l-green-500">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-500" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-green-500" />
             Saldo Atual
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold text-green-600">
-            {formatCurrency(summary?.saldo_atual || 0)}
+          <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+            {formatCurrency(summary?.saldo_atual)}
           </p>
         </CardContent>
       </Card>
 
       {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Dialog open={aporteOpen} onOpenChange={setAporteOpen}>
           <DialogTrigger asChild>
-            <Button className="h-20 flex flex-col gap-2 bg-green-600 hover:bg-green-700">
-              <ArrowUpCircle className="h-6 w-6" />
-              <span>Novo Aporte</span>
+            <Button className="h-16 bg-green-600 hover:bg-green-700">
+              <ArrowUpCircle className="mr-2 h-5 w-5" />
+              Novo Aporte
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Registrar Aporte</DialogTitle>
               <DialogDescription>
-                Adicionar dinheiro ao caixa (depósito inicial, investimento, etc.)
+                Adicionar dinheiro ao caixa
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Valor</Label>
                 <Input
-                  type="text"
                   placeholder="0,00"
                   value={aporteForm.valor}
                   onChange={(e) => setAporteForm({ ...aporteForm, valor: e.target.value })}
@@ -331,7 +317,7 @@ export default function CashPage() {
               <div>
                 <Label>Descrição</Label>
                 <Input
-                  placeholder="Ex: Depósito inicial, Investimento..."
+                  placeholder="Ex: Depósito inicial"
                   value={aporteForm.descricao}
                   onChange={(e) => setAporteForm({ ...aporteForm, descricao: e.target.value })}
                 />
@@ -340,7 +326,7 @@ export default function CashPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setAporteOpen(false)}>Cancelar</Button>
               <Button onClick={handleAporte} disabled={registerContribution.isPending}>
-                {registerContribution.isPending ? "Salvando..." : "Confirmar Aporte"}
+                {registerContribution.isPending ? "Salvando..." : "Confirmar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -348,23 +334,22 @@ export default function CashPage() {
 
         <Dialog open={retiradaOpen} onOpenChange={setRetiradaOpen}>
           <DialogTrigger asChild>
-            <Button className="h-20 flex flex-col gap-2 bg-red-600 hover:bg-red-700">
-              <ArrowDownCircle className="h-6 w-6" />
-              <span>Nova Retirada</span>
+            <Button className="h-16 bg-red-600 hover:bg-red-700">
+              <ArrowDownCircle className="mr-2 h-5 w-5" />
+              Nova Retirada
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Registrar Retirada</DialogTitle>
               <DialogDescription>
-                Remover dinheiro do caixa (sangria, retirada de lucro, custos)
+                Remover dinheiro do caixa
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Valor</Label>
                 <Input
-                  type="text"
                   placeholder="0,00"
                   value={retiradaForm.valor}
                   onChange={(e) => setRetiradaForm({ ...retiradaForm, valor: e.target.value })}
@@ -373,7 +358,7 @@ export default function CashPage() {
               <div>
                 <Label>Descrição</Label>
                 <Input
-                  placeholder="Ex: Retirada de lucro, Pagamento de fornecedor..."
+                  placeholder="Ex: Retirada de lucro"
                   value={retiradaForm.descricao}
                   onChange={(e) => setRetiradaForm({ ...retiradaForm, descricao: e.target.value })}
                 />
@@ -381,7 +366,7 @@ export default function CashPage() {
               <div>
                 <Label>Justificativa (obrigatória)</Label>
                 <Textarea
-                  placeholder="Explique o motivo da retirada..."
+                  placeholder="Explique o motivo..."
                   value={retiradaForm.justificativa}
                   onChange={(e) => setRetiradaForm({ ...retiradaForm, justificativa: e.target.value })}
                 />
@@ -390,7 +375,7 @@ export default function CashPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setRetiradaOpen(false)}>Cancelar</Button>
               <Button onClick={handleRetirada} disabled={registerWithdrawal.isPending} className="bg-red-600 hover:bg-red-700">
-                {registerWithdrawal.isPending ? "Salvando..." : "Confirmar Retirada"}
+                {registerWithdrawal.isPending ? "Salvando..." : "Confirmar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -398,21 +383,21 @@ export default function CashPage() {
 
         <Dialog open={ajusteOpen} onOpenChange={setAjusteOpen}>
           <DialogTrigger asChild>
-            <Button className="h-20 flex flex-col gap-2 bg-purple-600 hover:bg-purple-700">
-              <RefreshCw className="h-6 w-6" />
-              <span>Ajuste Manual</span>
+            <Button className="h-16 bg-purple-600 hover:bg-purple-700">
+              <RefreshCw className="mr-2 h-5 w-5" />
+              Ajuste Manual
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Ajuste Manual de Saldo</DialogTitle>
+              <DialogTitle>Ajuste Manual</DialogTitle>
               <DialogDescription>
-                Corrigir o saldo do caixa (positivo ou negativo)
+                Corrigir saldo do caixa
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Tipo de Ajuste</Label>
+                <Label>Tipo</Label>
                 <Select
                   value={ajusteForm.positivo ? "positivo" : "negativo"}
                   onValueChange={(v) => setAjusteForm({ ...ajusteForm, positivo: v === "positivo" })}
@@ -429,7 +414,6 @@ export default function CashPage() {
               <div>
                 <Label>Valor</Label>
                 <Input
-                  type="text"
                   placeholder="0,00"
                   value={ajusteForm.valor}
                   onChange={(e) => setAjusteForm({ ...ajusteForm, valor: e.target.value })}
@@ -438,7 +422,7 @@ export default function CashPage() {
               <div>
                 <Label>Descrição</Label>
                 <Input
-                  placeholder="Ex: Correção de saldo, Erro de lançamento..."
+                  placeholder="Ex: Correção de saldo"
                   value={ajusteForm.descricao}
                   onChange={(e) => setAjusteForm({ ...ajusteForm, descricao: e.target.value })}
                 />
@@ -446,7 +430,7 @@ export default function CashPage() {
               <div>
                 <Label>Justificativa (obrigatória)</Label>
                 <Textarea
-                  placeholder="Explique o motivo do ajuste..."
+                  placeholder="Explique o motivo..."
                   value={ajusteForm.justificativa}
                   onChange={(e) => setAjusteForm({ ...ajusteForm, justificativa: e.target.value })}
                 />
@@ -455,7 +439,7 @@ export default function CashPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setAjusteOpen(false)}>Cancelar</Button>
               <Button onClick={handleAjuste} disabled={registerAdjustment.isPending} className="bg-purple-600 hover:bg-purple-700">
-                {registerAdjustment.isPending ? "Salvando..." : "Confirmar Ajuste"}
+                {registerAdjustment.isPending ? "Salvando..." : "Confirmar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -466,58 +450,60 @@ export default function CashPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-green-600">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-sm">Total Entradas</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              <span>Entradas</span>
             </div>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(summary?.total_entradas || 0)}</p>
+            <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(summary?.total_entradas)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-red-600">
-              <TrendingDown className="h-4 w-4" />
-              <span className="text-sm">Total Saídas</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingDown className="h-4 w-4 text-red-500" />
+              <span>Saídas</span>
             </div>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(summary?.total_saidas || 0)}</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatCurrency(summary?.total_saidas)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-blue-600">
-              <ArrowUpCircle className="h-4 w-4" />
-              <span className="text-sm">Aportes</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ArrowUpCircle className="h-4 w-4 text-blue-500" />
+              <span>Aportes</span>
             </div>
-            <p className="text-xl font-bold text-blue-600">{formatCurrency(summary?.total_aportes || 0)}</p>
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(summary?.total_aportes)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-orange-600">
-              <ArrowDownCircle className="h-4 w-4" />
-              <span className="text-sm">Retiradas</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ArrowDownCircle className="h-4 w-4 text-orange-500" />
+              <span>Retiradas</span>
             </div>
-            <p className="text-xl font-bold text-orange-600">{formatCurrency(summary?.total_retiradas || 0)}</p>
+            <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{formatCurrency(summary?.total_retiradas)}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Histórico de Transações */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Histórico de Transações
-          </CardTitle>
-          <CardDescription>
-            {summary?.total_transactions || 0} transações registradas
-          </CardDescription>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Histórico de Transações
+            </CardTitle>
+            <span className="text-sm text-muted-foreground">
+              {summary?.total_transactions || 0} transações
+            </span>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {/* Filtros */}
-          <div className="flex gap-4 mb-4">
-            <Select value={getFilterTipoDisplay()} onValueChange={handleFilterTipoChange}>
-              <SelectTrigger className="w-40">
+          <div className="flex flex-wrap gap-3">
+            <Select value={filterTipo} onValueChange={handleTipoChange}>
+              <SelectTrigger className="w-36">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -526,20 +512,42 @@ export default function CashPage() {
                 <SelectItem value="saida">Saída</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={getFilterCategoriaDisplay()} onValueChange={handleFilterCategoriaChange}>
+
+            <Select 
+              value={filterCategoria} 
+              onValueChange={setFilterCategoria}
+              disabled={filterTipo === "all" && availableCategories.length <= 1}
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="aporte">Aporte</SelectItem>
-                <SelectItem value="pagamento_recebido">Pagamento Recebido</SelectItem>
-                <SelectItem value="emprestimo_liberado">Empréstimo Liberado</SelectItem>
-                <SelectItem value="retirada">Retirada</SelectItem>
-                <SelectItem value="ajuste">Ajuste</SelectItem>
+                {availableCategories.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            {(filterTipo || filterCategoria) && (
+
+            <Input
+              type="date"
+              className="w-40"
+              value={filterDataInicio}
+              onChange={(e) => setFilterDataInicio(e.target.value)}
+              placeholder="De"
+            />
+
+            <Input
+              type="date"
+              className="w-40"
+              value={filterDataFim}
+              onChange={(e) => setFilterDataFim(e.target.value)}
+              placeholder="Até"
+            />
+
+            {(filterTipo !== "all" || filterCategoria !== "all" || filterDataInicio || filterDataFim) && (
               <Button variant="outline" size="sm" onClick={clearFilters}>
                 Limpar
               </Button>
@@ -548,13 +556,19 @@ export default function CashPage() {
 
           {/* Lista de Transações */}
           <div className="space-y-2">
-            {transactions.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Nenhuma transação encontrada</p>
+            {isRefetching ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhuma transação encontrada
+              </p>
             ) : (
               transactions.map((tx) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
                 >
                   <div className="flex items-center gap-3">
                     {tx.tipo === "entrada" ? (
@@ -564,14 +578,12 @@ export default function CashPage() {
                     )}
                     <div>
                       <p className="font-medium">{tx.descricao || categoryLabels[tx.categoria]}</p>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Badge className={categoryColors[tx.categoria]}>
                           {categoryLabels[tx.categoria]}
                         </Badge>
                         <span>•</span>
                         <span>{formatDate(tx.data_transacao)}</span>
-                        <span>•</span>
-                        <span className="text-xs">{tx.usuario_responsavel}</span>
                       </div>
                     </div>
                   </div>
@@ -579,7 +591,7 @@ export default function CashPage() {
                     <p className={`font-bold ${tx.tipo === "entrada" ? "text-green-600" : "text-red-600"}`}>
                       {tx.tipo === "entrada" ? "+" : "-"}{formatCurrency(tx.valor)}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Saldo: {formatCurrency(tx.saldo_depois)}
                     </p>
                   </div>
