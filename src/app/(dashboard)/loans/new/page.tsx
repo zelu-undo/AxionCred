@@ -22,7 +22,7 @@ export default function NewLoanPage() {
   const router = useRouter()
   
   // Test alert to see if component renders
-  React.useEffect(() => {
+  useEffect(() => {
     alert("NewLoanPage rendered!")
   }, [])
   
