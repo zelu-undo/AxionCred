@@ -114,9 +114,7 @@ export default function NewLoanPage() {
 
   const calculateLoan = () => {
     console.log("=== calculateLoan called ===")
-    console.log("formData.principal:", formData.principal)
-    console.log("formData.installments:", formData.installments)
-    console.log("businessRulesData:", businessRulesData)
+    alert("calculateLoan EXECUTED!")
     
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
     const principalStr = formData.principal.replace(/[^0-9]/g, "")
@@ -136,17 +134,20 @@ export default function NewLoanPage() {
     // Get interest rate and type from business rules
     const rules = businessRulesData?.interestRules || []
     console.log("rules in calculateLoan:", rules)
+    alert("rules: " + JSON.stringify(rules))
     
     const rule = rules.find(
       (rule: any) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
     )
     console.log("matched rule:", rule)
+    alert("matched rule: " + JSON.stringify(rule))
     
     // Default interest rate if no rule found: 5% monthly
     const interestRate = rule?.interest_rate ?? 5
     const interestType = (rule?.interest_type || 'monthly') as InterestType
     
     console.log("interestRate:", interestRate, "interestType:", interestType)
+    alert("interestRate: " + interestRate)
 
     // Use centralized calculation from hook
     const calculation = computeLoan(principal, interestRate, numInstallments, interestType)
