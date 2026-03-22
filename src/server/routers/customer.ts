@@ -72,25 +72,22 @@ export const customerRouter = router({
         .order("created_at", { ascending: false })
 
       if (search) {
-        // Clean the search term - remove accents
+        // Check if search contains only numbers (CPF search)
+        const isNumberOnly = /^\d+$/.test(search.replace(/[^0-9]/g, ""))
         const cleanSearch = search.toLowerCase()
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
         
-        console.log("Search debug:", { search, cleanSearch })
+        console.log("Search debug:", { search, cleanSearch, isNumberOnly })
         
         if (cleanSearch.length > 0) {
-          // Search by document (CPF) - exact match after cleaning
-          const docSearch = cleanSearch.replace(/[^0-9]/g, '')
-          
-          // Search by name - use ilike with the cleaned search
-          // This will find any name containing the search term
-          if (docSearch.length > 0) {
-            // If there's a document number, search by both
-            query = query.or(`name.ilike.%${cleanSearch}%,document.ilike.%${docSearch}%`)
+          if (isNumberOnly) {
+            // Search only by document (CPF)
+            query = query.ilike("document", `%${search}%`)
           } else {
-            // Just search by name
-            query = query.ilike("name", `%${cleanSearch}%`)
+            // Search only by name - use unaccent if available
+            // Try using ilike with the cleaned search
+            query = query.or(`name.ilike.%${cleanSearch}%,name.ilike.%${search}%`)
           }
         }
       }
