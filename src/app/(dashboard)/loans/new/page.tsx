@@ -44,7 +44,8 @@ export default function NewLoanPage() {
   
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({ 
     limit: 5,
-    search: debouncedSearch || undefined
+    search: debouncedSearch || undefined,
+    status: "active"  // Only show active customers for new loans
   }, {
     enabled: true  // Always enable, let backend handle empty search
   })

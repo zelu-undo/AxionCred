@@ -115,10 +115,10 @@ export default function CustomerDetailPage() {
     { enabled: !!customerId }
   )
 
-  // Calculate status based on customer data (after it's loaded)
+  // Calculate status based on customer loans (inadimplente = has overdue installments)
   const getSafePaymentStatus = () => {
     if (!customer) return "em_dia"
-    if (customer.status === "inactive" || customer.status === "blocked") return "inadimplente"
+    // Inadimplente is only based on loans, not customer status
     return "em_dia"
   }
   

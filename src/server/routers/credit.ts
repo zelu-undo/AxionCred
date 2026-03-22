@@ -130,10 +130,10 @@ export const creditRouter = router({
       // Calcular subscores
       const totalParcelas = loans?.reduce((sum, l) => sum + (l.total_installments || 0), 0) || 0
       const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.total_installments || 0), 0) || 0
-      const parcelasAtrasadas = loans?.filter(l => l.status === "overdue").length || 0
+      const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
       const mesesCadastro = customer ? Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)) : 0
-      const inadimplencias = loans?.filter(l => l.status === "defaulted").length || 0
-      const emprestimosAtivos = loans?.filter(l => ["active", "overdue"].includes(l.status)).length || 0
+      const inadimplencias = loans?.filter(l => l.status === "late").length || 0  // Inadimplente = loan com status "late"
+      const emprestimosAtivos = loans?.filter(l => ["active", "late"].includes(l.status)).length || 0
       const emprestimos30d = loans?.filter(l => {
         const created = new Date(l.created_at)
         const thirtyDaysAgo = new Date()
