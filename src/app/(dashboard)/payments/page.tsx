@@ -124,6 +124,26 @@ export default function PaymentsPage() {
   const [selectedLoan, setSelectedLoan] = useState<LoanDetails | null>(null)
   const [paymentToReverse, setPaymentToReverse] = useState<PaymentRecord | null>(null)
   
+  // Payment form state - loan selection
+  const [loanSearch, setLoanSearch] = useState("")
+  const [selectedLoanId, setSelectedLoanId] = useState("")
+  const [selectedInstallmentId, setSelectedInstallmentId] = useState("")
+  const debouncedLoanSearch = useDebounce(loanSearch, 400)
+  
+  // Fetch loans for payment
+  const { data: loansData, isLoading: loadingLoans } = trpc.loan.searchForPayment.useQuery({
+    search: debouncedLoanSearch || undefined,
+  }, {
+    enabled: isRegisterOpen,
+  })
+  
+  // Fetch installments when loan is selected
+  const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.installmentsForPayment.useQuery({
+    loanId: selectedLoanId,
+  }, {
+    enabled: !!selectedLoanId,
+  })
+  
   // Payment form state
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
@@ -260,8 +280,8 @@ export default function PaymentsPage() {
 
   // Handle payment registration
   const handleRegisterPayment = async () => {
-    if (!selectedInstallment) {
-      showErrorToast("Selecione uma parcela para registrar o pagamento")
+    if (!selectedLoanId || !selectedInstallmentId) {
+      showErrorToast("Selecione um empréstimo e uma parcela")
       return
     }
     
@@ -275,7 +295,7 @@ export default function PaymentsPage() {
     
     try {
       await registerPaymentMutation.mutateAsync({
-        installment_id: selectedInstallment.id,
+        installment_id: selectedInstallmentId,
         amount,
         payment_date: paymentForm.payment_date,
         method: paymentForm.payment_method,
@@ -289,8 +309,9 @@ export default function PaymentsPage() {
         payment_method: "cash",
         notes: "",
       })
-      setSelectedInstallment(null)
-      setSelectedLoan(null)
+      setSelectedInstallmentId("")
+      setSelectedLoanId("")
+      setLoanSearch("")
     } catch (error) {
       // Error is handled by mutation onError
     } finally {
@@ -662,8 +683,22 @@ export default function PaymentsPage() {
       </motion.div>
 
       {/* Register Payment Modal */}
-      <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
-        <DialogContent className="max-w-lg w-[95vw]">
+      <Dialog open={isRegisterOpen} onOpenChange={(open) => {
+        setIsRegisterOpen(open)
+        if (!open) {
+          // Reset form when modal closes
+          setLoanSearch("")
+          setSelectedLoanId("")
+          setSelectedInstallmentId("")
+          setPaymentForm({
+            amount: "",
+            payment_date: new Date().toISOString().split("T")[0],
+            payment_method: "cash",
+            notes: "",
+          })
+        }
+      }}>
+        <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-[#22C55E]" />
@@ -675,26 +710,89 @@ export default function PaymentsPage() {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {/* Loan Selection - Demo */}
+            {/* Loan Selection - Real Data */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Empréstimo / Cliente *</label>
-              <select className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]">
-                <option value="">Selecione o empréstimo...</option>
-                <option value="l1">EMP-2024-001 - João Silva - R$ 1.250</option>
-                <option value="l2">EMP-2024-002 - Maria Santos - R$ 850</option>
-                <option value="l3">EMP-2024-003 - Pedro Costa - R$ 2.100</option>
-              </select>
+              <Input
+                placeholder="Pesquisar por contrato, nome ou CPF..."
+                value={loanSearch}
+                onChange={(e) => {
+                  setLoanSearch(e.target.value)
+                  setSelectedLoanId("")
+                  setSelectedInstallmentId("")
+                }}
+                className="w-full"
+              />
+              {loanSearch && (
+                <div className="border rounded-lg max-h-48 overflow-y-auto">
+                  {loadingLoans ? (
+                    <div className="p-3 text-center text-gray-500">Carregando...</div>
+                  ) : loansData && loansData.length > 0 ? (
+                    loansData.map((loan) => (
+                      <button
+                        key={loan.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedLoanId(loan.id)
+                          setLoanSearch(`${loan.contract_number || loan.id.slice(0,8)} - ${loan.customer?.name || 'Cliente'} - CPF: ${loan.customer?.document || '-'}`)
+                          setSelectedInstallmentId("")
+                          setPaymentForm({ ...paymentForm, amount: "" })
+                        }}
+                        className={`w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors ${
+                          selectedLoanId === loan.id ? "bg-green-50" : ""
+                        }`}
+                      >
+                        <div className="font-medium text-sm">
+                          {loan.contract_number || loan.id.slice(0,8)}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {loan.customer?.name || 'Cliente'} - CPF: {loan.customer?.document || '-'}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments_count} parcelas
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-3 text-center text-gray-500">Nenhum empréstimo encontrado</div>
+                  )}
+                </div>
+              )}
             </div>
             
-            {/* Installment Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Parcela *</label>
-              <select className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]">
-                <option value="">Selecione a parcela...</option>
-                <option value="1">Parcela 1 - R$ 1.250 - Venc: 15/03/2024</option>
-                <option value="2">Parcela 2 - R$ 850 - Venc: 18/03/2024</option>
-              </select>
-            </div>
+            {/* Installment Selection - Show only after loan is selected */}
+            {selectedLoanId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Parcela *</label>
+                {loadingInstallments ? (
+                  <div className="text-gray-500 text-sm">Carregando parcelas...</div>
+                ) : installmentsData && installmentsData.length > 0 ? (
+                  <select
+                    value={selectedInstallmentId}
+                    onChange={(e) => {
+                      setSelectedInstallmentId(e.target.value)
+                      const inst = installmentsData.find(i => i.id === e.target.value)
+                      if (inst) {
+                        setPaymentForm({ 
+                          ...paymentForm, 
+                          amount: ((inst.amount || 0) - (inst.paid_amount || 0)).toString() 
+                        })
+                      }
+                    }}
+                    className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]"
+                  >
+                    <option value="">Selecione a parcela...</option>
+                    {installmentsData.map((inst) => (
+                      <option key={inst.id} value={inst.id}>
+                        Parcela {inst.installment_number} - R$ {((inst.amount || 0) - (inst.paid_amount || 0)).toLocaleString('pt-BR')} - Venc: {new Date(inst.due_date).toLocaleDateString('pt-BR')} [{inst.status}]
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="text-gray-500 text-sm">Todas as parcelas foram pagas</div>
+                )}
+              </div>
+            )}
             
             {/* Payment Amount */}
             <div className="space-y-2">
@@ -707,9 +805,16 @@ export default function PaymentsPage() {
                   value={paymentForm.amount}
                   onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
                   className="pl-10"
+                  disabled={!selectedInstallmentId}
                 />
               </div>
-              <p className="text-xs text-gray-500">Valor remaining: R$ 1.250</p>
+              {selectedInstallmentId && (
+                <p className="text-xs text-gray-500">
+                  Valor remaining: R$ {installmentsData?.find(i => i.id === selectedInstallmentId) ? 
+                    ((installmentsData.find(i => i.id === selectedInstallmentId)?.amount || 0) - (installmentsData.find(i => i.id === selectedInstallmentId)?.paid_amount || 0)).toLocaleString('pt-BR') 
+                    : '0'}
+                </p>
+              )}
             </div>
             
             {/* Payment Date */}
@@ -765,7 +870,7 @@ export default function PaymentsPage() {
             </Button>
             <Button 
               onClick={handleRegisterPayment}
-              disabled={isSubmitting || !paymentForm.amount}
+              disabled={isSubmitting || !selectedLoanId || !selectedInstallmentId || !paymentForm.amount}
               className="bg-[#22C55E] hover:bg-[#16A34A]"
             >
               {isSubmitting ? (

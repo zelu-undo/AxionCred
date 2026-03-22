@@ -110,7 +110,7 @@ function NavigationItems() {
       items: [
         { name: t("navigation.customers"), href: "/customers", icon: Users, permission: "customers" },
         { name: t("navigation.loans"), href: "/loans", icon: CreditCard, permission: "loans" },
-        { name: "💰 Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
+        { name: "Pagamentos", href: "/payments", icon: DollarSign, permission: "loans" },
       ],
     },
     {

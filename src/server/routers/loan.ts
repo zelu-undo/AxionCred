@@ -95,6 +95,87 @@ export const loanRouter = router({
       return { loans: data || [], total: count || 0 }
     }),
 
+  // Search loans for payment selection - includes contract number, customer name and document
+  searchForPayment: protectedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        customerId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { search, customerId } = input
+
+      let query = ctx.supabase
+        .from("loans")
+        .select(`
+          id,
+          contract_number,
+          principal_amount,
+          total_amount,
+          paid_amount,
+          remaining_amount,
+          installments_count,
+          paid_installments,
+          status,
+          created_at,
+          customer:customers(id, name, document, phone)
+        `)
+        .eq("tenant_id", ctx.tenantId!)
+        .in("status", ["active", "late", "pending"])
+        .order("created_at", { ascending: false })
+        .limit(20)
+
+      if (customerId) {
+        query = query.eq("customer_id", customerId)
+      }
+
+      if (search && search.length >= 3) {
+        // Search by contract number, customer name or document
+        query = query.or(`contract_number.ilike.%${search}%,customer.name.ilike.%${search}%,customer.document.ilike.%${search}%`)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error("Error searching loans for payment:", error)
+        return []
+      }
+
+      return data || []
+    }),
+
+  // Get installments for a specific loan
+  installmentsForPayment: protectedProcedure
+    .input(
+      z.object({
+        loanId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase
+        .from("loan_installments")
+        .select(`
+          id,
+          installment_number,
+          amount,
+          paid_amount,
+          due_date,
+          paid_date,
+          status
+        `)
+        .eq("loan_id", input.loanId)
+        .neq("status", "paid")
+        .order("installment_number", { ascending: true })
+
+      if (error) {
+        console.error("Error fetching installments:", error)
+        return []
+      }
+
+      return data || []
+    }),
+
   byId: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
