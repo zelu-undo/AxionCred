@@ -173,22 +173,16 @@ export default function NewLoanPage() {
   }
 
   useEffect(() => {
-    console.log("=== useEffect triggered ===")
-    console.log("principal:", formData.principal)
-    console.log("installments:", formData.installments)
-    console.log("firstPaymentDate:", formData.firstPaymentDate)
-    console.log("businessRulesData:", !!businessRulesData)
-    
     // Use direct values, not debounced
     const principal = formData.principal
     const installments = formData.installments
     const firstPaymentDate = formData.firstPaymentDate
     
+    console.log("useEffect:", { principal, installments, firstPaymentDate, hasRules: !!businessRulesData })
+    
     if (principal && installments && businessRulesData) {
-      console.log("Calling calculateLoan!")
+      alert("Calling calculateLoan! principal=" + principal + ", installments=" + installments)
       calculateLoan()
-    } else {
-      console.log("NOT calling calculateLoan - missing data")
     }
   }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
 
