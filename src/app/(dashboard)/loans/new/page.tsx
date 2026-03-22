@@ -21,6 +21,11 @@ export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
   
+  // Test alert to see if component renders
+  React.useEffect(() => {
+    alert("NewLoanPage rendered!")
+  }, [])
+  
   console.log(">>> NewLoanPage rendered")
   
   // Get customers with search
