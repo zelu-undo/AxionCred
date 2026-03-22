@@ -10,6 +10,7 @@ import { ArrowLeft, Calculator, CheckCircle, Loader2, Search, AlertCircle } from
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import { useLoanCalculator, type InterestType } from "@/hooks/use-loan-calculator"
+import { useToast } from "@/hooks/use-toast"
 import type { Customer, InterestRule } from "@/types"
 
 interface InstallmentPreview {
@@ -21,6 +22,7 @@ interface InstallmentPreview {
 export default function NewLoanPage() {
   const { t } = useI18n()
   const router = useRouter()
+  const { toast } = useToast()
   
   // Get customers with search
   const [customerSearch, setCustomerSearch] = useState("")
@@ -61,7 +63,11 @@ export default function NewLoanPage() {
       }, 2000)
     },
     onError: (error) => {
-      alert(error.message)
+      toast({ 
+        title: "Erro ao criar empréstimo", 
+        description: error.message, 
+        variant: "destructive" 
+      })
       setIsSubmitting(false)
     }
   })
@@ -126,9 +132,6 @@ export default function NewLoanPage() {
     // Default interest rate if no rule found: 5% monthly
     const interestRate = rule?.interest_rate ?? 5
     const interestType = (rule?.interest_type || 'monthly') as InterestType
-    
-    // Show final result
-    alert(`RESULT: interestRate=${interestRate}, interestType=${interestType}, rule=${JSON.stringify(rule)}`)
 
     // Use centralized calculation from hook
     const calculation = computeLoan(principal, interestRate, numInstallments, interestType)
