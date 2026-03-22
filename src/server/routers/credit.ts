@@ -312,12 +312,36 @@ export const creditRouter = router({
       const availableCash = totalIn - totalOut
       const usableCash = availableCash * ((settings?.max_box_percentage || 80) / 100)
 
-      // Buscar loans do cliente para calcular limite
-      const { data: loans } = await ctx.supabase
+      // Buscar loans do cliente para calcular limite - usando JOIN com customers
+      const { data: loansWithCustomer } = await ctx.supabase
         .from("loans")
-        .select("amount, customer_document, status")
+        .select(`
+          amount,
+          status,
+          customer:customers!inner(document)
+        `)
         .eq("tenant_id", ctx.tenantId)
         .in("status", ["active", "overdue"])
+
+      // Filtrar loans pelo documento do cliente (normalizado)
+      const clientUsed = loansWithCustomer?.reduce((sum: number, loan: any) => {
+        const loanDoc = loan.customer?.document || ""
+        const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
+        if (normalizedLoanDoc === document) {
+          return sum + (loan.amount || 0)
+        }
+        return sum
+      }, 0) || 0
+
+      // Contar empréstimos ativos
+      const activeLoansCount = loansWithCustomer?.reduce((count: number, loan: any) => {
+        const loanDoc = loan.customer?.document || ""
+        const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
+        if (normalizedLoanDoc === document) {
+          return count + 1
+        }
+        return count
+      }, 0) || 0
 
       // Buscar score
       const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
@@ -336,10 +360,6 @@ export const creditRouter = router({
       })
 
       const clientLimit = Array.isArray(limitData) ? limitData[0] || 5000 : 5000
-      const clientUsed = loans?.filter(l => l.customer_document === document).reduce((sum, l) => sum + (l.amount || 0), 0) || 0
-
-      // Contar empréstimos ativos
-      const activeLoansCount = loans?.filter(l => l.customer_document === document && ["active", "overdue"].includes(l.status)).length || 0
 
       // Verificações
       const boxCheck = amount <= usableCash
@@ -521,12 +541,37 @@ export const creditRouter = router({
       const availableCash = totalIn - totalOut
       const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
 
-      // Buscar loans do cliente para calcular limite
-      const { data: loans } = await ctx.supabase
+      // Buscar loans do cliente para calcular limite - usando JOIN com customers
+      const { data: loansWithCustomer } = await ctx.supabase
         .from("loans")
-        .select("amount, customer_document, status")
+        .select(`
+          amount,
+          status,
+          customer:customers!inner(document)
+        `)
         .eq("tenant_id", ctx.tenantId)
         .in("status", ["active", "overdue"])
+
+      // Filtrar loans pelo documento do cliente (normalizado)
+      const clientUsed = loansWithCustomer?.reduce((sum: number, loan: any) => {
+        // O documento pode vir como string ou objeto dependendo do JOIN
+        const loanDoc = loan.customer?.document || ""
+        const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
+        if (normalizedLoanDoc === document) {
+          return sum + (loan.amount || 0)
+        }
+        return sum
+      }, 0) || 0
+
+      // Contar empréstimos ativos
+      const activeLoansCount = loansWithCustomer?.reduce((count: number, loan: any) => {
+        const loanDoc = loan.customer?.document || ""
+        const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
+        if (normalizedLoanDoc === document) {
+          return count + 1
+        }
+        return count
+      }, 0) || 0
 
       // Buscar score
       const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
@@ -546,10 +591,6 @@ export const creditRouter = router({
       })
 
       const clientLimit = Array.isArray(limitData) ? limitData[0] || 5000 : 5000
-      const clientUsed = loans?.filter(l => l.customer_document === document).reduce((sum, l) => sum + (l.amount || 0), 0) || 0
-
-      // Contar empréstimos ativos
-      const activeLoansCount = loans?.filter(l => l.customer_document === document && ["active", "overdue"].includes(l.status)).length || 0
 
       // Verificações
       const boxCheck = amount <= usableCash
@@ -617,6 +658,46 @@ export const creditRouter = router({
           max_loans: maxLoansCheck,
         },
         warnings,
+      }
+    }),
+
+  // 9. Buscar notificações do usuário
+  getNotifications: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(10),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { limit } = input
+
+      // Get notifications for current user
+      const { data: notifications, error } = await ctx.supabase
+        .from("notifications")
+        .select("*")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("user_id", ctx.userId!)
+        .order("created_at", { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        })
+      }
+
+      // Get unread count
+      const { count: unreadCount } = await ctx.supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", ctx.tenantId)
+        .eq("user_id", ctx.userId!)
+        .eq("is_read", false)
+
+      return {
+        notifications: notifications || [],
+        unreadCount: unreadCount || 0,
       }
     }),
 })

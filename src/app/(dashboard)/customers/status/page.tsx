@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Users, AlertCircle, Clock, TrendingUp } from 'lucide-react';
+import { Users, AlertCircle, Clock, TrendingUp, Loader2 } from 'lucide-react';
 import { motion } from "framer-motion";
+import { trpc } from "@/trpc/client";
 
 // Animation variants
 const containerVariants = {
@@ -21,12 +20,13 @@ const itemVariants = {
 }
 
 export default function CustomerStatusPage() {
-  const [customers] = useState([
-    { id: '1', name: 'João Silva', status: 'current', priority: 'high', debt: 5000, score: 850 },
-    { id: '2', name: 'Maria Santos', status: 'overdue', priority: 'high', debt: 3500, score: 720 },
-    { id: '3', name: 'Pedro Costa', status: 'default', priority: 'high', debt: 4800, score: 580 },
-    { id: '4', name: 'Ana Pereira', status: 'current', priority: 'medium', debt: 1000, score: 790 },
-  ])
+  // Fetch real customer status data
+  const { data: customersData, isLoading } = trpc.customer.getCustomerStatus.useQuery({
+    limit: 100,
+    offset: 0,
+  })
+
+  const customers = customersData?.customers || []
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -37,10 +37,11 @@ export default function CustomerStatusPage() {
     }
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 700) return 'text-green-600'
-    if (score >= 600) return 'text-yellow-600'
-    return 'text-red-600'
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value || 0)
   }
 
   return (
@@ -127,43 +128,51 @@ export default function CustomerStatusPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            <div className="rounded-md border border-gray-100">
-              <table className="w-full">
-                <thead className="bg-gray-50/50">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Prioridade</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Dívida</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Score</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {customers.map((customer) => {
-                    const statusInfo = getStatusInfo(customer.status);
-                    return (
-                      <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-4 py-3 font-medium">{customer.name}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
-                            {statusInfo.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={customer.priority === 'high' ? 'text-red-600 font-medium' : 'text-yellow-600'}>
-                            {customer.priority === 'high' ? 'Alta' : 'Média'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium">R$ {customer.debt.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={getScoreColor(customer.score)}>{customer.score}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-[#22C55E]" />
+                <span className="ml-2 text-gray-500">Carregando dados...</span>
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p>Nenhum cliente encontrado</p>
+              </div>
+            ) : (
+              <div className="rounded-md border border-gray-100">
+                <table className="w-full">
+                  <thead className="bg-gray-50/50">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Prioridade</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Dívida Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {customers.map((customer) => {
+                      const statusInfo = getStatusInfo(customer.status);
+                      return (
+                        <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-4 py-3 font-medium">{customer.name}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={customer.priority === 'high' ? 'text-red-600 font-medium' : customer.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'}>
+                              {customer.priority === 'high' ? 'Alta' : customer.priority === 'medium' ? 'Média' : 'Baixa'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium">{formatCurrency(customer.debt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

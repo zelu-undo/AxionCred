@@ -363,4 +363,101 @@ export const customerRouter = router({
         return []
       }
     }),
+
+  // Get customer status with loan information
+  getCustomerStatus: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { limit, offset } = input
+
+      // Get all customers with their loan information
+      const { data: customers, error: customersError } = await ctx.supabase
+        .from("customers")
+        .select("id, name, document, status, created_at")
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (customersError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: customersError.message,
+        })
+      }
+
+      if (!customers || customers.length === 0) {
+        return { customers: [], total: 0 }
+      }
+
+      // Get loan data for all customers
+      const { data: loans, error: loansError } = await ctx.supabase
+        .from("loans")
+        .select("customer_id, status, remaining_amount, principal_amount")
+        .eq("tenant_id", ctx.tenantId!)
+        .in("status", ["active", "overdue", "paid", "defaulted"])
+
+      if (loansError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: loansError.message,
+        })
+      }
+
+      // Calculate status for each customer
+      const customerMap = new Map(loans?.map(l => [l.customer_id, l]) || [])
+      
+      // Calculate total customers
+      const { count: totalCount } = await ctx.supabase
+        .from("customers")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", ctx.tenantId!)
+        .eq("status", "active")
+
+      const customersWithStatus = customers.map(customer => {
+        const customerLoans = loans?.filter(l => l.customer_id === customer.id) || []
+        
+        // Determine status based on loan status
+        const hasOverdue = customerLoans.some(l => l.status === "overdue")
+        const hasDefaulted = customerLoans.some(l => l.status === "defaulted")
+        const hasActive = customerLoans.some(l => l.status === "active")
+        
+        let status: "current" | "overdue" | "default" = "current"
+        let priority: "high" | "medium" | "low" = "low"
+        
+        if (hasDefaulted) {
+          status = "default"
+          priority = "high"
+        } else if (hasOverdue) {
+          status = "overdue"
+          priority = "high"
+        } else if (hasActive) {
+          priority = "medium"
+        }
+
+        // Calculate total debt (remaining amount from active/overdue loans)
+        const totalDebt = customerLoans
+          .filter(l => ["active", "overdue"].includes(l.status))
+          .reduce((sum, l) => sum + Number(l.remaining_amount || 0), 0)
+
+        return {
+          id: customer.id,
+          name: customer.name,
+          document: customer.document,
+          status,
+          priority,
+          debt: totalDebt,
+        }
+      })
+
+      return { 
+        customers: customersWithStatus, 
+        total: totalCount || 0 
+      }
+    }),
 })
