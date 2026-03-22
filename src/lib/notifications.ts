@@ -55,7 +55,9 @@ export async function createNotification(
     return
   }
 
-  const userIds = tenantUsers.map(u => u.id)
+  // Tipos explícitos para evitar erro de inferência
+  const usersArray: UserData[] = tenantUsers as unknown as UserData[]
+  const userIds = usersArray.map(u => u.id)
 
   // Buscar configurações de notificação para esses usuários
   const { data: userSettings, error: settingsError } = await supabase
@@ -76,7 +78,7 @@ export async function createNotification(
 
   if (!userSettings || userSettings.length === 0) {
     // Se não há configurações específicas, enviar para todos os usuários ativos (visual + email)
-    tenantUsers.forEach((u) => {
+    usersArray.forEach((u) => {
       usersForVisual.push(u.id)
       usersForEmail.push(u.id)
     })
@@ -116,7 +118,7 @@ export async function createNotification(
   // 2. Enviar notificações por email
   if (usersForEmail.length > 0) {
     // Buscar emails dos usuários que devem receber
-    const usersToEmail = tenantUsers.filter((u: UserData) => 
+    const usersToEmail = usersArray.filter((u: UserData) => 
       usersForEmail.includes(u.id) && u.email
     )
 
