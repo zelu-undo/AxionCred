@@ -141,7 +141,7 @@ export const dashboardRouter = router({
 
       // Get loan and customer details
       const overdueLoanIds = overdueCustomersRaw?.map(i => i.loan_id).filter(Boolean) || []
-      const { data: overdueLoansData } = overdueLoanIds.length > 0
+      const { data: overdueLoansForCustomers } = overdueLoanIds.length > 0
         ? await ctx.supabase
             .from("loans")
             .select("id, customer_id, tenant_id")
@@ -149,7 +149,7 @@ export const dashboardRouter = router({
         : { data: [] }
 
       // Get customer info for valid loans
-      const validOverdueLoans = overdueLoansData?.filter(l => l.tenant_id === ctx.tenantId) || []
+      const validOverdueLoans = overdueLoansForCustomers?.filter(l => l.tenant_id === ctx.tenantId) || []
       const customerIds = validOverdueLoans.map(l => l.customer_id).filter(Boolean)
       const { data: customerData } = customerIds.length > 0
         ? await ctx.supabase
