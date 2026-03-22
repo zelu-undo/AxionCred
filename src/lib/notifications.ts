@@ -1,10 +1,28 @@
 import { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
+import { sendNotificationEmail } from "./notification-email"
 
 type Supabase = SupabaseClient<Database>
 
 /**
+ * Interface para configurações de notificação do usuário
+ */
+interface UserNotificationSetting {
+  user_id: string
+  method: string
+}
+
+/**
+ * Interface para dados do usuário
+ */
+interface UserData {
+  id: string
+  email: string
+}
+
+/**
  * Cria notificações para usuários baseado em suas preferências
+ * Suporta both: visual (banco) + email (Resend)
  * 
  * @param supabase - Cliente do Supabase
  * @param tenantId - ID do tenant
@@ -21,10 +39,10 @@ export async function createNotification(
   message: string,
   data: Record<string, any> = {}
 ): Promise<void> {
-  // Buscar todos os usuários ativos do tenant
+  // Buscar todos os usuários ativos do tenant com seus emails
   const { data: tenantUsers, error: tenantUsersError } = await supabase
     .from("users")
-    .select("id")
+    .select("id, email")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
 
@@ -40,7 +58,6 @@ export async function createNotification(
   const userIds = tenantUsers.map(u => u.id)
 
   // Buscar configurações de notificação para esses usuários
-  // A tabela user_notification_settings não tem tenant_id, então usamos .in() com os userIds
   const { data: userSettings, error: settingsError } = await supabase
     .from("user_notification_settings")
     .select("user_id, method")
@@ -53,20 +70,31 @@ export async function createNotification(
     return
   }
 
-  let usersToNotify: string[] = []
+  // Separar usuários por método de notificação
+  const usersForVisual: string[] = []
+  const usersForEmail: string[] = []
 
   if (!userSettings || userSettings.length === 0) {
-    // Se não há configurações específicas, enviar para todos os usuários ativos
-    usersToNotify = tenantUsers.map(u => u.id)
+    // Se não há configurações específicas, enviar para todos os usuários ativos (visual + email)
+    tenantUsers.forEach((u) => {
+      usersForVisual.push(u.id)
+      usersForEmail.push(u.id)
+    })
   } else {
-    // Filtrar apenas usuários que desejam receber por método visual ou ambos
-    usersToNotify = userSettings
-      .filter((setting) => setting.method === "visual" || setting.method === "both")
-      .map((setting) => setting.user_id)
+    // Separar por método
+    userSettings.forEach((setting: UserNotificationSetting) => {
+      if (setting.method === "visual" || setting.method === "both") {
+        usersForVisual.push(setting.user_id)
+      }
+      if (setting.method === "email" || setting.method === "both") {
+        usersForEmail.push(setting.user_id)
+      }
+    })
   }
 
-  if (usersToNotify.length > 0) {
-    const notifications = usersToNotify.map((userId) => ({
+  // 1. Criar notificações visuais no banco
+  if (usersForVisual.length > 0) {
+    const notifications = usersForVisual.map((userId) => ({
       user_id: userId,
       tenant_id: tenantId,
       type: notificationType,
@@ -81,8 +109,29 @@ export async function createNotification(
       .insert(notifications)
 
     if (insertError) {
-      console.error("Erro ao criar notificações:", insertError)
+      console.error("Erro ao criar notificações visuais:", insertError)
     }
+  }
+
+  // 2. Enviar notificações por email
+  if (usersForEmail.length > 0) {
+    // Buscar emails dos usuários que devem receber
+    const usersToEmail = tenantUsers.filter((u: UserData) => 
+      usersForEmail.includes(u.id) && u.email
+    )
+
+    // Enviar emails em paralelo (não bloqueante)
+    usersToEmail.forEach((user: UserData) => {
+      sendNotificationEmail(
+        user.email,
+        notificationType,
+        title,
+        message,
+        data
+      ).catch((err) => {
+        console.error(`Erro ao enviar email para ${user.email}:`, err)
+      })
+    })
   }
 }
 
