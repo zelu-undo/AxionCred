@@ -254,31 +254,32 @@ export default function NewLoanPage() {
   // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments) || 1
-    console.log("Looking for rule with installments:", numInstallments)
-    console.log("Available rules:", businessRulesData?.interestRules)
     
-    // Default rates if no rules are configured
-    const defaultRates: Record<number, number> = {
-      1: 3, 2: 3.5, 3: 4, 4: 4.5, 5: 5, 
-      6: 5.5, 7: 6, 8: 6.5, 9: 7, 10: 7.5, 
-      11: 8, 12: 8.5
+    console.log("=== Interest Rate Debug ===")
+    console.log("formData.installments:", formData.installments)
+    console.log("numInstallments:", numInstallments)
+    console.log("businessRulesData:", businessRulesData)
+    console.log("interestRules:", businessRulesData?.interestRules)
+    
+    if (!businessRulesData?.interestRules || businessRulesData.interestRules.length === 0) {
+      console.log("NO RULES FOUND - returning rate: 0")
+      return { rate: 0, type: 'monthly' }
     }
     
-    // Try to find a matching rule
-    let rate = defaultRates[numInstallments] || 5
-    if (businessRulesData?.interestRules && businessRulesData.interestRules.length > 0) {
-      const rule = businessRulesData.interestRules.find(
-        r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
-      )
-      if (rule) {
-        rate = rule.interest_rate
-      }
+    const rule = businessRulesData.interestRules.find(
+      r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
+    )
+    
+    console.log("Matched rule:", rule)
+    
+    if (!rule) {
+      console.log("NO MATCHING RULE - returning rate: 0")
+      return { rate: 0, type: 'monthly' }
     }
     
-    console.log("Matched rate:", rate)
     return { 
-      rate, 
-      type: 'monthly' 
+      rate: rule.interest_rate, 
+      type: rule.interest_type || 'monthly' 
     }
   }, [formData.installments, businessRulesData])
 
