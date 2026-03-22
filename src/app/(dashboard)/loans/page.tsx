@@ -76,6 +76,18 @@ export default function LoansPage() {
         dot: "bg-red-500",
         label: t("loans.cancelled")
       },
+      late: { 
+        bg: "bg-gradient-to-r from-red-50 to-orange-50 border-red-200", 
+        text: "text-red-700",
+        dot: "bg-red-500",
+        label: "Atrasado"
+      },
+      overdue: { 
+        bg: "bg-gradient-to-r from-red-50 to-orange-50 border-red-200", 
+        text: "text-red-700",
+        dot: "bg-red-500",
+        label: "Inadimplente"
+      },
     }
     
     const config = statusConfig[status as keyof typeof statusConfig]

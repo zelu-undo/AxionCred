@@ -684,13 +684,19 @@ DECLARE
     paid DECIMAL(15,2);
     remaining DECIMAL(15,2);
     paid_count INTEGER;
+    late_count INTEGER;
+    current_loan_status VARCHAR(20);
 BEGIN
     SELECT COALESCE(SUM(paid_amount), 0), 
            COALESCE(SUM(amount), 0) - COALESCE(SUM(paid_amount), 0),
-           COUNT(*) FILTER (WHERE status = 'paid')
-    INTO paid, remaining, paid_count
+           COUNT(*) FILTER (WHERE status = 'paid'),
+           COUNT(*) FILTER (WHERE status = 'late')
+    INTO paid, remaining, paid_count, late_count
     FROM loan_installments
     WHERE loan_id = NEW.loan_id;
+    
+    -- Get current status before update
+    SELECT status INTO current_loan_status FROM loans WHERE id = NEW.loan_id;
     
     UPDATE loans
     SET paid_amount = paid,
@@ -698,6 +704,7 @@ BEGIN
         paid_installments = paid_count,
         status = CASE 
             WHEN paid_count = (SELECT installments_count FROM loans WHERE id = NEW.loan_id) THEN 'paid'
+            WHEN late_count > 0 THEN 'late'
             WHEN paid_count > 0 THEN 'active'
             ELSE status
         END
