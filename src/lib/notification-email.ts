@@ -1,9 +1,31 @@
 /**
- * Email notification service using Resend API
+ * Email notification service using Gmail (nodemailer)
  * 
- * This module handles sending email notifications based on user preferences.
- * It integrates with the existing /api/email endpoint.
+ * This module handles sending email notifications using Gmail SMTP.
+ * Requires: GOOGLE_APP_PASSWORD environment variable
  */
+
+import nodemailer from "nodemailer";
+
+// Configure Gmail transporter
+// Uses App Password (not regular password) for authentication
+const createTransporter = () => {
+  const gmailUser = process.env.GMAIL_USER; // seu email Gmail
+  const gmailAppPassword = process.env.GOOGLE_APP_PASSWORD; // App Password de 16 caracteres
+
+  if (!gmailUser || !gmailAppPassword) {
+    console.error("Gmail not configured. Set GMAIL_USER and GOOGLE_APP_PASSWORD env vars.");
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword,
+    },
+  });
+};
 
 interface EmailParams {
   to: string;
@@ -12,24 +34,25 @@ interface EmailParams {
 }
 
 /**
- * Send an email notification
- * Uses the internal API route which uses Resend
+ * Send an email notification using Gmail
  */
 async function sendEmail({ to, subject, html }: EmailParams): Promise<boolean> {
   try {
-    const response = await fetch("/api/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, subject, html }),
-    });
-
-    const result = await response.json();
+    const transporter = createTransporter();
     
-    if (result.error) {
-      console.error("Email error:", result.error);
+    if (!transporter) {
+      console.error("Gmail transporter not configured");
       return false;
     }
-    
+
+    const mailOptions = {
+      from: `"AXION Cred" <${process.env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    };
+
+    await transporter.sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error("Failed to send email:", error);
