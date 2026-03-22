@@ -40,11 +40,15 @@ export default function NewLoanPage() {
     limit: 5,
     search: debouncedSearch || undefined
   }, {
-    enabled: debouncedSearch.length > 0
+    enabled: true  // Always enable, let backend handle empty search
   })
   
-  console.log("Customers query result:", customersData, "search:", debouncedSearch)
   const customers = customersData?.customers || []
+  
+  // Show dropdown when input is focused or has content
+  const shouldShowDropdown = showDropdown && (customers.length > 0 || customerSearch.length > 0)
+  
+  console.log("Customers query result:", customersData, "search:", debouncedSearch)
 
   const createMutation = trpc.loan.create.useMutation({
     onSuccess: () => {
@@ -82,6 +86,9 @@ export default function NewLoanPage() {
 
   // Calculate loan preview using business rules
   const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
+  
+  console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
+  console.log("Interest rules:", businessRulesData?.interestRules)
 
   const calculateLoan = () => {
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
@@ -229,11 +236,14 @@ export default function NewLoanPage() {
   const currentInterestRate = useMemo(() => {
     const numInstallments = parseInt(formData.installments)
     if (!businessRulesData?.interestRules) return { rate: 0, type: 'monthly' }
+    console.log("Looking for rule with installments:", numInstallments)
+    console.log("Available rules:", businessRulesData.interestRules)
     const rule = businessRulesData.interestRules.find(
       r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
     )
+    console.log("Matched rule:", rule)
     return { 
-      rate: rule?.interest_rate || 0, 
+      rate: rule?.interest_rate || 5,  // Default to 5% if no rule found
       type: rule?.interest_type || 'monthly' 
     }
   }, [formData.installments, businessRulesData])
@@ -304,7 +314,7 @@ export default function NewLoanPage() {
                   )}
                 </div>
                 {/* Show dropdown when focused and has results */}
-                {showDropdown && customers.length > 0 && (
+                {shouldShowDropdown && (
                   <div className="border rounded-md max-h-48 overflow-y-auto absolute z-50 bg-white w-full shadow-lg">
                     {loadingCustomers ? (
                       <div className="p-2 text-center text-gray-500">
