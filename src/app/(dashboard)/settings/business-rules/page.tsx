@@ -642,7 +642,7 @@ export default function BusinessRulesPage() {
             </div>
           </div>
         
-          <div className="mt-6">
+          <div className="mt-6 flex gap-3">
             <Button 
               onClick={handleSaveLateFee}
               className="bg-[#22C55E] hover:bg-[#4ADE80] shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
@@ -651,6 +651,45 @@ export default function BusinessRulesPage() {
               Salvar Configurações
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Processar Juros Manual */}
+      <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
+        <CardHeader className="pb-4 border-b border-gray-100/50">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-[#1E3A8A]/10">
+              <AlertCircle className="h-5 w-5 text-[#1E3A8A]" />
+            </div>
+            <CardTitle className="text-lg font-semibold">Processamento de Juros</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <p className="text-gray-600 mb-4">
+            Clique no botão abaixo para processar manualmente os juros e multas das parcelas atrasadas. 
+            Este processamento também é feito automaticamente todo dia às 1:00 da manhã.
+          </p>
+          <Button 
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/cron/daily-late-fees', {
+                  method: 'POST',
+                })
+                const data = await response.json()
+                if (data.success) {
+                  alert(`Sucesso! ${data.message}`)
+                } else {
+                  alert(`Erro: ${data.message}`)
+                }
+              } catch (err) {
+                alert('Erro ao processar: ' + (err as Error).message)
+              }
+            }}
+            className="bg-[#1E3A8A] hover:bg-[#2D4BA0] shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300"
+          >
+            <AlertCircle className="mr-2 h-4 w-4" />
+            Processar Juros Agora
+          </Button>
         </CardContent>
       </Card>
     </motion.div>

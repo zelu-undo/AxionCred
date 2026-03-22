@@ -10,6 +10,11 @@ import { createClient } from "@/lib/supabase"
  * O endpoint requer uma chave de API configurada como CRON_SECRET
  */
 
+// Valores padrão se não houver configuração
+const DEFAULT_LATE_FEE = 0
+const DEFAULT_DAILY_INTEREST = 0.001 // 0.1% ao dia
+const DEFAULT_MAX_INTEREST_RATE = 0.10 // 10% máximo
+
 export async function POST(request: NextRequest) {
   try {
     // Verificar chave de segurança do cron
@@ -23,104 +28,114 @@ export async function POST(request: NextRequest) {
     const supabase = createClient()
     const today = new Date().toISOString().split('T')[0]
     
-    // Buscar configurações de juros de mora ativos
+    // Buscar todas as configurações de juros de mora
     const { data: configs, error: configError } = await supabase
       .from("late_fee_config")
       .select("*")
-      .eq("is_active", true)
 
     if (configError) {
       console.error("Erro ao buscar configurações:", configError)
+      // Continuar mesmo sem config - usar valores padrão
+    }
+
+    // Buscar todas as parcelas atrasadas
+    const { data: installments, error: instError } = await supabase
+      .from("loan_installments")
+      .select(`
+        id,
+        amount,
+        paid_amount,
+        due_date,
+        late_fee_applied,
+        late_interest_applied,
+        days_in_delay,
+        loan:loans(id, customer_id, tenant_id)
+      `)
+      .eq("status", "late")
+      .lt("due_date", today)
+      .or("paid_amount.is.null,paid_amount.lt.amount")
+
+    if (instError) {
+      console.error("Erro ao buscar parcelas:", instError)
       return NextResponse.json({ 
         success: false, 
-        message: "Erro ao buscar configurações",
+        message: "Erro ao buscar parcelas: " + instError.message,
         processed: 0 
       }, { status: 500 })
     }
 
-    if (!configs || configs.length === 0) {
+    if (!installments || installments.length === 0) {
       return NextResponse.json({ 
         success: true, 
-        message: "Nenhuma configuração de juros ativo",
+        message: "Nenhuma parcela atrasada para processar",
         processed: 0 
       })
     }
 
     let totalProcessed = 0
 
-    // Processar cada configuração de tenant
-    for (const config of configs) {
-      // Buscar parcelas atrasadas deste tenant
-      const { data: installments, error: instError } = await supabase
+    // Processar cada parcela
+    for (const inst of installments as any[]) {
+      // Encontrar configuração do tenant
+      const config = configs?.find((c: any) => c.tenant_id === inst.loan?.tenant_id)
+      
+      // Usar os campos corretos do banco
+      const fixedFee = config?.fixed_fee ?? config?.percentage ?? DEFAULT_LATE_FEE
+      
+      // Calcular juros diários a partir da configuração
+      let dailyInterest = DEFAULT_DAILY_INTEREST
+      if (config?.late_interest_type === 'percentage' && config?.late_interest_value) {
+        // Converter taxa percentual para taxa diária
+        if (config.late_interest_charge_type === 'daily') {
+          dailyInterest = (config.late_interest_value / 100) / 30 // mensal para diário
+        } else if (config.late_interest_charge_type === 'weekly') {
+          dailyInterest = (config.late_interest_value / 100) / 7 // semanal para diário
+        } else {
+          dailyInterest = config.late_interest_value / 100 // mensal
+        }
+      }
+
+      const dueDate = new Date(inst.due_date)
+      const todayDate = new Date(today)
+      const daysLate = Math.floor(
+        (todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      if (daysLate <= 0) continue
+
+      const originalAmount = inst.amount
+      let lateFee = inst.late_fee_applied || 0
+      let lateInterest = inst.late_interest_applied || 0
+
+      // Aplicar multa fixa (apenas na primeira vez)
+      if (fixedFee > 0 && lateFee === 0) {
+        lateFee = fixedFee
+      }
+
+      // Calcular juros diários progressivos
+      if (dailyInterest > 0 && daysLate > 0) {
+        lateInterest = originalAmount * dailyInterest * daysLate
+
+        // Aplicar limite máximo de 10%
+        const maxInterest = originalAmount * DEFAULT_MAX_INTEREST_RATE
+        lateInterest = Math.min(lateInterest, maxInterest)
+      }
+
+      const newTotal = originalAmount + lateFee + lateInterest
+
+      // Atualizar parcela
+      const { error: updateError } = await supabase
         .from("loan_installments")
-        .select(`
-          id,
-          amount,
-          paid_amount,
-          due_date,
-          late_fee_applied,
-          late_interest_applied,
-          loan:loans(tenant_id)
-        `)
-        .eq("status", "late")
-        .lt("due_date", today)
-        .or("paid_amount.is.null,paid_amount.lt.amount")
+        .update({
+          late_fee_applied: lateFee,
+          late_interest_applied: lateInterest,
+          days_in_delay: daysLate,
+          amount: newTotal,
+        })
+        .eq("id", inst.id)
 
-      if (instError) {
-        console.error("Erro ao buscar parcelas:", instError)
-        continue
-      }
-
-      if (!installments || installments.length === 0) {
-        continue
-      }
-
-      // Processar cada parcela
-      for (const inst of installments as any[]) {
-        const dueDate = new Date(inst.due_date)
-        const todayDate = new Date(today)
-        const daysLate = Math.floor(
-          (todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-        )
-
-        if (daysLate <= 0) continue
-
-        const originalAmount = inst.amount
-        let lateFee = inst.late_fee_applied || 0
-        let lateInterest = inst.late_interest_applied || 0
-
-        // Aplicar multa fixa (apenas na primeira vez)
-        if (config.fixed_fee > 0 && lateFee === 0) {
-          lateFee = config.fixed_fee
-        }
-
-        // Calcular juros diários progressivos
-        if (config.daily_interest > 0 && daysLate > 0) {
-          lateInterest = originalAmount * config.daily_interest * daysLate
-
-          // Aplicar limite máximo
-          if (config.max_interest_rate) {
-            const maxInterest = originalAmount * config.max_interest_rate
-            lateInterest = Math.min(lateInterest, maxInterest)
-          }
-        }
-
-        const newTotal = originalAmount + lateFee + lateInterest
-
-        // Atualizar parcela
-        const { error: updateError } = await supabase
-          .from("loan_installments")
-          .update({
-            late_fee_applied: lateFee,
-            late_interest_applied: lateInterest,
-            days_in_delay: daysLate,
-            amount: newTotal,
-          })
-          .eq("id", inst.id)
-
-        if (!updateError) {
-          totalProcessed++
-        }
+      if (!updateError) {
+        totalProcessed++
       }
     }
 
