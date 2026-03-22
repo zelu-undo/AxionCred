@@ -12,9 +12,8 @@ async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: 
       type,
       description,
     })
-  } catch (e) {
+  } catch {
     // Silently ignore if table doesn't exist
-    console.log("[customer] Event logging skipped:", type)
   }
 }
 

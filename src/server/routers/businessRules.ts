@@ -6,8 +6,6 @@ import { TRPCError } from "@trpc/server"
 export const businessRulesRouter = router({
   // Get all business rules in one call
   get: protectedProcedure.query(async ({ ctx }) => {
-    console.log("BusinessRules.get - tenantId:", ctx.tenantId)
-    
     // Get interest rules
     const { data: interestRules, error: irError } = await ctx.supabase
       .from("interest_rules")
@@ -15,8 +13,6 @@ export const businessRulesRouter = router({
       .eq("tenant_id", ctx.tenantId!)
       .order("min_installments", { ascending: true })
     
-    console.log("BusinessRules.get - interestRules:", interestRules, "error:", irError)
-
     // Get loan config
     const { data: loanConfig, error: lcError } = await ctx.supabase
       .from("loan_config")

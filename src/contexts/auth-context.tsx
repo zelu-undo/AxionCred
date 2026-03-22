@@ -96,7 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             // Se não encontrar tenant, criar automaticamente
             if (!tenantId) {
-              console.log("[Auth] Criando tenant e usuário automaticamente...")
               
               // Criar tenant
               const { data: newTenant, error: tenantError } = await supabase
@@ -128,7 +127,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   console.error("[Auth] Erro ao criar usuário:", userError)
                 } else {
                   tenantId = newTenant.id
-                  console.log("[Auth] Tenant e usuário criados com sucesso!")
                 }
               }
             }
@@ -180,7 +178,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createSupabaseClient()
     
     try {
-      console.log("[Auth] signIn - starting...")
       
       // Fazer signIn com timeout de 15 segundos
       const { data, error } = await fetchWithTimeout(
@@ -188,7 +185,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         15000
       )
 
-      console.log("[Auth] signIn - got response, error:", error)
 
       if (error) {
         return { error: { message: error.message, code: error.code } }
@@ -204,7 +200,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Se não encontrar tenant, criar automaticamente
           if (!tenantId) {
-            console.log("[Auth] Criando tenant e usuário automaticamente...")
             
             // Criar tenant
             const { data: newTenant, error: tenantError } = await supabase
@@ -236,7 +231,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.error("[Auth] Erro ao criar usuário:", userError)
               } else {
                 tenantId = newTenant.id
-                console.log("[Auth] Tenant e usuário criados com sucesso!")
               }
             }
           }
@@ -295,7 +289,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Se não encontrar tenant, criar automaticamente
         if (!tenantId) {
-          console.log("[Auth] Criando tenant e usuário automaticamente...")
           
           // Criar tenant
           const { data: newTenant, error: tenantError } = await supabase
@@ -327,7 +320,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.error("[Auth] Erro ao criar usuário:", userError)
             } else {
               tenantId = newTenant.id
-              console.log("[Auth] Tenant e usuário criados com sucesso!")
             }
           }
         }

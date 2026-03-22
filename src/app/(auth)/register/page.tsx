@@ -36,7 +36,6 @@ export default function RegisterPage() {
   useEffect(() => {
     if (isInitialized && !authLoading) {
       if (user) {
-        console.log("[Register] Usuário já autenticado, redirecionando para dashboard")
         router.push("/dashboard")
       }
     }
@@ -87,7 +86,6 @@ export default function RegisterPage() {
     }
 
     const { error } = await signUp(email, password, name)
-    console.log("Register: Signup result:", { error })
 
     if (error) {
       // Check if it's email confirmation required
@@ -106,7 +104,6 @@ export default function RegisterPage() {
       }
     } else {
       // No error means registration was successful
-      console.log("Register: Registration successful, redirecting...")
       // Small delay to show the form was processed
       await new Promise(resolve => setTimeout(resolve, 500))
       router.push("/dashboard")

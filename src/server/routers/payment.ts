@@ -12,9 +12,8 @@ async function logCustomerEvent(supabase: SupabaseClient<Database>, customerId: 
       type,
       description,
     })
-  } catch (e) {
+  } catch {
     // Silently ignore if table doesn't exist
-    console.log("[payment] Event logging skipped:", type)
   }
 }
 
@@ -375,8 +374,8 @@ export const paymentRouter = router({
             is_full_payment: isFullPayment,
           },
         })
-      } catch (e) {
-        console.log("[payment] Event logging skipped")
+      } catch {
+        // Silently ignore if table doesn't exist
       }
 
       // Registrar transação de caixa - Pagamento Recebido (entrada)
@@ -388,7 +387,7 @@ export const paymentRouter = router({
           p_usuario_responsavel: ctx.userId || "unknown",
         })
       } catch (cashError) {
-        // Não bloqueia pagamento se falhar no caixa
+        // Don't block payment if cash register fails
         console.error("Erro ao registrar transação de caixa:", cashError)
       }
 
@@ -513,8 +512,8 @@ export const paymentRouter = router({
             reason,
           },
         })
-      } catch (e) {
-        console.log("[payment] Reverse event logging skipped")
+      } catch {
+        // Silently ignore if table doesn't exist
       }
 
       return { success: true }
