@@ -83,26 +83,6 @@ interface LoanDetails {
   installments: Installment[]
 }
 
-// Type for loan search results
-interface LoanSearchResult {
-  id: string
-  contract_number: string | null
-  principal_amount: number
-  total_amount: number
-  paid_amount: number
-  remaining_amount: number
-  installments_count: number
-  paid_installments: number
-  status: string
-  created_at: string
-  customer: {
-    id: string
-    name: string | null
-    document: string | null
-    phone: string | null
-  } | null
-}
-
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -159,8 +139,22 @@ export default function PaymentsPage() {
     enabled: isRegisterOpen,
   })
   
-  // Fetch loans when customer is selected
-  const { data: loansData, isLoading: loadingLoans } = trpc.customer.loansForPayment.useQuery({
+  // Type for loans from customer query (no customer nested)
+interface LoanForPayment {
+  id: string
+  contract_number: string | null
+  principal_amount: number
+  total_amount: number
+  paid_amount: number
+  remaining_amount: number
+  installments_count: number
+  paid_installments: number
+  status: string
+  created_at: string
+}
+
+// Fetch loans when customer is selected
+const { data: loansData, isLoading: loadingLoans } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
     customerId: selectedCustomerId,
   }, {
     enabled: !!selectedCustomerId,
