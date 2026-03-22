@@ -245,26 +245,45 @@ export default function LoanDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(loan.installments || []).map((inst: LoanInstallment) => (
-                  <tr key={inst.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">#{inst.installment_number}</td>
-                    <td className="px-4 py-3">{formatCurrency(inst.amount - (inst.late_fee_applied || 0) - (inst.late_interest_applied || 0))}</td>
-                    <td className="px-4 py-3">
-                      {((inst.late_fee_applied || 0) + (inst.late_interest_applied || 0)) > 0 ? (
-                        <span className="text-red-600 font-medium">
-                          +{formatCurrency((inst.late_fee_applied || 0) + (inst.late_interest_applied || 0))}
-                          {inst.days_in_delay ? ` (${inst.days_in_delay}d)` : ''}
-                        </span>
-                      ) : '-'}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{formatCurrency(inst.amount)}</td>
-                    <td className="px-4 py-3">{formatDate(inst.due_date)}</td>
-                    <td className="px-4 py-3">{getInstallmentStatusBadge(inst.status)}</td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {inst.paid_date ? formatDate(inst.paid_date) : "-"}
-                    </td>
-                  </tr>
-                ))}
+                {(loan.installments || []).map((inst: LoanInstallment) => {
+                    const lateFees = inst.late_fee_applied || 0
+                    const lateInterest = inst.late_interest_applied || 0
+                    const totalLate = lateFees + lateInterest
+                    const originalValue = inst.amount - totalLate
+                    
+                    return (
+                      <tr key={inst.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">#{inst.installment_number}</td>
+                        <td className="px-4 py-3">{formatCurrency(originalValue)}</td>
+                        <td className="px-4 py-3">
+                          {totalLate > 0 ? (
+                            <div className="text-red-600">
+                              <span className="font-medium">+{formatCurrency(totalLate)}</span>
+                              {inst.days_in_delay ? (
+                                <span className="text-xs ml-1">({inst.days_in_delay}d)</span>
+                              ) : null}
+                              {lateFees > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  Multa: {formatCurrency(lateFees)}
+                                </div>
+                              )}
+                              {lateInterest > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  Juros: {formatCurrency(lateInterest)}
+                                </div>
+                              )}
+                            </div>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 font-medium">{formatCurrency(inst.amount)}</td>
+                        <td className="px-4 py-3">{formatDate(inst.due_date)}</td>
+                        <td className="px-4 py-3">{getInstallmentStatusBadge(inst.status)}</td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {inst.paid_date ? formatDate(inst.paid_date) : "-"}
+                        </td>
+                      </tr>
+                    )
+                  })}
               </tbody>
             </table>
           </div>

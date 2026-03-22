@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
         late_interest_applied,
         days_in_delay,
         status,
-        loan:loans(id, customer_id, tenant_id)
+        installment_number,
+        loan:loans(id, customer_id, tenant_id, principal_amount, installments_count)
       `)
       .eq("status", "late")
       .lt("due_date", today)
@@ -131,19 +132,31 @@ export async function POST(request: NextRequest) {
 
       if (daysLate <= 0) continue
 
-      const originalAmount = inst.amount
-      let lateFee = inst.late_fee_applied || 0
-      let lateInterest = inst.late_interest_applied || 0
-
-      if (fixedFee > 0 && lateFee === 0) {
+      // Calcular valor base: remover juros anteriores para calcular apenas a diferença
+      // Isso evita acumulação infinita de juros
+      const previousLateFees = inst.late_fee_applied || 0
+      const previousLateInterest = inst.late_interest_applied || 0
+      const baseAmount = inst.amount - previousLateFees - previousLateInterest
+      
+      // Aplicar multa fixa APENAS uma vez (se ainda não foi aplicada)
+      let lateFee = previousLateFees
+      if (fixedFee > 0 && previousLateFees === 0) {
         lateFee = fixedFee
       }
-
+      
+      // Calcular juros apenas para novos dias de atraso (progressivo)
+      // Se já tinha juros, calculamos apenas a diferença
+      let lateInterest = previousLateInterest
       if (dailyInterest > 0 && daysLate > 0 && hasLateInterestConfig) {
-        lateInterest = originalAmount * dailyInterest * daysLate
+        // Calcular juros totais e subtrair os já aplicados
+        const totalInterest = baseAmount * dailyInterest * daysLate
+        lateInterest = totalInterest - previousLateInterest
+        
+        // Se resultado negativo, não atualizar (manter os anteriores)
+        if (lateInterest < 0) lateInterest = 0
       }
 
-      const newTotal = originalAmount + lateFee + lateInterest
+      const newTotal = baseAmount + lateFee + lateInterest
 
       const { error: updateError } = await supabase
         .from("loan_installments")
