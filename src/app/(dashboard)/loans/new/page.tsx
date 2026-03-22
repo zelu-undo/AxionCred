@@ -104,7 +104,9 @@ export default function NewLoanPage() {
   const { calculateLoan: computeLoan, generateSchedule } = useLoanCalculator()
 
   // Calculate loan preview using business rules
-  const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
+  const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
   
   // DEBUG: Show data on screen
   const debugInfo = `businessRulesData: ${JSON.stringify(businessRulesData)}, isLoadingRules: ${isLoadingRules}`
@@ -172,21 +174,23 @@ export default function NewLoanPage() {
 
   useEffect(() => {
     console.log("=== useEffect triggered ===")
-    console.log("debouncedPrincipal:", debouncedPrincipal)
-    console.log("formData.installments:", formData.installments)
-    console.log("businessRulesData:", businessRulesData)
-    console.log("formData.firstPaymentDate:", formData.firstPaymentDate)
+    console.log("principal:", formData.principal)
+    console.log("installments:", formData.installments)
+    console.log("firstPaymentDate:", formData.firstPaymentDate)
+    console.log("businessRulesData:", !!businessRulesData)
     
-    alert(`useEffect: 
-debouncedPrincipal="${debouncedPrincipal}"
-installments="${formData.installments}"
-firstPaymentDate="${formData.firstPaymentDate}"
-businessRulesData=${businessRulesData ? 'loaded' : 'null'}`)
+    // Use direct values, not debounced
+    const principal = formData.principal
+    const installments = formData.installments
+    const firstPaymentDate = formData.firstPaymentDate
     
-    if (debouncedPrincipal && formData.installments && businessRulesData) {
+    if (principal && installments && businessRulesData) {
+      console.log("Calling calculateLoan!")
       calculateLoan()
+    } else {
+      console.log("NOT calling calculateLoan - missing data")
     }
-  }, [debouncedPrincipal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
+  }, [formData.principal, formData.installments, formData.firstPaymentDate, businessRulesData, computeLoan, generateSchedule])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
