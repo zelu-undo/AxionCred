@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import { Notifications } from "@/lib/notifications"
 
 export const loanRouter = router({
   list: protectedProcedure
@@ -466,6 +467,14 @@ export const loanRouter = router({
         description: `Empréstimo de R$ ${total_amount.toFixed(2)} criado com ${installments_count}x de R$ ${installment_amount.toFixed(2)}`,
         metadata: { loan_id: loan.id, amount: total_amount, interest_rate, interest_type },
       })
+
+      // Create notification for loan created
+      await Notifications.loanCreated(
+        ctx.supabase,
+        ctx.tenantId!,
+        customer.name,
+        principal_amount
+      )
 
       // Create loan rule snapshot for contract immutability
       // This ensures the original rules remain unchanged even if business rules are updated

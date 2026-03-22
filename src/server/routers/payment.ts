@@ -3,6 +3,7 @@ import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
+import { Notifications } from "@/lib/notifications"
 
 // Helper function to safely log customer events (won't fail if table doesn't exist)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,6 +202,15 @@ export const paymentRouter = router({
         })
       }
 
+      // Buscar nome do cliente para notificação
+      const { data: customer } = await ctx.supabase
+        .from("customers")
+        .select("name")
+        .eq("id", installment.loan.customer_id)
+        .single()
+
+      const customerName = customer?.name || "Cliente"
+
       // Verificar se parcela já está quitada
       if (installment.status === "paid") {
         throw new TRPCError({
@@ -392,6 +402,14 @@ export const paymentRouter = router({
         // Don't block payment if cash register fails
         console.error("Erro ao registrar transação de caixa:", cashError)
       }
+
+      // Create notification for payment received
+      await Notifications.paymentReceived(
+        ctx.supabase,
+        ctx.tenantId!,
+        customerName,
+        amount
+      )
 
       return { 
         success: true, 
