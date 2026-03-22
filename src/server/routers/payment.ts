@@ -377,6 +377,19 @@ export const paymentRouter = router({
         console.log("[payment] Event logging skipped")
       }
 
+      // Registrar transação de caixa - Pagamento Recebido (entrada)
+      try {
+        await ctx.supabase.rpc("register_payment_received", {
+          p_tenant_id: ctx.tenantId,
+          p_payment_id: installment.loan_id, // Usar loan_id como referência
+          p_valor: amount,
+          p_usuario_responsavel: ctx.userId || "unknown",
+        })
+      } catch (cashError) {
+        // Não bloqueia pagamento se falhar no caixa
+        console.error("Erro ao registrar transação de caixa:", cashError)
+      }
+
       return { 
         success: true, 
         installment_id,

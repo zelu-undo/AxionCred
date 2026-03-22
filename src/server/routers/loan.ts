@@ -427,6 +427,19 @@ export const loanRouter = router({
         late_interest_percentage: appliedRule.late_interest_percentage,
       })
 
+      // Registrar transação de caixa - Empréstimo Liberado (saída)
+      try {
+        await ctx.supabase.rpc("register_loan_disbursement", {
+          p_tenant_id: ctx.tenantId,
+          p_loan_id: loan.id,
+          p_valor: principal_amount,
+          p_usuario_responsavel: ctx.userId || "unknown",
+        })
+      } catch (cashError) {
+        // Não bloqueia criação do empréstimo se falhar no caixa
+        console.error("Erro ao registrar transação de caixa:", cashError)
+      }
+
       return loan
     }),
 

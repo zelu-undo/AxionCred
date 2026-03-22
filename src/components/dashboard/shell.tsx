@@ -25,6 +25,7 @@ import {
   DollarSign,
   AlertTriangle,
   ChevronDown,
+  Wallet,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -126,6 +127,7 @@ function NavigationItems() {
     {
       title: "Financeiro",
       items: [
+        { name: "💼 Caixa", href: "/cash", icon: Wallet, permission: "dashboard" },
         { name: "📊 Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
         { name: "🔄 Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
         { name: "🛡️ Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
