@@ -253,17 +253,32 @@ export default function NewLoanPage() {
 
   // Get current interest rate and type for display
   const currentInterestRate = useMemo(() => {
-    const numInstallments = parseInt(formData.installments)
-    if (!businessRulesData?.interestRules) return { rate: 0, type: 'monthly' }
+    const numInstallments = parseInt(formData.installments) || 1
     console.log("Looking for rule with installments:", numInstallments)
-    console.log("Available rules:", businessRulesData.interestRules)
-    const rule = businessRulesData.interestRules.find(
-      r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
-    )
-    console.log("Matched rule:", rule)
+    console.log("Available rules:", businessRulesData?.interestRules)
+    
+    // Default rates if no rules are configured
+    const defaultRates: Record<number, number> = {
+      1: 3, 2: 3.5, 3: 4, 4: 4.5, 5: 5, 
+      6: 5.5, 7: 6, 8: 6.5, 9: 7, 10: 7.5, 
+      11: 8, 12: 8.5
+    }
+    
+    // Try to find a matching rule
+    let rate = defaultRates[numInstallments] || 5
+    if (businessRulesData?.interestRules && businessRulesData.interestRules.length > 0) {
+      const rule = businessRulesData.interestRules.find(
+        r => numInstallments >= r.min_installments && numInstallments <= r.max_installments
+      )
+      if (rule) {
+        rate = rule.interest_rate
+      }
+    }
+    
+    console.log("Matched rate:", rate)
     return { 
-      rate: rule?.interest_rate || 5,  // Default to 5% if no rule found
-      type: rule?.interest_type || 'monthly' 
+      rate, 
+      type: 'monthly' 
     }
   }, [formData.installments, businessRulesData])
 
