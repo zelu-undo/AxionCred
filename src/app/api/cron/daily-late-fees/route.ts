@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const supabase = createClient()
+    
     // Primeira etapa: atualizar parcelas que estão com status "pending" mas a data de vencimento já passou para "late"
     console.log("Atualizando parcelas pending para late...")
     const today = new Date().toISOString().split('T')[0]
