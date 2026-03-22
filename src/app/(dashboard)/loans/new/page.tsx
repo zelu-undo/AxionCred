@@ -106,8 +106,14 @@ export default function NewLoanPage() {
   // Calculate loan preview using business rules
   const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery()
   
+  // Debug: show alert when data loads
+  useEffect(() => {
+    if (businessRulesData) {
+      alert(`Business rules loaded! interestRules count: ${businessRulesData.interestRules?.length || 0}`)
+    }
+  }, [businessRulesData])
+  
   console.log("Business rules loaded:", businessRulesData, "loading:", isLoadingRules)
-  console.log("Interest rules:", businessRulesData?.interestRules)
 
   const calculateLoan = () => {
     // Parse principal - Brazilian format: 1.234,56 = 1234.56
