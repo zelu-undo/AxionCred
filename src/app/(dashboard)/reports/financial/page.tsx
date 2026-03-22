@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
+import { trpc } from "@/trpc/client"
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -28,10 +29,11 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react"
 
-// Demo data for financial reports
+// Real cash flow data from API (or demo data)
 const cashFlowData = [
   { month: "Jan", revenue: 12500, expenses: 4200, profit: 8300 },
   { month: "Fev", revenue: 15800, expenses: 5100, profit: 10700 },
@@ -41,6 +43,7 @@ const cashFlowData = [
   { month: "Jun", revenue: 19500, expenses: 7100, profit: 12400 },
 ]
 
+// Demo data for projections (when no real data)
 const projectedCashFlow = [
   { month: "Jul", projected: 22000, confidence: 85 },
   { month: "Ago", projected: 23500, confidence: 80 },
@@ -99,6 +102,24 @@ export default function FinancialReportsPage() {
   const [dateRange, setDateRange] = useState("6months")
   const [activeTab, setActiveTab] = useState("cashflow")
 
+  // Fetch real cash flow data from credit system
+  const { data: cashFlowDataReal, isLoading: loadingCashFlow } = trpc.credit.getCashFlow.useQuery(undefined, {
+    refetchInterval: 60000, // Refresh every minute
+  })
+
+  // Calculate totals from real data
+  const totalReceived = cashFlowDataReal?.total_received || 0
+  const totalDisbursed = cashFlowDataReal?.total_disbursed || 0
+  const availableCash = cashFlowDataReal?.available_cash || 0
+  const usableCash = cashFlowDataReal?.usable_cash || 0
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    }).format(value || 0)
+  }
+
   return (
     <motion.div 
       className="space-y-6"
@@ -141,77 +162,105 @@ export default function FinancialReportsPage() {
         </div>
       </motion.div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Real Data from Credit System */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg shadow-emerald-500/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-emerald-100 text-sm font-medium">Receita Total</p>
-                <p className="text-2xl font-bold mt-1">R$ 101.500</p>
-                <p className="text-xs text-emerald-100 mt-1 flex items-center gap-1">
-                  <ArrowUpRight className="h-3 w-3" />
-                  +12.5% vs período anterior
-                </p>
+            {loadingCashFlow ? (
+              <div className="animate-pulse">
+                <div className="h-4 bg-emerald-400 rounded w-24 mb-2"></div>
+                <div className="h-8 bg-emerald-400 rounded w-32"></div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium">Total Recebido</p>
+                  <p className="text-2xl font-bold mt-1">{formatCurrency(totalReceived)}</p>
+                  <p className="text-xs text-emerald-100 mt-1 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Recebimentos realizados
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg shadow-blue-500/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-sm font-medium">Despesas</p>
-                <p className="text-2xl font-bold mt-1">R$ 32.900</p>
-                <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
-                  <ArrowDownRight className="h-3 w-3" />
-                  -3.2% vs período anterior
-                </p>
+            {loadingCashFlow ? (
+              <div className="animate-pulse">
+                <div className="h-4 bg-blue-400 rounded w-24 mb-2"></div>
+                <div className="h-8 bg-blue-400 rounded w-32"></div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                <TrendingDown className="h-6 w-6" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Liberado</p>
+                  <p className="text-2xl font-bold mt-1">{formatCurrency(totalDisbursed)}</p>
+                  <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3" />
+                    Valor.empréstimos ativos
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                  <TrendingDown className="h-6 w-6" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg shadow-purple-500/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">Lucro Líquido</p>
-                <p className="text-2xl font-bold mt-1">R$ 68.600</p>
-                <p className="text-xs text-purple-100 mt-1 flex items-center gap-1">
-                  <ArrowUpRight className="h-3 w-3" />
-                  +18.3% vs período anterior
-                </p>
+            {loadingCashFlow ? (
+              <div className="animate-pulse">
+                <div className="h-4 bg-purple-400 rounded w-24 mb-2"></div>
+                <div className="h-8 bg-purple-400 rounded w-32"></div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                <Wallet className="h-6 w-6" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Caixa Disponível</p>
+                  <p className="text-2xl font-bold mt-1">{formatCurrency(availableCash)}</p>
+                  <p className="text-xs text-purple-100 mt-1 flex items-center gap-1">
+                    <Wallet className="h-3 w-3" />
+                    Saldo atual
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                  <Wallet className="h-6 w-6" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg shadow-orange-500/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-orange-100 text-sm font-medium">Taxa de Inadimplência</p>
-                <p className="text-2xl font-bold mt-1">8.5%</p>
-                <p className="text-xs text-orange-100 mt-1 flex items-center gap-1">
-                  <ArrowDownRight className="h-3 w-3" />
-                  -2.1% vs período anterior
-                </p>
+            {loadingCashFlow ? (
+              <div className="animate-pulse">
+                <div className="h-4 bg-orange-400 rounded w-24 mb-2"></div>
+                <div className="h-8 bg-orange-400 rounded w-32"></div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">Caixa Utilizável</p>
+                  <p className="text-2xl font-bold mt-1">{formatCurrency(usableCash)}</p>
+                  <p className="text-xs text-orange-100 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Limite disponível
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

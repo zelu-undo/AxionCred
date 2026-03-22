@@ -9,11 +9,16 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Save, AlertTriangle, HelpCircle } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2, Save, AlertTriangle, HelpCircle, Lock } from "lucide-react"
 import { trpc } from "@/trpc/client"
 
 export default function CreditSettingsPage() {
   const { toast } = useToast()
+  const { user } = useAuth()
+  
+  // Check if user is owner
+  const isOwner = user?.role === "owner"
   
   // Queries
   const { data: settings, isLoading: loadingSettings, refetch: refetchSettings } = trpc.credit.getSettings.useQuery()
@@ -297,7 +302,8 @@ export default function CreditSettingsPage() {
             </div>
           </div>
 
-          {/* Pesos do Score */}
+          {/* Pesos do Score - Only for Owner */}
+          {isOwner ? (
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-2">
               <h4 className="font-medium">Pesos do Cálculo de Score</h4>
@@ -411,6 +417,14 @@ export default function CreditSettingsPage() {
               )}
             </div>
           </div>
+          ) : (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500">
+                <Lock className="h-4 w-4" />
+                <p className="text-sm">Os pesos do cálculo de score são configurados apenas pelo proprietário (owner) da conta.</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
