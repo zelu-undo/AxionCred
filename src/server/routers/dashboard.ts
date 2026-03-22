@@ -69,6 +69,7 @@ export const dashboardRouter = router({
       }, 0) || 0
 
       // Get overdue data (late installments or pending past due date)
+      // First get all late/pending installments with loan info
       const { data: overdueInstallments } = await ctx.supabase
         .from("loan_installments")
         .select(`
@@ -77,17 +78,32 @@ export const dashboardRouter = router({
           paid_amount,
           due_date,
           status,
-          loan:loans(customer_id, tenant_id)
+          loan_id
         `)
-        .eq("loan.tenant_id", ctx.tenantId!)
         .in("status", ["late", "pending"])
         .lt("due_date", today)
 
-      const overdueAmount = overdueInstallments?.reduce((sum, inst) => {
-        return sum + ((inst.amount || 0) - (inst.paid_amount || 0))
-      }, 0) || 0
+      // Get loan details to filter by tenant
+      const loanIds = overdueInstallments?.map(i => i.loan_id).filter(Boolean) || []
+      const { data: loansData } = loanIds.length > 0 
+        ? await ctx.supabase
+            .from("loans")
+            .select("id, tenant_id")
+            .in("id", loanIds)
+        : { data: [] }
 
-      const overdueCount = overdueInstallments?.length || 0
+      const validLoanIds = new Set(loansData?.filter(l => l.tenant_id === ctx.tenantId).map(l => l.id) || [])
+
+      // Filter installments by tenant
+      const filteredOverdueInstallments = overdueInstallments?.filter(
+        inst => validLoanIds.has(inst.loan_id)
+      ) || []
+
+      const overdueAmount = filteredOverdueInstallments.reduce((sum, inst) => {
+        return sum + ((inst.amount || 0) - (inst.paid_amount || 0))
+      }, 0)
+
+      const overdueCount = filteredOverdueInstallments.length
 
       // Get recent loans with customer info (all statuses)
       const { data: recentLoans } = await ctx.supabase
