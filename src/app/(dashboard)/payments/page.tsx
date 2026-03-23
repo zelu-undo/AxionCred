@@ -142,7 +142,6 @@ export default function PaymentsPage() {
   // Type for loans from customer query (no customer nested)
 interface LoanForPayment {
   id: string
-  contract_number: string | null
   principal_amount: number
   total_amount: number
   paid_amount: number
@@ -857,7 +856,7 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
                         className="w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors"
                       >
                         <div className="font-medium text-sm">
-                          {loan.contract_number || loan.id.slice(0,8)}
+                          {loan.id.slice(0,8)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments_count} parcelas | Status: {loan.status}

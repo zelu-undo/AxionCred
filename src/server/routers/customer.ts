@@ -191,7 +191,7 @@ export const customerRouter = router({
       // Debug: First try without tenant filter to see if loans exist at all
       const { data: debugLoans, error: debugError } = await ctx.supabase
         .from("loans")
-        .select("id, contract_number, status, customer_id, tenant_id")
+        .select("id, status, customer_id, tenant_id")
         .eq("customer_id", input.customerId)
       
       console.error("Debug loans (no tenant filter):", debugLoans?.length, debugError, debugLoans)
@@ -205,7 +205,6 @@ export const customerRouter = router({
         .from("loans")
         .select(`
           id,
-          contract_number,
           principal_amount,
           total_amount,
           paid_amount,
