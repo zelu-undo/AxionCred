@@ -179,6 +179,14 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       console.log("loansForPayment called for customer:", input.customerId, "tenant:", ctx.tenantId)
       
+      // Debug: First try without tenant filter to see if loans exist at all
+      const { data: debugLoans, error: debugError } = await ctx.supabase
+        .from("loans")
+        .select("*")
+        .eq("customer_id", input.customerId)
+      
+      console.log("Debug loans (no tenant filter):", debugLoans?.length, debugError)
+      
       // Get loans filtered by tenant_id and customer_id, including all statuses except paid
       const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
@@ -205,7 +213,7 @@ export const customerRouter = router({
         return []
       }
 
-      console.log("Loans found:", loans?.length, loans)
+      console.log("Loans found with tenant filter:", loans?.length, loans)
       return loans || []
     }),
 
