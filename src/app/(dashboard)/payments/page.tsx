@@ -62,6 +62,8 @@ interface Installment {
   due_date: string
   paid_date: string | null
   status: InstallmentStatus
+  notes?: string | null
+  payment_method?: string | null
 }
 
 interface LoanDetails {
@@ -642,6 +644,8 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
                                     due_date: payment.due_date,
                                     paid_date: payment.paid_date,
                                     status: payment.status,
+                                    notes: payment.notes,
+                                    payment_method: payment.payment_method,
                                   })
                                   setIsDetailsOpen(true)
                                 }}
@@ -1007,14 +1011,22 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
                 
                 {/* Notes - Only show after payment method */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Observações</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium">Observações</label>
+                    <span className={`text-xs ${paymentForm.notes?.length > 150 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                      {paymentForm.notes?.length || 0}/150
+                    </span>
+                  </div>
                   <textarea
-                    value={paymentForm.notes}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                    value={paymentForm.notes?.slice(0, 150) || ''}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value.slice(0, 150) })}
                     placeholder="Observações opcionais..."
                     rows={3}
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] resize-none"
                   />
+                  {paymentForm.notes?.length > 150 && (
+                    <p className="text-xs text-red-500">Limite máximo de 150 caracteres excedido</p>
+                  )}
                 </div>
               </>
             )}
@@ -1106,14 +1118,21 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Método de Pagamento</p>
-                    <p className="font-medium text-gray-900">PIX</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedInstallment.payment_method === "pix" && "PIX"}
+                      {selectedInstallment.payment_method === "cash" && "Dinheiro"}
+                      {selectedInstallment.payment_method === "card" && "Cartão"}
+                      {selectedInstallment.payment_method === "boleto" && "Boleto"}
+                      {selectedInstallment.payment_method === "transfer" && "Transferência"}
+                      {!selectedInstallment.payment_method && "-"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Observações</p>
-                    <p className="font-medium text-gray-900">Pagamento em dia</p>
+                    <p className="font-medium text-gray-900">{selectedInstallment.notes || "-"}</p>
                   </div>
                 </div>
               </div>

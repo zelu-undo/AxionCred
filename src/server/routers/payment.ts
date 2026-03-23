@@ -142,23 +142,45 @@ export const paymentRouter = router({
       }
 
       // Formata os dados para o frontend
-      const payments = installments.map((inst: any) => ({
-        id: inst.id,
-        customer_name: inst.loan?.customer?.name || "-",
-        customer_document: inst.loan?.customer?.document || "-",
-        customer_phone: inst.loan?.customer?.phone || "-",
-        customer_email: inst.loan?.customer?.email || "-",
-        loan_id: inst.loan?.id,
-        installment_number: inst.installment_number,
-        installment_total: inst.loan?.installments_count || 0,
-        amount_due: inst.amount,
-        amount_paid: inst.paid_amount || 0,
-        due_date: inst.due_date,
-        paid_date: inst.paid_date,
-        status: inst.status,
-        payment_method: null, // Será preenchido quando houver transação
-        notes: null,
-      }))
+      // Primeiro, buscar as transações de pagamento para obter método e observações
+      const installmentIds = (data || []).map((inst: any) => inst.id)
+      
+      let transactionsMap: Record<string, { method: string; notes: string }> = {}
+      
+      if (installmentIds.length > 0) {
+        const { data: transactions } = await ctx.supabase
+          .from("payment_transactions")
+          .select("id, installment_id, method, notes")
+          .in("installment_id", installmentIds)
+          .eq("status", "completed")
+        
+        if (transactions) {
+          transactions.forEach((t: any) => {
+            transactionsMap[t.installment_id] = { method: t.method, notes: t.notes }
+          })
+        }
+      }
+
+      const payments = installments.map((inst: any) => {
+        const transaction = transactionsMap[inst.id]
+        return {
+          id: inst.id,
+          customer_name: inst.loan?.customer?.name || "-",
+          customer_document: inst.loan?.customer?.document || "-",
+          customer_phone: inst.loan?.customer?.phone || "-",
+          customer_email: inst.loan?.customer?.email || "-",
+          loan_id: inst.loan?.id,
+          installment_number: inst.installment_number,
+          installment_total: inst.loan?.installments_count || 0,
+          amount_due: inst.amount,
+          amount_paid: inst.paid_amount || 0,
+          due_date: inst.due_date,
+          paid_date: inst.paid_date,
+          status: inst.status,
+          payment_method: transaction?.method || null,
+          notes: transaction?.notes || null,
+        }
+      })
 
       return { payments, total: count || 0 }
     }),
@@ -171,7 +193,7 @@ export const paymentRouter = router({
         amount: z.number().positive(),
         payment_date: z.string(),
         method: z.enum(["cash", "pix", "boleto", "card", "transfer"]),
-        notes: z.string().optional(),
+        notes: z.string().min(0).max(150, "Máximo de 150 caracteres"),
       })
     )
     .mutation(async ({ ctx, input }) => {

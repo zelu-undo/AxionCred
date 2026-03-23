@@ -252,7 +252,7 @@ CREATE TABLE payment_transactions (
     status VARCHAR(20) DEFAULT 'pending',
     gateway_id VARCHAR(100),
     gateway_response JSONB,
-    notes TEXT,
+    notes VARCHAR(150),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
