@@ -172,6 +172,8 @@ export const customerRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      console.log("loansForPayment called for customer:", input.customerId, "tenant:", ctx.tenantId)
+      
       const { data, error } = await ctx.supabase
         .from("loans")
         .select(`
@@ -188,7 +190,6 @@ export const customerRouter = router({
         `)
         .eq("tenant_id", ctx.tenantId!)
         .eq("customer_id", input.customerId)
-        .in("status", ["active", "late", "pending"])
         .order("created_at", { ascending: false })
 
       if (error) {
@@ -196,6 +197,7 @@ export const customerRouter = router({
         return []
       }
 
+      console.log("Loans found:", data)
       return data || []
     }),
 
