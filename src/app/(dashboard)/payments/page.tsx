@@ -35,7 +35,7 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useDebounce } from "@/hooks/use-debounce"
 
 // Payment method type
-type PaymentMethod = "cash" | "pix" | "transfer" | "card"
+type PaymentMethod = "cash" | "pix" | "transfer" | "card" | "boleto"
 type InstallmentStatus = "paid" | "pending" | "late" | "partial"
 
 interface PaymentRecord {
@@ -258,7 +258,7 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
     due_date: p.due_date,
     paid_date: p.paid_date,
     status: p.status,
-    payment_method: p.payment_method,
+    payment_method: p.payment_method as PaymentMethod | null,
     notes: p.notes,
   })) || []
 
@@ -316,6 +316,7 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
       case "pix": return "PIX"
       case "transfer": return "Transferência"
       case "card": return "Cartão"
+      case "boleto": return "Boleto"
       default: return "-"
     }
   }
@@ -989,7 +990,7 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Método de Pagamento</label>
                   <div className="grid grid-cols-4 gap-2">
-                    {(["cash", "pix", "transfer", "card"] as PaymentMethod[]).map((method) => (
+                    {(["cash", "pix", "transfer", "card", "boleto"] as PaymentMethod[]).map((method) => (
                       <button
                         key={method}
                         type="button"

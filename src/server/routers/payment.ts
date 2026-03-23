@@ -257,16 +257,17 @@ export const paymentRouter = router({
           .eq("tenant_id", ctx.tenantId)
           .single()
         
+        // Calcular dias de atraso com segurança
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        
         if (lateFeeConfig) {
-          // Calcular dias de atraso
-          const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
-          
           // Calcular taxa fixa de multa
           lateFee = lateFeeConfig.fixed_fee || 0
           
-          // Calcular juros de mora diários
-          if (lateFeeConfig.daily_interest && daysOverdue > 0) {
-            lateInterest = installment.amount * lateFeeConfig.daily_interest * daysOverdue
+          // Calcular juros de mora diários (limitado a 30 dias para evitar valores absurdos)
+          const effectiveDaysOverdue = Math.min(daysOverdue, 30)
+          if (lateFeeConfig.daily_interest && effectiveDaysOverdue > 0) {
+            lateInterest = installment.amount * lateFeeConfig.daily_interest * effectiveDaysOverdue
           }
         }
       }
