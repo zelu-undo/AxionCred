@@ -181,6 +181,8 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
   enabled: !!selectedLoanId,
 })
 
+console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallments:", loadingInstallments, "selectedLoanId:", selectedLoanId)
+
 
 
 

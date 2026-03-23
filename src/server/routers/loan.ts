@@ -152,7 +152,10 @@ export const loanRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
+      console.log(" [installmentsForPayment] loanId:", input.loanId, "tenantId:", ctx.tenantId)
+      
+      // Buscar parcelas vinculadas ao empréstimo (sem filtro de tenant_id na tabela de parcelas)
+      const { data: allData, error: allError } = await ctx.supabase
         .from("loan_installments")
         .select(`
           id,
@@ -163,17 +166,21 @@ export const loanRouter = router({
           paid_date,
           status
         `)
-        .eq("tenant_id", ctx.tenantId!)
         .eq("loan_id", input.loanId)
-        .neq("status", "paid")
         .order("installment_number", { ascending: true })
 
-      if (error) {
-        console.error("Error fetching installments:", error)
+      if (allError) {
+        console.error("Error fetching installments:", allError)
         return []
       }
 
-      return data || []
+      console.log(" [installmentsForPayment] allData (without filter):", allData)
+      
+      // Filtrar apenas as que não estão pagas
+      const data = (allData || []).filter(i => i.status !== "paid")
+      console.log(" [installmentsForPayment] filtered data:", data)
+      
+      return data
     }),
 
   byId: protectedProcedure
