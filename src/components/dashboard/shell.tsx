@@ -117,22 +117,22 @@ function NavigationItems() {
       title: "Cobrança",
       items: [
         { name: t("navigation.collections"), href: "/collections", icon: Receipt, permission: "collections" },
-        { name: "🔔 Alertas", href: "/alerts", icon: Bell, permission: "alerts" },
+        { name: t("navigation.alerts"), href: "/alerts", icon: Bell, permission: "alerts" },
       ],
     },
     {
       title: "Operações",
       items: [
-        { name: "⚡ Venda Rápida", href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
+        { name: t("navigation.quickSale"), href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
       ],
     },
     {
       title: "Financeiro",
       items: [
-        { name: "💼 Caixa", href: "/cash", icon: Wallet, permission: "dashboard" },
-        { name: "📊 Relatórios", href: "/reports/financial", icon: BarChart3, permission: "reports" },
-        { name: "🔄 Renegociações", href: "/renegotiations", icon: RefreshCw, permission: "reports" },
-        { name: "🛡️ Fiadores", href: "/guarantors", icon: Handshake, permission: "loans" },
+        { name: t("navigation.cash"), href: "/cash", icon: Wallet, permission: "dashboard" },
+        { name: t("navigation.reports"), href: "/reports/financial", icon: BarChart3, permission: "reports" },
+        { name: t("navigation.renegotiations"), href: "/renegotiations", icon: RefreshCw, permission: "reports" },
+        { name: t("navigation.guarantors"), href: "/guarantors", icon: Handshake, permission: "loans" },
       ],
     },
     {
