@@ -60,7 +60,7 @@ export const paymentRouter = router({
             customer_id,
             principal_amount,
             total_amount,
-            paid_amount as loan_paid_amount,
+            paid_amount,
             remaining_amount,
             installments_count,
             paid_installments,
