@@ -113,23 +113,28 @@ export const creditRouter = router({
     .query(async ({ ctx, input }) => {
       const document = input.document.replace(/\D/g, "")
 
-      // Buscar dados do cliente
-      const { data: loans } = await ctx.supabase
-        .from("loans")
-        .select("status, total_installments, created_at")
-        .eq("tenant_id", ctx.tenantId)
-        .eq("customer_document", document)
-
+      // Buscar cliente pelo documento
       const { data: customer } = await ctx.supabase
         .from("customers")
-        .select("created_at")
+        .select("id, created_at")
         .eq("tenant_id", ctx.tenantId)
         .eq("document", document)
         .single()
 
+      if (!customer) {
+        return null
+      }
+
+      // Buscar dados do cliente
+      const { data: loans } = await ctx.supabase
+        .from("loans")
+        .select("status, installments_count, created_at")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("customer_id", customer.id)
+
       // Calcular subscores
-      const totalParcelas = loans?.reduce((sum, l) => sum + (l.total_installments || 0), 0) || 0
-      const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.total_installments || 0), 0) || 0
+      const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+      const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
       const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
       const mesesCadastro = customer ? Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)) : 0
       const inadimplencias = loans?.filter(l => l.status === "late").length || 0  // Inadimplente = loan com status "late"
@@ -247,14 +252,22 @@ export const creditRouter = router({
       const usableCash = cashData?.usable_cash || 0
 
       // Buscar uso atual
-      const { data: loans } = await ctx.supabase
-        .from("loans")
-        .select("amount")
+      const { data: customer } = await ctx.supabase
+        .from("customers")
+        .select("id")
         .eq("tenant_id", ctx.tenantId)
-        .eq("customer_document", document)
-        .in("status", ["active", "overdue"])
+        .eq("document", document)
+        .single()
 
-      const currentUsed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+      const { data: loans } = customer ? await ctx.supabase
+        .from("loans")
+        .select("principal_amount")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("customer_id", customer.id)
+        .in("status", ["active", "overdue"])
+      : { data: null }
+
+      const currentUsed = loans?.reduce((sum, l) => sum + (l.principal_amount || 0), 0) || 0
 
       // Calcular limite
       const incomePercentage = 30 // 30% da renda
@@ -316,7 +329,7 @@ export const creditRouter = router({
       const { data: loansWithCustomer } = await ctx.supabase
         .from("loans")
         .select(`
-          amount,
+          principal_amount,
           status,
           customer:customers!inner(document)
         `)
@@ -328,7 +341,7 @@ export const creditRouter = router({
         const loanDoc = loan.customer?.document || ""
         const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
         if (normalizedLoanDoc === document) {
-          return sum + (loan.amount || 0)
+          return sum + (loan.principal_amount || 0)
         }
         return sum
       }, 0) || 0

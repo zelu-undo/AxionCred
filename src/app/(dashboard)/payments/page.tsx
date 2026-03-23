@@ -827,11 +827,36 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
               )}
             </div>
             
-            {/* Step 2: Loan Selection - Show only after customer is selected */}
-            {selectedCustomerId && !selectedLoanId && (
+            {/* Step 2: Loan Selection - Show after customer is selected */}
+            {selectedCustomerId && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Contrato *</label>
-                {loadingLoans ? (
+                {selectedLoanId && (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div>
+                      <div className="font-medium text-sm">Contrato #{selectedLoanId.slice(0,8)}</div>
+                      {loansData?.find(l => l.id === selectedLoanId) && (
+                        <div className="text-xs text-gray-500">
+                          R$ {loansData.find(l => l.id === selectedLoanId)?.remaining_amount?.toLocaleString('pt-BR')}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLoanId("")
+                        setSelectedInstallmentId("")
+                      }}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Alterar
+                    </button>
+                  </div>
+                )}
+                
+                {!selectedLoanId && (
+                  <>
+                    {loadingLoans ? (
                   <div className="text-gray-500 text-sm">Carregando contratos...</div>
                 ) : loansError ? (
                   <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg">
@@ -850,13 +875,21 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
                         key={loan.id}
                         type="button"
                         onClick={() => {
+                          console.log(" [PAYMENTS] Loan clicked:", loan.id)
                           setSelectedLoanId(loan.id)
                           setSelectedInstallmentId("")
                         }}
-                        className="w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors"
+                        className={`w-full text-left p-3 border-b last:border-b-0 transition-colors ${
+                          selectedLoanId === loan.id 
+                            ? "bg-blue-50 border-l-4 border-l-blue-500" 
+                            : "hover:bg-gray-50"
+                        }`}
                       >
-                        <div className="font-medium text-sm">
-                          {loan.id.slice(0,8)}
+                        <div className="font-medium text-sm flex justify-between items-center">
+                          <span>Contrato #{loan.id.slice(0,8)}</span>
+                          {selectedLoanId === loan.id && (
+                            <span className="text-blue-600 text-xs">✓ Selecionado</span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments_count} parcelas | Status: {loan.status}
@@ -874,6 +907,8 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
                       Atualizar
                     </button>
                   </div>
+                )}
+                  </>
                 )}
               </div>
             )}

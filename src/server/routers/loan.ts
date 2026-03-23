@@ -110,7 +110,6 @@ export const loanRouter = router({
         .from("loans")
         .select(`
           id,
-          contract_number,
           principal_amount,
           total_amount,
           paid_amount,
@@ -131,8 +130,8 @@ export const loanRouter = router({
       }
 
       if (search && search.length >= 3) {
-        // Search by contract number, customer name or document
-        query = query.or(`contract_number.ilike.%${search}%,customer.name.ilike.%${search}%,customer.document.ilike.%${search}%`)
+        // Search by customer name or document
+        query = query.or(`customer.name.ilike.%${search}%,customer.document.ilike.%${search}%`)
       }
 
       const { data, error } = await query
@@ -254,12 +253,12 @@ export const loanRouter = router({
 
           const { data: loans } = await ctx.supabase
             .from("loans")
-            .select("amount, status, customer_document")
+            .select("principal_amount, status, customer_id")
             .eq("tenant_id", ctx.tenantId)
             .in("status", ["active", "overdue", "paid"])
 
           const totalReceived = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-          const totalDisbursed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+          const totalDisbursed = loans?.reduce((sum, l) => sum + (l.principal_amount || 0), 0) || 0
 
           const grossCash = totalReceived - totalDisbursed
           const availableCash = Math.max(0, grossCash)
@@ -282,10 +281,10 @@ export const loanRouter = router({
           })
 
           const clientLimit = Array.isArray(limitData) ? limitData[0] || 5000 : 5000
-          const clientUsed = loans?.filter(l => l.customer_document === document).reduce((sum, l) => sum + (l.amount || 0), 0) || 0
+          const clientUsed = loans?.filter(l => l.customer_id === customer_id).reduce((sum, l) => sum + (l.principal_amount || 0), 0) || 0
 
           // Contar empréstimos ativos
-          const activeLoansCount = loans?.filter(l => l.customer_document === document && ["active", "overdue"].includes(l.status)).length || 0
+          const activeLoansCount = loans?.filter(l => l.customer_id === customer_id && ["active", "overdue"].includes(l.status)).length || 0
 
           // Verificações
           const boxCheck = principal_amount <= usableCash
