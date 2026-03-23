@@ -154,7 +154,20 @@ export const loanRouter = router({
     .query(async ({ ctx, input }) => {
       console.log(" [installmentsForPayment] loanId:", input.loanId, "tenantId:", ctx.tenantId)
       
-      // Buscar parcelas vinculadas ao empréstimo (sem filtro de tenant_id na tabela de parcelas)
+      // Primeiro verificar se o empréstimo pertence ao tenant do usuário
+      const { data: loanData, error: loanError } = await ctx.supabase
+        .from("loans")
+        .select("id, tenant_id")
+        .eq("id", input.loanId)
+        .eq("tenant_id", ctx.tenantId)
+        .single()
+
+      if (loanError || !loanData) {
+        console.error("Loan not found or access denied:", loanError)
+        return []
+      }
+
+      // Agora buscar as parcelas
       const { data: allData, error: allError } = await ctx.supabase
         .from("loan_installments")
         .select(`
@@ -174,7 +187,7 @@ export const loanRouter = router({
         return []
       }
 
-      console.log(" [installmentsForPayment] allData (without filter):", allData)
+      console.log(" [installmentsForPayment] allData:", allData)
       
       // Filtrar apenas as que não estão pagas
       const data = (allData || []).filter(i => i.status !== "paid")
