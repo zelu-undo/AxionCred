@@ -177,17 +177,18 @@ export const customerRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      console.log("loansForPayment called for customer:", input.customerId, "tenant:", ctx.tenantId)
+      // Use console.error para aparecer nos logs da Vercel
+      console.error("loansForPayment called:", input.customerId, "tenantId:", ctx.tenantId)
       
       // Debug: First try without tenant filter to see if loans exist at all
       const { data: debugLoans, error: debugError } = await ctx.supabase
         .from("loans")
-        .select("*")
+        .select("id, contract_number, status, customer_id, tenant_id")
         .eq("customer_id", input.customerId)
       
-      console.log("Debug loans (no tenant filter):", debugLoans?.length, debugError)
+      console.error("Debug loans (no tenant filter):", debugLoans?.length, debugError, debugLoans)
       
-      // Get loans filtered by tenant_id and customer_id, including all statuses except paid
+      // Get loans filtered by tenant_id and customer_id
       const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
         .select(`
@@ -213,7 +214,7 @@ export const customerRouter = router({
         return []
       }
 
-      console.log("Loans found with tenant filter:", loans?.length, loans)
+      console.error("Loans found with tenant filter:", loans?.length, loans)
       return loans || []
     }),
 
