@@ -302,7 +302,7 @@ export const customerRouter = router({
       // Check for existing customer with same CPF
       const { data: existing } = await ctx.supabase
         .from("customers")
-        .select("id, status, name, email, phone, address, cep, street, number, complement, neighborhood, city, state, notes")
+        .select("id, status, name, email, phone, address, notes")
         .eq("tenant_id", ctx.tenantId!)
         .eq("document", input.document || "")
         .in("status", ["active", "inactive", "blocked"])
@@ -395,7 +395,7 @@ export const customerRouter = router({
       // Get current customer data for audit
       const { data: current } = await ctx.supabase
         .from("customers")
-        .select("name, email, phone, address, cep, street, number, complement, neighborhood, city, state, notes, status")
+        .select("name, email, phone, address, notes, status")
         .eq("id", id)
         .single()
 

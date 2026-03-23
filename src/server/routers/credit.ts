@@ -558,7 +558,7 @@ export const creditRouter = router({
       const { data: loansWithCustomer } = await ctx.supabase
         .from("loans")
         .select(`
-          amount,
+          principal_amount,
           status,
           customer:customers!inner(document)
         `)
@@ -571,7 +571,7 @@ export const creditRouter = router({
         const loanDoc = loan.customer?.document || ""
         const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
         if (normalizedLoanDoc === document) {
-          return sum + (loan.amount || 0)
+          return sum + (loan.principal_amount || 0)
         }
         return sum
       }, 0) || 0
