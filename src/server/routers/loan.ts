@@ -164,6 +164,7 @@ export const loanRouter = router({
           paid_date,
           status
         `)
+        .eq("tenant_id", ctx.tenantId!)
         .eq("loan_id", input.loanId)
         .neq("status", "paid")
         .order("installment_number", { ascending: true })
