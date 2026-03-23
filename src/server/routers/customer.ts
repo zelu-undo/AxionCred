@@ -179,7 +179,7 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       console.log("loansForPayment called for customer:", input.customerId, "tenant:", ctx.tenantId)
       
-      // Get loans filtered by tenant_id and customer_id, only active/overdue loans
+      // Get loans filtered by tenant_id and customer_id, including all statuses except paid
       const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
         .select(`
@@ -197,7 +197,7 @@ export const customerRouter = router({
         `)
         .eq("tenant_id", ctx.tenantId!)
         .eq("customer_id", input.customerId)
-        .in("status", ["active", "overdue"])
+        .neq("status", "paid")
         .order("created_at", { ascending: false })
 
       if (loansError) {
