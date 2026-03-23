@@ -567,7 +567,29 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loan_installments ENABLE ROW LEVEL SECURITY;
+
+-- Loan installments policies
+CREATE POLICY "loan_installments_tenant_isolation" ON loan_installments
+    FOR ALL USING (
+        loan_id IN (
+            SELECT id FROM loans WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+        )
+    );
+
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Payment transactions policies
+CREATE POLICY "payment_transactions_tenant_isolation" ON payment_transactions
+    FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+-- Audit logs policies
+CREATE POLICY "audit_logs_tenant_isolation" ON audit_logs
+    FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+-- Notifications policies
+CREATE POLICY "notifications_tenant_isolation" ON notifications
+    FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 

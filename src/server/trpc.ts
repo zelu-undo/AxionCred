@@ -16,7 +16,8 @@ export const createContext = async (opts: {
   const authHeader = opts.headers.get("authorization") || ""
   const token = authHeader.replace("Bearer ", "")
   
-  const supabase = supabaseServer(token)
+  // Try to get user from Supabase Auth first to get tenantId
+  const tempSupabase = supabaseServer(token)
   
   // Try to get user from Supabase Auth
   let userId: string | undefined
@@ -25,14 +26,14 @@ export const createContext = async (opts: {
 
   if (token) {
     // Get user from Supabase using the session token
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const { data: { user }, error } = await tempSupabase.auth.getUser()
     
     if (user && !error) {
       userId = user.id
       
       // Get user data from our users table
       try {
-        const { data: userData } = await supabase
+        const { data: userData } = await tempSupabase
           .from("users")
           .select("tenant_id, role")
           .eq("id", user.id)
@@ -47,6 +48,9 @@ export const createContext = async (opts: {
       }
     }
   }
+
+  // Create supabase client WITH tenantId for RLS policies
+  const supabase = supabaseServer(token, tenantId)
 
   return {
     supabase,
