@@ -64,7 +64,7 @@ export const paymentRouter = router({
             remaining_amount,
             installments_count,
             paid_installments,
-            status as loan_status,
+            status,
             customer:customers(
               id,
               name,
