@@ -134,6 +134,7 @@ export const customerRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { search } = input
+      console.log("searchForPayment called with:", search, "tenant:", ctx.tenantId)
 
       let query = ctx.supabase
         .from("customers")
@@ -150,7 +151,10 @@ export const customerRouter = router({
         .limit(20)
 
       if (search && search.length >= 3) {
-        const searchTerm = normalizeName(search).toLowerCase()
+        // Extract just the name or document from formats like "Name - CPF: 123456789"
+        const cleanSearch = search.replace(/[-\s]*(CPF|cpf|Cpf).*$/i, '').trim()
+        const searchTerm = normalizeName(cleanSearch).toLowerCase()
+        console.log("Clean search term:", searchTerm)
         query = query.or(`name_normalized.ilike.%${searchTerm}%,document.ilike.%${searchTerm}%`)
       }
 
@@ -161,6 +165,7 @@ export const customerRouter = router({
         return []
       }
 
+      console.log("Customers found:", data?.length)
       return data || []
     }),
 

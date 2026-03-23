@@ -760,7 +760,8 @@ const { data: loansData, isLoading: loadingLoans } = trpc.customer.loansForPayme
                             onClick={() => {
                               setSelectedCustomerId(customer.id)
                               setSelectedCustomerName(customer.name || 'Cliente')
-                              setCustomerSearch(`${customer.name || 'Cliente'} - CPF: ${customer.document || '-'}`)
+                              // Keep only the name for search to avoid issues
+                              setCustomerSearch(customer.name || '')
                               setSelectedLoanId("")
                               setSelectedInstallmentId("")
                             }}
