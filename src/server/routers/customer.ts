@@ -180,6 +180,14 @@ export const customerRouter = router({
       // Use console.error para aparecer nos logs da Vercel
       console.error("loansForPayment called:", input.customerId, "tenantId:", ctx.tenantId)
       
+      if (!ctx.tenantId) {
+        console.error("ERROR: tenantId is undefined!")
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Tenant ID não encontrado. Faça login novamente.",
+        })
+      }
+      
       // Debug: First try without tenant filter to see if loans exist at all
       const { data: debugLoans, error: debugError } = await ctx.supabase
         .from("loans")
@@ -187,6 +195,10 @@ export const customerRouter = router({
         .eq("customer_id", input.customerId)
       
       console.error("Debug loans (no tenant filter):", debugLoans?.length, debugError, debugLoans)
+      
+      if (debugError) {
+        console.error("Debug query error:", debugError)
+      }
       
       // Get loans filtered by tenant_id and customer_id
       const { data: loans, error: loansError } = await ctx.supabase
@@ -204,14 +216,17 @@ export const customerRouter = router({
           created_at,
           customer_id
         `)
-        .eq("tenant_id", ctx.tenantId!)
+        .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", input.customerId)
         .neq("status", "paid")
         .order("created_at", { ascending: false })
 
       if (loansError) {
         console.error("Error fetching loans:", loansError)
-        return []
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao buscar contratos: ${loansError.message}`,
+        })
       }
 
       console.error("Loans found with tenant filter:", loans?.length, loans)

@@ -156,14 +156,24 @@ interface LoanForPayment {
 
 
 // Fetch loans when customer is selected
-const { data: loansData, isLoading: loadingLoans, error: loansError } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
+const { data: loansData, isLoading: loadingLoans, error: loansError, refetch: refetchLoans } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
   customerId: selectedCustomerId,
 }, {
   enabled: !!selectedCustomerId,
+  retry: 2,
+  retryDelay: 1000,
 })
 
 // Debug log
-console.log(" loansData:", loansData, "loadingLoans:", loadingLoans, "loansError:", loansError, "selectedCustomerId:", selectedCustomerId)
+console.log(" [PAYMENTS] loansData:", loansData, "loadingLoans:", loadingLoans, "loansError:", loansError, "selectedCustomerId:", selectedCustomerId)
+
+// Refetch loans when customer changes (only after initial load)
+useEffect(() => {
+  if (selectedCustomerId && !loadingLoans && loansData === undefined) {
+    console.log(" [PAYMENTS] Triggering refetch for customer:", selectedCustomerId)
+    refetchLoans()
+  }
+}, [selectedCustomerId, loadingLoans, loansData, refetchLoans])
 
 // Fetch installments when loan is selected
 const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.installmentsForPayment.useQuery({
@@ -824,6 +834,16 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
                 <label className="text-sm font-medium">Contrato *</label>
                 {loadingLoans ? (
                   <div className="text-gray-500 text-sm">Carregando contratos...</div>
+                ) : loansError ? (
+                  <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg">
+                    Erro ao carregar contratos: {loansError.message}
+                    <button 
+                      onClick={() => refetchLoans()} 
+                      className="ml-2 text-blue-500 underline"
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
                 ) : loansData && loansData.length > 0 ? (
                   <div className="border rounded-lg max-h-48 overflow-y-auto">
                     {loansData.map((loan) => (
@@ -846,7 +866,15 @@ const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.ins
                     ))}
                   </div>
                 ) : (
-                  <div className="text-gray-500 text-sm">Nenhum contrato ativo encontrado</div>
+                  <div className="text-gray-500 text-sm p-3 bg-gray-50 rounded-lg">
+                    Nenhum contrato ativo encontrado para este cliente
+                    <button 
+                      onClick={() => refetchLoans()} 
+                      className="ml-2 text-blue-500 underline"
+                    >
+                      Atualizar
+                    </button>
+                  </div>
                 )}
               </div>
             )}
