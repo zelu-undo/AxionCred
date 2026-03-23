@@ -154,19 +154,35 @@ interface LoanForPayment {
   customer_id: string
 }
 
+
 // Fetch loans when customer is selected
-const { data: loansData, isLoading: loadingLoans } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
-    customerId: selectedCustomerId,
-  }, {
-    enabled: !!selectedCustomerId,
-  })
-  
-  // Fetch installments when loan is selected
-  const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.installmentsForPayment.useQuery({
-    loanId: selectedLoanId,
-  }, {
-    enabled: !!selectedLoanId,
-  })
+const { data: loansData, isLoading: loadingLoans, error: loansError } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
+  customerId: selectedCustomerId,
+}, {
+  enabled: !!selectedCustomerId,
+})
+
+// Debug log
+console.log(" loansData:", loansData, "loadingLoans:", loadingLoans, "loansError:", loansError, "selectedCustomerId:", selectedCustomerId)
+
+// Fetch installments when loan is selected
+const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.installmentsForPayment.useQuery({
+  loanId: selectedLoanId,
+}, {
+  enabled: !!selectedLoanId,
+})
+
+
+
+
+
+
+
+
+
+
+
+
   
   // Payment form state
   const [paymentForm, setPaymentForm] = useState({
