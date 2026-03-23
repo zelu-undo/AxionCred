@@ -157,33 +157,27 @@ interface LoanForPayment {
 
 
 // Fetch loans when customer is selected
-const { data: loansData, isLoading: loadingLoans, error: loansError, refetch: refetchLoans } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
-  customerId: selectedCustomerId,
-}, {
-  enabled: !!selectedCustomerId,
-  retry: 2,
-  retryDelay: 1000,
-})
+  const { data: loansData, isLoading: loadingLoans, error: loansError, refetch: refetchLoans } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
+    customerId: selectedCustomerId,
+  }, {
+    enabled: !!selectedCustomerId,
+    retry: 2,
+    retryDelay: 1000,
+  })
 
-// Debug log
-console.log(" [PAYMENTS] loansData:", loansData, "loadingLoans:", loadingLoans, "loansError:", loansError, "selectedCustomerId:", selectedCustomerId)
+  // Refetch loans when customer changes
+  useEffect(() => {
+    if (selectedCustomerId && loansData === undefined && !loadingLoans) {
+      refetchLoans()
+    }
+  }, [selectedCustomerId, loansData, loadingLoans, refetchLoans])
 
-// Refetch loans when customer changes (only after initial load)
-useEffect(() => {
-  if (selectedCustomerId && !loadingLoans && loansData === undefined) {
-    console.log(" [PAYMENTS] Triggering refetch for customer:", selectedCustomerId)
-    refetchLoans()
-  }
-}, [selectedCustomerId, loadingLoans, loansData, refetchLoans])
-
-// Fetch installments when loan is selected
-const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.installmentsForPayment.useQuery({
-  loanId: selectedLoanId,
-}, {
-  enabled: !!selectedLoanId,
-})
-
-console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallments:", loadingInstallments, "selectedLoanId:", selectedLoanId)
+  // Fetch installments when loan is selected
+  const { data: installmentsData, isLoading: loadingInstallments } = trpc.loan.installmentsForPayment.useQuery({
+    loanId: selectedLoanId,
+  }, {
+    enabled: !!selectedLoanId,
+  })
 
 
 
@@ -882,7 +876,6 @@ console.log(" [PAYMENTS] installmentsData:", installmentsData, "loadingInstallme
                         key={loan.id}
                         type="button"
                         onClick={() => {
-                          console.log(" [PAYMENTS] Loan clicked:", loan.id)
                           setSelectedLoanId(loan.id)
                           setSelectedInstallmentId("")
                         }}
