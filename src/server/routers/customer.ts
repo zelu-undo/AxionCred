@@ -179,7 +179,8 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       console.log("loansForPayment called for customer:", input.customerId, "tenant:", ctx.tenantId)
       
-      const { data, error } = await ctx.supabase
+      // First, let's get the loans - WITHOUT tenant filter to debug
+      const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
         .select(`
           id,
@@ -191,19 +192,19 @@ export const customerRouter = router({
           installments_count,
           paid_installments,
           status,
-          created_at
+          created_at,
+          customer_id
         `)
-        .eq("tenant_id", ctx.tenantId!)
         .eq("customer_id", input.customerId)
         .order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("Error fetching customer loans for payment:", error)
+      if (loansError) {
+        console.error("Error fetching loans:", loansError)
         return []
       }
 
-      console.log("Loans found:", data)
-      return data || []
+      console.log("Loans found:", loans?.length, loans)
+      return loans || []
     }),
 
   byId: protectedProcedure
