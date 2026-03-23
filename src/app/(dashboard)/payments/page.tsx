@@ -151,6 +151,7 @@ interface LoanForPayment {
   paid_installments: number
   status: string
   created_at: string
+  customer_id: string
 }
 
 // Fetch loans when customer is selected
