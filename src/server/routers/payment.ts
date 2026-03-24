@@ -194,10 +194,11 @@ export const paymentRouter = router({
         payment_date: z.string(),
         method: z.enum(["cash", "pix", "boleto", "card", "transfer"]),
         notes: z.string().min(0).max(150, "Máximo de 150 caracteres"),
+        payment_type: z.enum(["full", "interest_only"]).default("full"),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { installment_id, amount, payment_date, method, notes } = input
+      const { installment_id, amount, payment_date, method, notes, payment_type } = input
 
       // Busca a parcela
       const { data: installment, error: instError } = await ctx.supabase
@@ -275,19 +276,43 @@ export const paymentRouter = router({
       // Valor total com juros de mora (se houver)
       const totalWithLateFees = installment.amount + lateFee + lateInterest
 
-      // Valida valor mínimo (80% da parcela + juros)
-      const minAmount = totalWithLateFees * 0.8
-      if (amount < minAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Valor mínimo para pagamento é R$ ${minAmount.toFixed(2)}` +
-            (isOverdue ? ` (inclui R$ ${(lateFee + lateInterest).toFixed(2)} de juros de mora)` : ""),
-        })
+      // Para pagamento de juros apenas, calcular valor dos juros da parcela
+      let interestOnlyAmount = 0
+      if (payment_type === "interest_only") {
+        // Calcular juros da parcela (pro-rata mensal)
+        const monthlyRate = 0.05 // 5% ao mês como padrão
+        interestOnlyAmount = installment.amount * monthlyRate
+        
+        // Não aplicar mínimos para pagamento de juros apenas
+        if (amount < interestOnlyAmount * 100) { // em centavos
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Valor mínimo para pagamento de juros apenas é R$ ${(interestOnlyAmount).toFixed(2)}`,
+          })
+        }
+      } else {
+        // Valida valor mínimo (80% da parcela + juros)
+        const minAmount = totalWithLateFees * 0.8
+        if (amount < minAmount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Valor mínimo para pagamento é R$ ${minAmount.toFixed(2)}` +
+              (isOverdue ? ` (inclui R$ ${(lateFee + lateInterest).toFixed(2)} de juros de mora)` : ""),
+          })
+        }
       }
 
       // Determina status do pagamento (considerando juros de mora)
-      const isFullPayment = amount >= totalWithLateFees
-      const newStatus = isFullPayment ? "paid" : "partial"
+      let newStatus: string
+      
+      if (payment_type === "interest_only") {
+        // Pagamento de juros apenas mantém como partial
+        newStatus = "partial"
+      } else {
+        const isFullPayment = amount >= totalWithLateFees
+        newStatus = isFullPayment ? "paid" : "partial"
+      }
+      
       const paidAmount = installment.paid_amount || 0
       const newPaidAmount = paidAmount + amount
 
@@ -353,6 +378,9 @@ export const paymentRouter = router({
       const loan = installment.loan
       const newLoanPaidAmount = (loan.paid_amount || 0) + amount
       const newRemainingAmount = (loan.total_amount || 0) - newLoanPaidAmount
+      
+      // Para interest_only, não conta como parcela paga
+      const isFullPayment = payment_type !== "interest_only" && newStatus === "paid"
       const newPaidInstallments = isFullPayment 
         ? (loan.paid_installments || 0) + 1 
         : loan.paid_installments
