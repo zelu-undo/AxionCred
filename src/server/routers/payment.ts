@@ -298,13 +298,21 @@ export const paymentRouter = router({
       const originalLoanPaidAmount = installment.loan.paid_amount || 0
       const originalLoanPaidInstallments = installment.loan.paid_installments || 0
 
+      // Ensure payment_date is saved with proper timezone handling
+      // If date has no time component, add time as noon to avoid timezone issues
+      let paymentDateISO = payment_date
+      if (payment_date.length === 10) {
+        // Format: "2025-03-23" - add time as noon to avoid timezone shift
+        paymentDateISO = payment_date + "T12:00:00"
+      }
+      
       // Atualiza a parcela
       const { error: updateError } = await ctx.supabase
         .from("loan_installments")
         .update({
           status: newStatus,
           paid_amount: newPaidAmount,
-          paid_date: payment_date,
+          paid_date: paymentDateISO,
         })
         .eq("id", installment_id)
 

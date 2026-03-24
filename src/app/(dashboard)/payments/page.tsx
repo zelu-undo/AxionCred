@@ -192,10 +192,19 @@ interface LoanForPayment {
 
 
   
+  // Helper to get current date in local timezone (YYYY-MM-DD)
+  const getCurrentDate = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   // Payment form state
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
-    payment_date: new Date().toISOString().split("T")[0],
+    payment_date: getCurrentDate(),
     payment_method: "cash" as PaymentMethod,
     notes: "",
   })
@@ -336,6 +345,9 @@ interface LoanForPayment {
     
     // CurrencyInput already returns value in cents
     const amount = parseInt(paymentForm.amount || "0", 10) / 100
+    
+    // Format payment date with time to avoid timezone issues
+    const paymentDateWithTime = paymentForm.payment_date + "T12:00:00"
     if (isNaN(amount) || amount <= 0) {
       showErrorToast("Valor inválido")
       return
@@ -347,7 +359,7 @@ interface LoanForPayment {
       await registerPaymentMutation.mutateAsync({
         installment_id: selectedInstallmentId,
         amount,
-        payment_date: paymentForm.payment_date,
+        payment_date: paymentDateWithTime,
         method: paymentForm.payment_method,
         notes: paymentForm.notes,
       })
@@ -355,7 +367,7 @@ interface LoanForPayment {
       setIsRegisterOpen(false)
       setPaymentForm({
         amount: "",
-        payment_date: new Date().toISOString().split("T")[0],
+        payment_date: getCurrentDate(),
         payment_method: "cash",
         notes: "",
       })
@@ -748,7 +760,7 @@ interface LoanForPayment {
           setSelectedInstallmentId("")
           setPaymentForm({
             amount: "",
-            payment_date: new Date().toISOString().split("T")[0],
+            payment_date: getCurrentDate(),
             payment_method: "cash",
             notes: "",
           })
