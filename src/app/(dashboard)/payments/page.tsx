@@ -940,9 +940,11 @@ interface LoanForPayment {
                       setSelectedInstallmentId(e.target.value)
                       const inst = installmentsData.find(i => i.id === e.target.value)
                       if (inst) {
+                        // CurrencyInput expects value in cents, so multiply by 100
+                        const remainingAmount = ((inst.amount || 0) - (inst.paid_amount || 0))
                         setPaymentForm({ 
                           ...paymentForm, 
-                          amount: ((inst.amount || 0) - (inst.paid_amount || 0)).toString() 
+                          amount: (remainingAmount * 100).toString() 
                         })
                       }
                     }}

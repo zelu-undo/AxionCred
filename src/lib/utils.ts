@@ -13,6 +13,15 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(date: Date | string): string {
+  // Handle ISO date string - extract date part to avoid timezone issues
+  if (typeof date === 'string') {
+    // If it's ISO format like "2025-03-23T12:00:00.000Z", extract date part
+    if (date.includes('T')) {
+      const datePart = date.split('T')[0]
+      const [year, month, day] = datePart.split('-')
+      return `${day}/${month}/${year}`
+    }
+  }
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
