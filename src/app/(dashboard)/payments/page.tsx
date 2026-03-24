@@ -47,6 +47,7 @@ interface PaymentRecord {
   loan_contract_number: string
   installment_number: number
   installment_total: number
+  amount_due: number
   amount_paid: number
   due_date: string
   paid_date: string | null
@@ -209,6 +210,7 @@ interface LoanForPayment {
     notes: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   
   // Fetch payments from API with server-side filters
   const { data: paymentsData, isLoading, refetch } = trpc.payment.list.useQuery({
@@ -258,6 +260,7 @@ interface LoanForPayment {
     loan_contract_number: p.loan_id?.slice(0, 8) || "-",
     installment_number: p.installment_number,
     installment_total: p.installment_total,
+    amount_due: p.amount_due,
     amount_paid: p.amount_paid,
     due_date: p.due_date,
     paid_date: p.paid_date,
@@ -648,7 +651,7 @@ interface LoanForPayment {
                                   setSelectedInstallment({
                                     id: payment.id,
                                     installment_number: payment.installment_number,
-                                    amount: payment.installment_total,
+                                    amount: payment.amount_due,
                                     paid_amount: payment.amount_paid,
                                     due_date: payment.due_date,
                                     paid_date: payment.paid_date,
@@ -669,7 +672,7 @@ interface LoanForPayment {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => {
-                                    // Edit payment
+                                    setEditingPayment(payment)
                                   }}>
                                     <Edit className="h-4 w-4 mr-2" />
                                     Editar
@@ -1012,6 +1015,7 @@ interface LoanForPayment {
                         {method === "pix" && "⚡ PIX"}
                         {method === "transfer" && "🏦 Transfer"}
                         {method === "card" && "💳 Cartão"}
+                        {method === "boleto" && "📄 Boleto"}
                       </button>
                     ))}
                   </div>
@@ -1220,6 +1224,54 @@ interface LoanForPayment {
                   Confirmar Estorno
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!editingPayment} onOpenChange={(open) => !open && setEditingPayment(null)}>
+        <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-[#22C55E]" />
+              Editar Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              Atualize os dados do pagamento
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingPayment && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-gray-50 rounded-xl space-y-2">
+                <p className="text-sm text-gray-500">Parcela</p>
+                <p className="font-semibold">
+                  {editingPayment.installment_number} de {editingPayment.installment_total}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
+                  <p className="font-bold text-gray-900">{formatCurrency(editingPayment.amount_due)}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Valor Pago</p>
+                  <p className="font-bold text-green-600">{formatCurrency(editingPayment.amount_paid)}</p>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <p className="text-sm text-yellow-800">
+                  <strong>Funcionalidade em desenvolvimento.</strong><br/>
+                  A edição de pagamentos estará disponível em breve.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPayment(null)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
