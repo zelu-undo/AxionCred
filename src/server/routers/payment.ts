@@ -500,9 +500,18 @@ export const paymentRouter = router({
         })
       }
 
-      // Calcular diferença de valor
-      const oldAmount = existingTransaction.amount
-      const amountDiff = amount - oldAmount
+      // Calcular diferença de valor (usar valor direto, não diferença)
+      const newPaidAmount = amount // novo valor em cents
+      
+      // Validar que não excede o valor da parcela
+      if (newPaidAmount > installment.amount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Valor não pode exceder R$ ${(installment.amount / 100).toLocaleString('pt-BR')}`,
+        })
+      }
+      
+      const newStatus = newPaidAmount >= installment.amount ? "paid" : (newPaidAmount > 0 ? "partial" : "pending")
 
       // Atualizar transação
       const { error: updateTransError } = await ctx.supabase
@@ -521,14 +530,11 @@ export const paymentRouter = router({
         })
       }
 
-      // Atualizar parcela
-      const newPaidAmount = installment.paid_amount + amountDiff
-      const newStatus = newPaidAmount >= installment.amount ? "paid" : "partial"
-
+      // Atualizar parcela (usar valor direto)
       const { error: updateInstError } = await ctx.supabase
         .from("loan_installments")
         .update({
-          paid_amount: Math.max(0, newPaidAmount),
+          paid_amount: newPaidAmount,
           paid_date: payment_date,
           status: newStatus,
         })
@@ -541,17 +547,27 @@ export const paymentRouter = router({
         })
       }
 
-      // Atualizar loan
+      // Atualizar loan (calcular baseado no novo paid_amount)
       const loan = installment.loan
-      const newLoanPaidAmount = Math.max(0, (loan.paid_amount || 0) + amountDiff)
+      const oldPaidAmount = existingTransaction.amount // valor anterior em cents
+      
+      // Calcular nova diferença
+      const newLoanPaidAmount = Math.max(0, (loan.paid_amount || 0) - oldPaidAmount + newPaidAmount)
       const newRemainingAmount = (loan.total_amount || 0) - newLoanPaidAmount
+      
+      // Contagem de parcelas pagas
+      const wasOldPaid = oldPaidAmount >= installment.amount
+      const isNewPaid = newStatus === "paid"
+      let newPaidInstallments = loan.paid_installments || 0
+      if (wasOldPaid && !isNewPaid) newPaidInstallments = Math.max(0, newPaidInstallments - 1)
+      if (!wasOldPaid && isNewPaid) newPaidInstallments += 1
 
       const { error: updateLoanError } = await ctx.supabase
         .from("loans")
         .update({
           paid_amount: newLoanPaidAmount,
           remaining_amount: newRemainingAmount,
-          paid_installments: newStatus === "paid" ? (loan.paid_installments || 0) + 1 : loan.paid_installments,
+          paid_installments: newPaidInstallments,
           status: newRemainingAmount <= 0 ? "paid" : "active",
         })
         .eq("id", loan.id)

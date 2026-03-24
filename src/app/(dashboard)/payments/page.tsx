@@ -273,7 +273,7 @@ interface LoanForPayment {
   useEffect(() => {
     if (editingPayment) {
       setEditForm({
-        amount: (editingPayment.amount_paid / 100).toString(),
+        amount: editingPayment.amount_paid.toString(), // CurrencyInput expects cents
         payment_date: editingPayment.paid_date ? editingPayment.paid_date.split('T')[0] : "",
         payment_method: editingPayment.payment_method as PaymentMethod || "cash",
         notes: editingPayment.notes || "",
@@ -1360,9 +1360,10 @@ interface LoanForPayment {
                       showErrorToast("Preencha o valor e a data")
                       return
                     }
+                    // CurrencyInput already sends cents, pass directly
                     updatePaymentMutation.mutate({
                       installment_id: editingPayment!.id,
-                      amount: Math.round(parseFloat(editForm.amount) * 100),
+                      amount: parseInt(editForm.amount, 10),
                       payment_date: editForm.payment_date,
                       method: editForm.payment_method,
                       notes: editForm.notes,
