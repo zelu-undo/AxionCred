@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { 
@@ -333,7 +334,8 @@ interface LoanForPayment {
       return
     }
     
-    const amount = parseFloat(paymentForm.amount.replace(/[^0-9]/g, "")) / 100
+    // CurrencyInput already returns value in cents
+    const amount = parseInt(paymentForm.amount || "0", 10) / 100
     if (isNaN(amount) || amount <= 0) {
       showErrorToast("Valor inválido")
       return
@@ -953,12 +955,10 @@ interface LoanForPayment {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Valor Pago *</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
-                    <Input
-                      type="number"
+                    <CurrencyInput
                       placeholder="0,00"
                       value={paymentForm.amount}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      onChange={(value) => setPaymentForm({ ...paymentForm, amount: value })}
                       className="pl-10"
                     />
                   </div>
