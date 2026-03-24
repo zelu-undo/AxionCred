@@ -279,17 +279,63 @@ export const paymentRouter = router({
       // Para pagamento de juros apenas, calcular valor dos juros da parcela
       let interestOnlyAmount = 0
       if (payment_type === "interest_only") {
-        // Calcular juros da parcela (pro-rata mensal)
-        const monthlyRate = 0.05 // 5% ao mês como padrão
-        interestOnlyAmount = installment.amount * monthlyRate
+        // Buscar configuração de juros do tenant
+        const { data: lateFeeConfig } = await ctx.supabase
+          .from("late_fee_config")
+          .select("*")
+          .eq("tenant_id", ctx.tenantId)
+          .single()
+        
+        // Calcular dias até a data de pagamento
+        const paymentDate = new Date(payment_date)
+        const dueDate = new Date(installment.due_date)
+        
+        // Buscar próxima parcela para limitar dias
+        const { data: nextInstallments } = await ctx.supabase
+          .from("loan_installments")
+          .select("due_date")
+          .eq("loan_id", installment.loan.id)
+          .gt("due_date", installment.due_date)
+          .order("due_date", { ascending: true })
+          .limit(1)
+        
+        const maxDays = nextInstallments && nextInstallments[0]
+          ? Math.floor((new Date(nextInstallments[0].due_date).getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+          : 30 // padrão 30 dias se não houver próxima
+        
+        // Calcular dias de atraso (limitados ao máximo)
+        const daysDiff = Math.floor((paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+        const effectiveDays = Math.max(1, Math.min(daysDiff, maxDays))
+        
+        // Calcular juros baseado na configuração
+        if (lateFeeConfig) {
+          // daily_interest pode ser:
+          // - Valor fixo (ex: 10 = R$10 por dia)
+          // - Percentual (ex: 0.01 = 0.01% ao dia)
+          const dailyRate = lateFeeConfig.daily_interest || 0
+          const monthlyRate = lateFeeConfig.monthly_interest || 0
+          
+          // Se daily_interest > 1, considera como valor fixo (R$ por dia)
+          // Se daily_interest <= 1, considera como percentual
+          if (dailyRate > 1) {
+            // Valor fixo por dia (ex: R$ 10/dia)
+            interestOnlyAmount = dailyRate * effectiveDays
+          } else if (dailyRate > 0) {
+            // Percentual diário (ex: 0.1% ao dia)
+            interestOnlyAmount = installment.amount * (dailyRate / 100) * effectiveDays
+          } else if (monthlyRate > 0) {
+            // Juros mensais (ex: 5% ao mês)
+            interestOnlyAmount = installment.amount * (monthlyRate / 100) * (effectiveDays / 30)
+          }
+        }
+        
+        // Se não houver configuração, usar valor mínimo de R$ 1
+        if (interestOnlyAmount < 1) {
+          interestOnlyAmount = 1
+        }
         
         // Não aplicar mínimos para pagamento de juros apenas
-        if (amount < interestOnlyAmount * 100) { // em centavos
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Valor mínimo para pagamento de juros apenas é R$ ${(interestOnlyAmount).toFixed(2)}`,
-          })
-        }
+        // mas validar que não excede muito o esperado
       } else {
         // Valida valor mínimo (80% da parcela + juros)
         const minAmount = totalWithLateFees * 0.8

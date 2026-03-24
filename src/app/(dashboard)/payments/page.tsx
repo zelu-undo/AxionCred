@@ -1000,11 +1000,67 @@ interface LoanForPayment {
               </div>
             )}
             
-            {/* Step 4: Payment Amount - Show after installment is selected */}
+            {/* Step 4: Payment Type - Show after installment is selected */}
             {selectedInstallmentId && (
               <>
+                {/* Payment Type */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor Pago *</label>
+                  <label className="text-sm font-medium">Tipo de Pagamento</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Calcular valor integral (parcela - já pago)
+                        const inst = installmentsData?.find(i => i.id === selectedInstallmentId)
+                        const remaining = inst ? ((inst.amount || 0) - (inst.paid_amount || 0)) * 100 : 0
+                        setPaymentForm({ 
+                          ...paymentForm, 
+                          payment_type: "full",
+                          amount: remaining.toString()
+                        })
+                      }}
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        paymentForm.payment_type === "full"
+                          ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      💰 Pagamento Integral
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Calcular valor de juros baseado na parcela
+                        const inst = installmentsData?.find(i => i.id === selectedInstallmentId)
+                        if (inst) {
+                          // Mostrar valor base (5% da parcela) - será recalculado no backend
+                          const baseInterest = (inst.amount * 0.05 * 100)
+                          setPaymentForm({ 
+                            ...paymentForm, 
+                            payment_type: "interest_only",
+                            amount: baseInterest.toString()
+                          })
+                        }
+                      }}
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        paymentForm.payment_type === "interest_only"
+                          ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      📈 Apenas Juros
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    "Apenas Juros" paga os juros de atraso configurados, sem abatimento do principal.
+                  </p>
+                </div>
+                
+                {/* Step 5: Payment Amount */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    {paymentForm.payment_type === "interest_only" ? "Valor de Juros *" : "Valor Pago *"}
+                  </label>
                   <div className="relative">
                     <CurrencyInput
                       placeholder="0,00"
@@ -1017,47 +1073,6 @@ interface LoanForPayment {
                     Valor remaining: R$ {installmentsData?.find(i => i.id === selectedInstallmentId) ? 
                       ((installmentsData.find(i => i.id === selectedInstallmentId)?.amount || 0) - (installmentsData.find(i => i.id === selectedInstallmentId)?.paid_amount || 0)).toLocaleString('pt-BR') 
                       : '0'}
-                  </p>
-                </div>
-                
-                {/* Payment Type */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo de Pagamento</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentForm({ ...paymentForm, payment_type: "full" })}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        paymentForm.payment_type === "full"
-                          ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      💰 Pagamento Integral
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Calcular valor de juros (5% da parcela)
-                        const inst = installmentsData?.find(i => i.id === selectedInstallmentId)
-                        const interestAmount = inst ? (inst.amount * 0.05 * 100) : 0
-                        setPaymentForm({ 
-                          ...paymentForm, 
-                          payment_type: "interest_only",
-                          amount: interestAmount.toString()
-                        })
-                      }}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        paymentForm.payment_type === "interest_only"
-                          ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      📈 Apenas Juros
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    "Apenas Juros" paga apenas os juros da parcela (5%), sem abatimento do principal.
                   </p>
                 </div>
                 

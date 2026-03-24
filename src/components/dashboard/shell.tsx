@@ -139,7 +139,7 @@ function NavigationItems() {
       title: "Configurações",
       items: [
         { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
-        { name: "Regras de Juros", href: "/settings/business-rules", icon: Percent, permission: "settings" },
+        { name: "Regras de Negócio", href: "/settings/business-rules", icon: Percent, permission: "settings" },
         { name: "Crédito", href: "/settings/credit", icon: CreditCard, permission: "settings" },
         { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
         { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
