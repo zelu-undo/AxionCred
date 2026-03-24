@@ -8,24 +8,26 @@ export function supabaseServer(authToken?: string, tenantId?: string) {
     throw new Error("Missing Supabase environment variables")
   }
 
-  const options: any = {
+  const headers: Record<string, string> = {}
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+  }
+
+  // Set tenant_id for RLS policies via custom header
+  // Supabase PostgREST reads custom headers with x-kps- prefix
+  if (tenantId) {
+    headers["x-kps-tenant-id"] = tenantId
+  }
+
+  const client = createSupabaseServerClient(supabaseUrl, supabaseKey, {
     global: {
-      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      headers,
     },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
-  }
-
-  // Set tenant_id for RLS policies via PostgREST config
-  if (tenantId) {
-    options.postgrestSettings = {
-      "app.current_tenant_id": tenantId,
-    }
-  }
-
-  const client = createSupabaseServerClient(supabaseUrl, supabaseKey, options)
+  })
   
   return client
 }
