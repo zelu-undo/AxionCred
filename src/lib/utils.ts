@@ -12,21 +12,37 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return "-"
+  
+  let dateStr: string
+  
+  // Handle Date object
+  if (date instanceof Date) {
+    dateStr = date.toISOString().split('T')[0]
+  } else {
+    dateStr = date
+  }
+  
   // Handle ISO date string - extract date part to avoid timezone issues
-  if (typeof date === 'string') {
-    // If it's ISO format like "2025-03-23T12:00:00.000Z", extract date part
-    if (date.includes('T')) {
-      const datePart = date.split('T')[0]
-      const [year, month, day] = datePart.split('-')
+  if (typeof dateStr === 'string') {
+    // If it has 'T', extract just the date part
+    if (dateStr.includes('T')) {
+      dateStr = dateStr.split('T')[0]
+    }
+    
+    // If it's YYYY-MM-DD format (no time), parse manually to avoid timezone
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateStr.split('-')
       return `${day}/${month}/${year}`
     }
   }
+  
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(date))
+  }).format(new Date(dateStr))
 }
 
 export function formatDateTime(date: Date | string): string {
