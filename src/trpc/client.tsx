@@ -76,6 +76,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
           headers: {
             // Send Supabase session token for authentication
             ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+            // Tenant ID for RLS policies - will be set after auth
           },
         }),
       ],

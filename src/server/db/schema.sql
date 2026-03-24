@@ -579,31 +579,23 @@ CREATE POLICY "loan_installments_tenant_isolation" ON loan_installments
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Payment transactions policies
+-- Allow authenticated users - tenant isolation is handled at application level via ctx.tenantId
 CREATE POLICY "payment_transactions_tenant_isolation" ON payment_transactions
-    FOR ALL USING (
-        tenant_id = COALESCE(
-            current_setting('request.headers.x-kps-tenant-id', true),
-            current_setting('app.current_tenant_id', true)
-        )::uuid
-    );
+    FOR ALL USING (tenant_id = (
+        SELECT tenant_id FROM users WHERE id = auth.uid()
+    )::uuid);
 
--- Audit logs policies
+-- Audit logs policies - allow authenticated users
 CREATE POLICY "audit_logs_tenant_isolation" ON audit_logs
-    FOR ALL USING (
-        tenant_id = COALESCE(
-            current_setting('request.headers.x-kps-tenant-id', true),
-            current_setting('app.current_tenant_id', true)
-        )::uuid
-    );
+    FOR ALL USING (tenant_id = (
+        SELECT tenant_id FROM users WHERE id = auth.uid()
+    )::uuid);
 
--- Notifications policies
+-- Notifications policies - allow authenticated users
 CREATE POLICY "notifications_tenant_isolation" ON notifications
-    FOR ALL USING (
-        tenant_id = COALESCE(
-            current_setting('request.headers.x-kps-tenant-id', true),
-            current_setting('app.current_tenant_id', true)
-        )::uuid
-    );
+    FOR ALL USING (tenant_id = (
+        SELECT tenant_id FROM users WHERE id = auth.uid()
+    )::uuid);
 
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
