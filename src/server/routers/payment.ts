@@ -446,6 +446,127 @@ export const paymentRouter = router({
       }
     }),
 
+  // Atualiza um pagamento
+  update: protectedProcedure
+    .input(
+      z.object({
+        installment_id: z.string(),
+        amount: z.number().positive(),
+        payment_date: z.string(),
+        method: z.enum(["cash", "pix", "boleto", "card", "transfer"]),
+        notes: z.string().min(0).max(150, "Máximo de 150 caracteres"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { installment_id, amount, payment_date, method, notes } = input
+
+      // Buscar a parcela atual
+      const { data: installment, error: instError } = await ctx.supabase
+        .from("loan_installments")
+        .select(`
+          *,
+          loan:loans(id, customer_id, tenant_id, paid_amount, remaining_amount, paid_installments, installments_count, total_amount, status)
+        `)
+        .eq("id", installment_id)
+        .single()
+
+      if (instError || !installment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Parcela não encontrada",
+        })
+      }
+
+      // Validar tenant
+      if (installment.loan.tenant_id !== ctx.tenantId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Acesso negado",
+        })
+      }
+
+      // Buscar transação de pagamento existente
+      const { data: existingTransaction, error: transError } = await ctx.supabase
+        .from("payment_transactions")
+        .select("*")
+        .eq("installment_id", installment_id)
+        .eq("status", "completed")
+        .single()
+
+      if (transError || !existingTransaction) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Transação de pagamento não encontrada",
+        })
+      }
+
+      // Calcular diferença de valor
+      const oldAmount = existingTransaction.amount
+      const amountDiff = amount - oldAmount
+
+      // Atualizar transação
+      const { error: updateTransError } = await ctx.supabase
+        .from("payment_transactions")
+        .update({
+          amount,
+          method,
+          notes,
+        })
+        .eq("id", existingTransaction.id)
+
+      if (updateTransError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao atualizar transação: ${updateTransError.message}`,
+        })
+      }
+
+      // Atualizar parcela
+      const newPaidAmount = installment.paid_amount + amountDiff
+      const newStatus = newPaidAmount >= installment.amount ? "paid" : "partial"
+
+      const { error: updateInstError } = await ctx.supabase
+        .from("loan_installments")
+        .update({
+          paid_amount: Math.max(0, newPaidAmount),
+          paid_date: payment_date,
+          status: newStatus,
+        })
+        .eq("id", installment_id)
+
+      if (updateInstError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao atualizar parcela: ${updateInstError.message}`,
+        })
+      }
+
+      // Atualizar loan
+      const loan = installment.loan
+      const newLoanPaidAmount = Math.max(0, (loan.paid_amount || 0) + amountDiff)
+      const newRemainingAmount = (loan.total_amount || 0) - newLoanPaidAmount
+
+      const { error: updateLoanError } = await ctx.supabase
+        .from("loans")
+        .update({
+          paid_amount: newLoanPaidAmount,
+          remaining_amount: newRemainingAmount,
+          paid_installments: newStatus === "paid" ? (loan.paid_installments || 0) + 1 : loan.paid_installments,
+          status: newRemainingAmount <= 0 ? "paid" : "active",
+        })
+        .eq("id", loan.id)
+
+      if (updateLoanError) {
+        console.error("Erro ao atualizar loan:", updateLoanError)
+      }
+
+      return { 
+        success: true, 
+        installment_id,
+        new_status: newStatus,
+      }
+    }),
+
   // Estorna um pagamento
   reverse: protectedProcedure
     .input(

@@ -210,7 +210,6 @@ interface LoanForPayment {
     notes: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   
   // Fetch payments from API with server-side filters
   const { data: paymentsData, isLoading, refetch } = trpc.payment.list.useQuery({
@@ -250,6 +249,37 @@ interface LoanForPayment {
       showErrorToast(error.message || "Erro ao estornar pagamento")
     },
   })
+  
+  const updatePaymentMutation = trpc.payment.update.useMutation({
+    onSuccess: () => {
+      showSuccessToast("Pagamento atualizado com sucesso!")
+      refetch()
+      setEditingPayment(null)
+    },
+    onError: (error) => {
+      showErrorToast(error.message || "Erro ao atualizar pagamento")
+    },
+  })
+  
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
+  const [editForm, setEditForm] = useState({
+    amount: "",
+    payment_date: "",
+    payment_method: "cash" as PaymentMethod,
+    notes: "",
+  })
+  
+  // Initialize edit form when editingPayment changes
+  useEffect(() => {
+    if (editingPayment) {
+      setEditForm({
+        amount: (editingPayment.amount_paid / 100).toString(),
+        payment_date: editingPayment.paid_date ? editingPayment.paid_date.split('T')[0] : "",
+        payment_method: editingPayment.payment_method as PaymentMethod || "cash",
+        notes: editingPayment.notes || "",
+      })
+    }
+  }, [editingPayment])
   
   // Use real payments data from API (already filtered by server)
   const paginatedPayments: PaymentRecord[] = paymentsData?.payments?.map((p) => ({
@@ -1228,54 +1258,123 @@ interface LoanForPayment {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={!!editingPayment} onOpenChange={(open) => !open && setEditingPayment(null)}>
-        <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5 text-[#22C55E]" />
-              Editar Pagamento
-            </DialogTitle>
-            <DialogDescription>
-              Atualize os dados do pagamento
-            </DialogDescription>
-          </DialogHeader>
-          
-          {editingPayment && (
-            <div className="space-y-4 py-4">
-              <div className="p-4 bg-gray-50 rounded-xl space-y-2">
-                <p className="text-sm text-gray-500">Parcela</p>
-                <p className="font-semibold">
-                  {editingPayment.installment_number} de {editingPayment.installment_total}
-                </p>
-              </div>
+      <Dialog open={!!editingPayment} onOpenChange={(open) => {
+            if (!open) setEditingPayment(null)
+          }}>
+            <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Edit className="h-5 w-5 text-[#22C55E]" />
+                  Editar Pagamento
+                </DialogTitle>
+                <DialogDescription>
+                  Atualize os dados do pagamento
+                </DialogDescription>
+              </DialogHeader>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
-                  <p className="font-bold text-gray-900">{formatCurrency(editingPayment.amount_due)}</p>
+              {editingPayment && (
+                <div className="space-y-4 py-4">
+                  <div className="p-4 bg-gray-50 rounded-xl space-y-2">
+                    <p className="text-sm text-gray-500">Parcela</p>
+                    <p className="font-semibold">
+                      {editingPayment.installment_number} de {editingPayment.installment_total}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
+                      <p className="font-bold text-gray-900">{formatCurrency(editingPayment.amount_due)}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-500 mb-1">Valor Pago</p>
+                      <p className="font-bold text-green-600">{formatCurrency(editingPayment.amount_paid)}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Edit Form */}
+                  <div className="space-y-3 border-t pt-4">
+                    <div>
+                      <label className="text-sm font-medium">Valor Pago *</label>
+                      <CurrencyInput
+                        value={editForm.amount}
+                        onChange={(val) => setEditForm({ ...editForm, amount: val })}
+                        placeholder="Digite o valor"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium">Data do Pagamento *</label>
+                      <Input
+                        type="date"
+                        value={editForm.payment_date}
+                        onChange={(e) => setEditForm({ ...editForm, payment_date: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium">Método de Pagamento</label>
+                      <div className="grid grid-cols-3 gap-2 mt-1">
+                        {(["cash", "pix", "transfer", "card", "boleto"] as PaymentMethod[]).map((method) => (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, payment_method: method })}
+                            className={`p-2 rounded-lg border-2 text-xs font-medium transition-all ${
+                              editForm.payment_method === method
+                                ? "border-[#22C55E] bg-[#22C55E]/5 text-[#22C55E]"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            {method === "cash" && "💵"}
+                            {method === "pix" && "⚡"}
+                            {method === "transfer" && "🏦"}
+                            {method === "card" && "💳"}
+                            {method === "boleto" && "📄"}
+                            <span className="ml-1">{method}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium">Observações</label>
+                      <Input
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                        placeholder="Observações (opcional)"
+                        maxLength={150}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <p className="text-sm text-gray-500 mb-1">Valor Pago</p>
-                  <p className="font-bold text-green-600">{formatCurrency(editingPayment.amount_paid)}</p>
-                </div>
-              </div>
+              )}
               
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <p className="text-sm text-yellow-800">
-                  <strong>Funcionalidade em desenvolvimento.</strong><br/>
-                  A edição de pagamentos estará disponível em breve.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingPayment(null)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingPayment(null)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (!editForm.amount || !editForm.payment_date) {
+                      showErrorToast("Preencha o valor e a data")
+                      return
+                    }
+                    updatePaymentMutation.mutate({
+                      installment_id: editingPayment!.id,
+                      amount: Math.round(parseFloat(editForm.amount) * 100),
+                      payment_date: editForm.payment_date,
+                      method: editForm.payment_method,
+                      notes: editForm.notes,
+                    })
+                  }}
+                  disabled={updatePaymentMutation.isPending}
+                >
+                  {updatePaymentMutation.isPending ? "Salvando..." : "Salvar"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
     </motion.div>
   )
 }
