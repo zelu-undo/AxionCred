@@ -458,10 +458,10 @@ CREATE TABLE late_fee_config (
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     fixed_fee DECIMAL(15,2) DEFAULT 0,
     percentage DECIMAL(5,2) DEFAULT 0,
-    daily_interest DECIMAL(5,4) DEFAULT 0, -- daily rate for compound interest
+    daily_interest DECIMAL(15,4) DEFAULT 0, -- daily rate: >1 = R$/day, <=1 = percentage
     monthly_interest DECIMAL(5,2) DEFAULT 0, -- monthly rate
     grace_days INTEGER DEFAULT 0,
-    push_installments_on_interest_payment BOOLEAN DEFAULT false, -- empurrar parcelas ao pagar apenas juros
+    push_installments_on_interest_payment BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tenant_id)

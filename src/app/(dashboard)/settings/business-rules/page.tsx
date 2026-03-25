@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
 import type { LateFeeConfig } from "@/types";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 interface InterestRule {
   id: string;
@@ -57,6 +58,7 @@ export default function BusinessRulesPage() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     async function fetchData() {
@@ -295,11 +297,10 @@ export default function BusinessRulesPage() {
         if (insertError) throw insertError
       }
 
-      setMessage({ type: 'success', text: 'Configurações de multa salvas!' })
+      toast({ title: "Configurações salvas com sucesso!" })
     } catch (err) {
-      setMessage({ type: 'error', text: (err as Error).message })
+      toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" })
     }
-    setTimeout(() => setMessage(null), 3000)
   };
 
   if (authLoading || loading) {
