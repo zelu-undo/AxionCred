@@ -357,13 +357,12 @@ export default function FinancialReportsPage() {
           // Calculate months from current month (0 = current month, 1 = next month, etc.)
           let monthsDiff = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
           
-          // If due date is in the past but payment is pending, count as current month
-          if (monthsDiff < 0) monthsDiff = 0;
-          if (monthsDiff > 3) monthsDiff = 3; // Cap at index 3 (4th month)
-          
-          const monthKey = monthsDiff;
-          if (monthlyAmounts[monthKey] !== undefined) {
-            monthlyAmounts[monthKey] += amount;
+          // Only include installments within the 4-month window
+          if (monthsDiff >= 0 && monthsDiff <= 3) {
+            const monthKey = monthsDiff;
+            if (monthlyAmounts[monthKey] !== undefined) {
+              monthlyAmounts[monthKey] += amount;
+            }
           }
         }
       }
@@ -379,7 +378,8 @@ export default function FinancialReportsPage() {
         const dueMonth = dueDate.getMonth();
         const dueYear = dueDate.getFullYear();
         let m = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
-        if (m < 0) m = 0;
+        // Only count within 4-month window
+        if (m < 0 || m > 3) return false;
         return m === i;
       }).length;
       
