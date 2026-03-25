@@ -159,9 +159,14 @@ export const NotificationTypes = {
   LOAN_CREATED: "loan_created",
   LOAN_APPROVED: "loan_approved",
   LOAN_REJECTED: "loan_rejected",
+  LOAN_CANCELLED: "loan_cancelled",
+  LOAN_PAID_OFF: "loan_paid_off",
   CUSTOMER_CREATED: "customer_created",
   REMINDER_SENT: "reminder_sent",
   NEW_USER: "new_user",
+  RENEGOTIATION_CREATED: "renegotiation_created",
+  RENEGOTIATION_APPROVED: "renegotiation_approved",
+  RENEGOTIATION_REJECTED: "renegotiation_rejected",
 } as const
 
 /**
@@ -319,6 +324,102 @@ export const Notifications = {
       "Lembrete Enviado",
       `${customerName} - Parcela #${installmentNumber} - R$ ${amount.toLocaleString("pt-BR")}`,
       { customerName, installmentNumber, amount }
+    )
+  },
+
+  /**
+   * Notifica que um empréstimo foi cancelado
+   */
+  loanCancelled: async (
+    supabase: Supabase,
+    tenantId: string,
+    customerName: string,
+    amount: number
+  ) => {
+    await createNotification(
+      supabase,
+      tenantId,
+      NotificationTypes.LOAN_CANCELLED,
+      "Empréstimo Cancelado",
+      `${customerName} - R$ ${amount.toLocaleString("pt-BR")}`,
+      { customerName, amount }
+    )
+  },
+
+  /**
+   * Notifica que um empréstimo foi quitado
+   */
+  loanPaidOff: async (
+    supabase: Supabase,
+    tenantId: string,
+    customerName: string,
+    amount: number
+  ) => {
+    await createNotification(
+      supabase,
+      tenantId,
+      NotificationTypes.LOAN_PAID_OFF,
+      "Empréstimo Quitado",
+      `${customerName} quitou R$ ${amount.toLocaleString("pt-BR")}`,
+      { customerName, amount }
+    )
+  },
+
+  /**
+   * Notifica que uma renegociação foi criada
+   */
+  renegotiationCreated: async (
+    supabase: Supabase,
+    tenantId: string,
+    customerName: string,
+    oldAmount: number,
+    newAmount: number
+  ) => {
+    await createNotification(
+      supabase,
+      tenantId,
+      NotificationTypes.RENEGOTIATION_CREATED,
+      "Nova Renegociação",
+      `${customerName} - De R$ ${oldAmount.toLocaleString("pt-BR")} para R$ ${newAmount.toLocaleString("pt-BR")}`,
+      { customerName, oldAmount, newAmount }
+    )
+  },
+
+  /**
+   * Notifica que uma renegociação foi aprovada
+   */
+  renegotiationApproved: async (
+    supabase: Supabase,
+    tenantId: string,
+    customerName: string,
+    newAmount: number
+  ) => {
+    await createNotification(
+      supabase,
+      tenantId,
+      NotificationTypes.RENEGOTIATION_APPROVED,
+      "Renegociação Aprovada",
+      `${customerName} - Novo valor: R$ ${newAmount.toLocaleString("pt-BR")}`,
+      { customerName, newAmount }
+    )
+  },
+
+  /**
+   * Notifica que uma renegociação foi rejeitada
+   */
+  renegotiationRejected: async (
+    supabase: Supabase,
+    tenantId: string,
+    customerName: string,
+    reason?: string
+  ) => {
+    await createNotification(
+      supabase,
+      tenantId,
+      NotificationTypes.RENEGOTIATION_REJECTED,
+      "Renegociação Rejeitada",
+      `${customerName}${reason ? ` - ${reason}` : ""}`,
+      { customerName, reason }
     )
   },
 }

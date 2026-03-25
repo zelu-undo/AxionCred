@@ -473,6 +473,7 @@ export const paymentRouter = router({
 
       // Determina status do loan
       let newLoanStatus = loan.status
+      const wasLoanPaidOff = newLoanStatus !== "paid" && newPaidInstallments >= loan.installments_count
       if (newPaidInstallments >= loan.installments_count) {
         newLoanStatus = "paid"
       } else if (newPaidInstallments > 0) {
@@ -551,6 +552,16 @@ export const paymentRouter = router({
         customerName,
         amount
       )
+
+      // Create notification for loan paid off
+      if (wasLoanPaidOff) {
+        await Notifications.loanPaidOff(
+          ctx.supabase,
+          ctx.tenantId!,
+          customerName,
+          loan.total_amount || 0
+        )
+      }
 
       return { 
         success: true, 

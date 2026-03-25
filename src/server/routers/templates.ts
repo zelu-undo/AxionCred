@@ -384,9 +384,14 @@ export const notificationsRouter = router({
       { type: "loan_created", label: "Empréstimo criado" },
       { type: "loan_approved", label: "Empréstimo aprovado" },
       { type: "loan_rejected", label: "Empréstimo rejeitado" },
+      { type: "loan_cancelled", label: "Empréstimo cancelado" },
+      { type: "loan_paid_off", label: "Empréstimo quitado" },
       { type: "customer_created", label: "Cliente criado" },
       { type: "reminder_sent", label: "Lembrete enviado" },
       { type: "new_user", label: "Novo usuário adicionado" },
+      { type: "renegotiation_created", label: "Renegociação criada" },
+      { type: "renegotiation_approved", label: "Renegociação aprovada" },
+      { type: "renegotiation_rejected", label: "Renegociação rejeitada" },
     ]
   }),
 

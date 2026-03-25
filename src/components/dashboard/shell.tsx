@@ -28,6 +28,9 @@ import {
   ChevronDown,
   Wallet,
   Clock,
+  CheckCircle,
+  XCircle,
+  UserPlus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -435,8 +438,26 @@ export function Header() {
               case 'loan_created':
               case 'new_loan':
                 return { icon: CreditCard, bg: 'bg-blue-100', text: 'text-blue-600' }
+              case 'loan_approved':
+                return { icon: CheckCircle, bg: 'bg-green-100', text: 'text-green-600' }
+              case 'loan_rejected':
+              case 'loan_cancelled':
+                return { icon: XCircle, bg: 'bg-red-100', text: 'text-red-600' }
+              case 'loan_paid_off':
+                return { icon: CheckCircle, bg: 'bg-emerald-100', text: 'text-emerald-600' }
+              case 'customer_created':
+                return { icon: UserPlus, bg: 'bg-purple-100', text: 'text-purple-600' }
               case 'reminder':
+              case 'reminder_sent':
                 return { icon: Clock, bg: 'bg-yellow-100', text: 'text-yellow-600' }
+              case 'new_user':
+                return { icon: UserPlus, bg: 'bg-indigo-100', text: 'text-indigo-600' }
+              case 'renegotiation_created':
+                return { icon: RefreshCw, bg: 'bg-orange-100', text: 'text-orange-600' }
+              case 'renegotiation_approved':
+                return { icon: CheckCircle, bg: 'bg-green-100', text: 'text-green-600' }
+              case 'renegotiation_rejected':
+                return { icon: XCircle, bg: 'bg-red-100', text: 'text-red-600' }
               default:
                 return { icon: Bell, bg: 'bg-gray-100', text: 'text-gray-600' }
             }

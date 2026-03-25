@@ -793,6 +793,24 @@ export const loanRouter = router({
   cancel: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // Buscar dados do loan antes de cancelar para notificação
+      const { data: loan } = await ctx.supabase
+        .from("loans")
+        .select("id, customer_id, principal_amount")
+        .eq("id", input.id)
+        .single()
+
+      // Buscar nome do cliente
+      let customerName = "Cliente"
+      if (loan?.customer_id) {
+        const { data: customer } = await ctx.supabase
+          .from("customers")
+          .select("name")
+          .eq("id", loan.customer_id)
+          .single()
+        customerName = customer?.name || "Cliente"
+      }
+
       const { error } = await ctx.supabase
         .from("loans")
         .update({ status: "cancelled" })
@@ -804,6 +822,16 @@ export const loanRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         })
+      }
+
+      // Criar notificação de cancelamento
+      if (loan) {
+        await Notifications.loanCancelled(
+          ctx.supabase,
+          ctx.tenantId!,
+          customerName,
+          loan.principal_amount
+        )
       }
 
       return { success: true }

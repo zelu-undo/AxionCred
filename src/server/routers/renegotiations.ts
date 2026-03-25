@@ -1,6 +1,7 @@
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import { Notifications } from "@/lib/notifications"
 
 // Renegotiations router
 export const renegotiationsRouter = router({
@@ -147,6 +148,22 @@ export const renegotiationsRouter = router({
         })
       }
 
+      // Buscar nome do cliente para notificação
+      const { data: customer } = await ctx.supabase
+        .from("customers")
+        .select("name")
+        .eq("id", loan.customer_id)
+        .single()
+
+      // Criar notificação de nova renegociação
+      await Notifications.renegotiationCreated(
+        ctx.supabase,
+        tenantId,
+        customer?.name || "Cliente",
+        loan.total_amount,
+        input.new_total_amount
+      )
+
       return data
     }),
 
@@ -214,6 +231,31 @@ export const renegotiationsRouter = router({
         })
       }
 
+      // Buscar nome do cliente para notificação
+      if (renegotiation?.loan_id) {
+        const { data: loan } = await ctx.supabase
+          .from("loans")
+          .select("customer_id")
+          .eq("id", renegotiation.loan_id)
+          .single()
+
+        if (loan?.customer_id) {
+          const { data: customer } = await ctx.supabase
+            .from("customers")
+            .select("name")
+            .eq("id", loan.customer_id)
+            .single()
+
+          // Criar notificação de renegociação aprovada
+          await Notifications.renegotiationApproved(
+            ctx.supabase,
+            tenantId,
+            customer?.name || "Cliente",
+            renegotiation.new_total_amount
+          )
+        }
+      }
+
       return data
     }),
 
@@ -225,6 +267,13 @@ export const renegotiationsRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const { tenantId, userId } = ctx
+
+      // Buscar dados da renegociação para notificação
+      const { data: renegotiationData } = await ctx.supabase
+        .from("loan_renegotiations")
+        .select("loan_id")
+        .eq("id", input.id)
+        .single()
 
       const { data, error } = await ctx.supabase
         .from("loan_renegotiations")
@@ -244,6 +293,31 @@ export const renegotiationsRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Erro ao rejeitar renegociação",
         })
+      }
+
+      // Buscar nome do cliente para notificação
+      if (renegotiationData?.loan_id) {
+        const { data: loan } = await ctx.supabase
+          .from("loans")
+          .select("customer_id")
+          .eq("id", renegotiationData.loan_id)
+          .single()
+
+        if (loan?.customer_id) {
+          const { data: customer } = await ctx.supabase
+            .from("customers")
+            .select("name")
+            .eq("id", loan.customer_id)
+            .single()
+
+          // Criar notificação de renegociação rejeitada
+          await Notifications.renegotiationRejected(
+            ctx.supabase,
+            tenantId,
+            customer?.name || "Cliente",
+            input.reason
+          )
+        }
       }
 
       return data
