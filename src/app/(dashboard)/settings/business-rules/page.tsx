@@ -127,7 +127,7 @@ export default function BusinessRulesPage() {
 
   const handleAddNew = async () => {
     if (!newRule.name || !newRule.minInstallments || !newRule.maxInstallments || !newRule.interestRate) {
-      setMessage({ type: 'error', text: 'Preencha todos os campos' }); return;
+      toast({ title: "Preencha todos os campos", variant: "destructive" }); return;
     }
     const ruleToAdd: InterestRule = { 
       id: String(Date.now()), 
@@ -139,7 +139,7 @@ export default function BusinessRulesPage() {
       isActive: true 
     };
     const error = validateNoOverlap(interestRules, ruleToAdd);
-    if (error) { setMessage({ type: 'error', text: error }); return; }
+    if (error) { toast({ title: error, variant: "destructive" }); return; }
     
     try {
       const { error: insertError } = await supabase
@@ -155,7 +155,7 @@ export default function BusinessRulesPage() {
       
       if (insertError) throw insertError
       
-      setMessage({ type: 'success', text: 'Faixa adicionada com sucesso!' })
+      toast({ title: "Faixa adicionada com sucesso!", variant: "success" })
       const { data } = await supabase
         .from("interest_rules")
         .select("*")
@@ -174,11 +174,10 @@ export default function BusinessRulesPage() {
         })))
       }
     } catch (err) {
-      setMessage({ type: 'error', text: (err as Error).message })
+      toast({ title: "Erro ao adicionar faixa", description: (err as Error).message, variant: "destructive" })
     }
     
     setNewRule({}); setIsAddingNew(false);
-    setTimeout(() => setMessage(null), 3000)
   };
 
   const handleDelete = async (id: string) => {
@@ -192,12 +191,11 @@ export default function BusinessRulesPage() {
       
       if (deleteError) throw deleteError
 
-      setMessage({ type: 'success', text: 'Faixa excluída com sucesso!' })
+      toast({ title: "Faixa excluída com sucesso!", variant: "success" })
       setInterestRules(prev => prev.filter(r => r.id !== id))
     } catch (err) {
-      setMessage({ type: 'error', text: (err as Error).message })
+      toast({ title: "Erro ao excluir faixa", description: (err as Error).message, variant: "destructive" })
     }
-    setTimeout(() => setMessage(null), 3000)
   };
 
   const handleEdit = (rule: InterestRule) => { setEditingId(rule.id); setEditingRule({ ...rule }); };
@@ -214,7 +212,7 @@ export default function BusinessRulesPage() {
       isActive: editingRule.isActive ?? true
     };
     const error = validateNoOverlap(interestRules, ruleToUpdate, editingId!);
-    if (error) { setMessage({ type: 'error', text: error }); return; }
+    if (error) { toast({ title: error, variant: "destructive" }); return; }
 
     try {
       const { error: updateError } = await supabase
@@ -230,14 +228,13 @@ export default function BusinessRulesPage() {
 
       if (updateError) throw updateError
 
-      setMessage({ type: 'success', text: 'Faixa atualizada com sucesso!' })
+      toast({ title: "Faixa atualizada com sucesso!", variant: "success" })
       setInterestRules(prev => prev.map(r => r.id === editingId ? ruleToUpdate : r))
     } catch (err) {
-      setMessage({ type: 'error', text: (err as Error).message })
+      toast({ title: "Erro ao atualizar faixa", description: (err as Error).message, variant: "destructive" })
     }
 
     setEditingId(null); setEditingRule({});
-    setTimeout(() => setMessage(null), 3000)
   };
 
   const handleCancelEdit = () => { setEditingId(null); setEditingRule({}); setIsAddingNew(false); setNewRule({}); };
@@ -253,11 +250,10 @@ export default function BusinessRulesPage() {
       if (updateError) throw updateError
 
       setInterestRules(prev => prev.map(r => r.id === rule.id ? { ...r, isActive: newStatus } : r))
-      setMessage({ type: 'success', text: `Faixa ${newStatus ? 'ativada' : 'desativada'} com sucesso!` })
+      toast({ title: `Faixa ${newStatus ? 'ativada' : 'desativada'} com sucesso!`, variant: "success" })
     } catch (err) {
-      setMessage({ type: 'error', text: (err as Error).message })
+      toast({ title: "Erro ao atualizar faixa", description: (err as Error).message, variant: "destructive" })
     }
-    setTimeout(() => setMessage(null), 3000)
   };
 
   const handleSaveLateFee = async () => {
@@ -297,7 +293,7 @@ export default function BusinessRulesPage() {
         if (insertError) throw insertError
       }
 
-      toast({ title: "Configurações salvas com sucesso!" })
+      toast({ title: "Configurações salvas com sucesso!", variant: "success" })
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" })
     }
@@ -366,20 +362,6 @@ export default function BusinessRulesPage() {
         <h1 className="text-2xl font-bold text-gray-900">Regras de Negócio</h1>
         <p className="text-gray-500 mt-1">Configure as taxas de juros e multas</p>
       </div>
-
-      {message && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`px-4 py-3 rounded-lg ${
-            message.type === 'success' 
-              ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border border-emerald-200' 
-              : 'bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200'
-          }`}
-        >
-          {message.text}
-        </motion.div>
-      )}
 
       {/* Interest Rules Section */}
       <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
