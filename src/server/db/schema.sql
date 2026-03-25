@@ -461,6 +461,7 @@ CREATE TABLE late_fee_config (
     daily_interest DECIMAL(5,4) DEFAULT 0, -- daily rate for compound interest
     monthly_interest DECIMAL(5,2) DEFAULT 0, -- monthly rate
     grace_days INTEGER DEFAULT 0,
+    push_installments_on_interest_payment BOOLEAN DEFAULT false, -- empurrar parcelas ao pagar apenas juros
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tenant_id)

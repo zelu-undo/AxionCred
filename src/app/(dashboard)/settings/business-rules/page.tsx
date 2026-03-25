@@ -29,6 +29,7 @@ interface SystemConfig {
   lateInterestChargeType: 'daily' | 'weekly' | 'monthly';
   renegotiationInterestRate: number;
   renegotiationMaxInstallments: number;
+  pushInstallmentsOnInterestPayment: boolean;
 }
 
 const isLateFeeEnabled = (config: SystemConfig) => config.lateFeeType !== null;
@@ -52,6 +53,7 @@ export default function BusinessRulesPage() {
     lateFeeType: null, lateFeeValue: 0,
     lateInterestType: null, lateInterestValue: 0, lateInterestChargeType: 'daily',
     renegotiationInterestRate: 10, renegotiationMaxInstallments: 12,
+    pushInstallmentsOnInterestPayment: false,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -92,15 +94,16 @@ export default function BusinessRulesPage() {
         
         if (lateFeeData) {
           const hasLateFee = lateFeeData.percentage !== null || lateFeeData.fixed_fee !== null
-          const hasLateInterest = lateFeeData.late_interest_value !== null && lateFeeData.late_interest_value > 0
+          const hasLateInterest = lateFeeData.daily_interest !== null || lateFeeData.monthly_interest !== null
           
           setConfig(prev => ({
             ...prev,
             lateFeeType: hasLateFee ? (lateFeeData.percentage ? 'percentage' : 'fixed') : null,
             lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
-            lateInterestType: hasLateInterest ? (lateFeeData.late_interest_type === 'fixed' ? 'fixed' : 'percentage') : null,
-            lateInterestValue: lateFeeData.late_interest_value || 0,
-            lateInterestChargeType: lateFeeData.late_interest_charge_type || 'daily'
+            lateInterestType: hasLateInterest ? 'percentage' : null,
+            lateInterestValue: lateFeeData.daily_interest || lateFeeData.monthly_interest || 0,
+            lateInterestChargeType: 'daily',
+            pushInstallmentsOnInterestPayment: lateFeeData.push_installments_on_interest_payment || false
           }))
         }
       } catch (err) {
@@ -272,9 +275,8 @@ export default function BusinessRulesPage() {
           .update({
             percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
             fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
-            late_interest_type: lateInterestEnabled ? config.lateInterestType : null,
-            late_interest_value: lateInterestEnabled ? config.lateInterestValue : null,
-            late_interest_charge_type: lateInterestEnabled ? config.lateInterestChargeType : null,
+            daily_interest: lateInterestEnabled ? config.lateInterestValue : null,
+            push_installments_on_interest_payment: config.pushInstallmentsOnInterestPayment,
           })
           .eq("tenant_id", user?.tenantId)
 
@@ -286,9 +288,8 @@ export default function BusinessRulesPage() {
             tenant_id: user?.tenantId,
             percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
             fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
-            late_interest_type: lateInterestEnabled ? config.lateInterestType : null,
-            late_interest_value: lateInterestEnabled ? config.lateInterestValue : null,
-            late_interest_charge_type: lateInterestEnabled ? config.lateInterestChargeType : null,
+            daily_interest: lateInterestEnabled ? config.lateInterestValue : null,
+            push_installments_on_interest_payment: config.pushInstallmentsOnInterestPayment,
           })
 
         if (insertError) throw insertError
@@ -634,11 +635,32 @@ export default function BusinessRulesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Diariamente</SelectItem>
-                    <SelectItem value="weekly">Semanalmente</SelectItem>
                     <SelectItem value="monthly">Mensalmente</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-amber-900">Empurrar Parcelas ao Pagar Apenas Juros</h4>
+                <p className="text-sm text-amber-700 mt-1">
+                  Ao ativar, ao pagar apenas os juros de atraso, as parcelas futuras serão adiadas pelo mesmo número de dias de atraso pago.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfig({ ...config, pushInstallmentsOnInterestPayment: !config.pushInstallmentsOnInterestPayment })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  config.pushInstallmentsOnInterestPayment ? 'bg-[#22C55E]' : 'bg-gray-300'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  config.pushInstallmentsOnInterestPayment ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
           </div>
         

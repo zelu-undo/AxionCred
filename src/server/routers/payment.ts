@@ -334,6 +334,40 @@ export const paymentRouter = router({
           interestOnlyAmount = 1
         }
         
+        // Se pagamento de juros apenas e config habilitada, empurrar parcelas futuras
+        const { data: lateFeeConfigForPush } = await ctx.supabase
+          .from("late_fee_config")
+          .select("push_installments_on_interest_payment")
+          .eq("tenant_id", ctx.tenantId)
+          .single()
+        
+        if (lateFeeConfigForPush?.push_installments_on_interest_payment) {
+          // Buscar parcelas futuras (não pagas, com vencimento após a data do pagamento)
+          const paymentDateStr = payment_date.split('T')[0]
+          const { data: futureInstallments } = await ctx.supabase
+            .from("loan_installments")
+            .select("id, due_date")
+            .eq("loan_id", installment.loan_id)
+            .gte("due_date", paymentDateStr)
+            .neq("status", "paid")
+            .order("due_date", { ascending: true })
+          
+          if (futureInstallments && futureInstallments.length > 0) {
+            // Empurrar cada parcela pelos mesmos dias de atraso
+            const daysToPush = effectiveDays
+            
+            for (const inst of futureInstallments) {
+              const currentDueDate = new Date(inst.due_date)
+              currentDueDate.setDate(currentDueDate.getDate() + daysToPush)
+              
+              await ctx.supabase
+                .from("loan_installments")
+                .update({ due_date: currentDueDate.toISOString().split('T')[0] })
+                .eq("id", inst.id)
+            }
+          }
+        }
+        
         // Não aplicar mínimos para pagamento de juros apenas
         // mas validar que não excede muito o esperado
       } else {
