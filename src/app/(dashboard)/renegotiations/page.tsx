@@ -204,6 +204,21 @@ export default function RenegotiationsPage() {
   
   // Get selected loan details
   const selectedLoan = loansData?.loans?.find(l => l.id === selectedLoanId)
+  
+  // Calculate installment with interest (price table method - SAC)
+  const calculateInstallment = (total: number, installments: number, monthlyRate: number) => {
+    if (!total || !installments || !monthlyRate) return 0
+    const rate = monthlyRate / 100
+    // Price table formula: PMT = PV * (r * (1+r)^n) / ((1+r)^n - 1)
+    const factor = Math.pow(1 + rate, installments)
+    return (total * rate * factor) / (factor - 1)
+  }
+  
+  const installmentValue = selectedLoan && newTotalAmount && newInstallments && newInterestRate
+    ? calculateInstallment(Number(newTotalAmount), Number(newInstallments), Number(newInterestRate))
+    : 0
+    
+  const isInvalidAmount = selectedLoan && newTotalAmount && Number(newTotalAmount) < (selectedLoan.remaining_amount || 0)
 
   const filteredRenegotiations = renegotiations.filter((r: Renegotiation) => {
     const customerName = r.loan?.customer?.name || ""
@@ -554,13 +569,17 @@ export default function RenegotiationsPage() {
                 </h4>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Novo Valor</label>
+                    <label className="text-sm font-medium">Novo Valor (mín: {formatCurrency(selectedLoan.remaining_amount)})</label>
                     <Input 
                       type="number" 
-                      placeholder="R$ 0,00" 
+                      placeholder={`Min: ${selectedLoan.remaining_amount}`} 
                       value={newTotalAmount}
                       onChange={(e) => setNewTotalAmount(e.target.value)}
+                      className={isInvalidAmount ? "border-red-500" : ""}
                     />
+                    {isInvalidAmount && (
+                      <p className="text-xs text-red-500">Valor não pode ser menor que o saldo devedor</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Parcelas</label>
@@ -593,18 +612,23 @@ export default function RenegotiationsPage() {
             )}
 
             {/* Simulation */}
-            {selectedLoan && newTotalAmount && (
+            {selectedLoan && newTotalAmount && !isInvalidAmount && (
               <div className="p-4 bg-gradient-to-r from-[#22C55E]/10 to-[#4ADE80]/10 rounded-lg border border-[#22C55E]/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Valor da Parcela</span>
+                  <span className="text-sm font-medium text-gray-700">Valor da Parcela (com juros)</span>
                   <span className="text-xl font-bold text-[#22C55E]">
-                    {formatCurrency(Number(newTotalAmount) / Number(newInstallments))}
+                    {formatCurrency(installmentValue)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Total a Pagar</span>
                   <span className="font-semibold text-gray-900">{formatCurrency(Number(newTotalAmount))}</span>
                 </div>
+                {newInterestRate && Number(newInterestRate) > 0 && (
+                  <div className="mt-2 pt-2 border-t border-green-200 text-xs text-gray-600">
+                    Taxa de {newInterestRate}% ao mês aplicada via tabela price
+                  </div>
+                )}
               </div>
             )}
 
@@ -627,9 +651,9 @@ export default function RenegotiationsPage() {
             </Button>
             <Button 
               className="bg-[#22C55E] hover:bg-[#16A34A] gap-2"
-              disabled={!selectedLoanId || !newTotalAmount || createMutation.isPending}
+              disabled={!selectedLoanId || !newTotalAmount || isInvalidAmount || createMutation.isPending}
               onClick={() => {
-                if (selectedLoanId && newTotalAmount) {
+                if (selectedLoanId && newTotalAmount && !isInvalidAmount) {
                   createMutation.mutate({
                     loan_id: selectedLoanId,
                     new_installments: Number(newInstallments),
