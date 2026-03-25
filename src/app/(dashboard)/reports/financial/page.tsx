@@ -313,17 +313,18 @@ export default function FinancialReportsPage() {
 
   // Calculate projected cash flow based on real pending installments
   const projectedCashFlow = useMemo(() => {
+    // Labels for the next 4 months from now
     const months = ["Próximo mês", "2 meses", "3 meses", "4 meses"];
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
-    // Group pending payments by month
-    const monthlyAmounts: { [key: string]: number } = {
-      "Próximo mês": 0,
-      "2 meses": 0,
-      "3 meses": 0,
-      "4 meses": 0,
+    // Group pending payments by month index (0 = current month, 1 = next month, etc.)
+    const monthlyAmounts: { [key: number]: number } = {
+      0: 0, // Current month
+      1: 0, // Next month
+      2: 0, // 2 months from now
+      3: 0, // 3 months from now
     };
     
     // Combine pending and overdue payments
@@ -351,15 +352,15 @@ export default function FinancialReportsPage() {
           const dueMonth = dueDate.getMonth();
           const dueYear = dueDate.getFullYear();
           
-          // Calculate months from now
+          // Calculate months from current month (0 = current month, 1 = next month, etc.)
           let monthsDiff = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
           
-          // If due date is in the past but payment is pending, count as next month
-          if (monthsDiff < 1) monthsDiff = 1;
-          if (monthsDiff > 4) monthsDiff = 4; // Cap at 4 months
+          // If due date is in the past but payment is pending, count as current month
+          if (monthsDiff < 0) monthsDiff = 0;
+          if (monthsDiff > 3) monthsDiff = 3; // Cap at index 3 (4th month)
           
-          const monthKey = months[monthsDiff - 1];
-          if (monthKey && monthlyAmounts[monthKey] !== undefined) {
+          const monthKey = monthsDiff;
+          if (monthlyAmounts[monthKey] !== undefined) {
             monthlyAmounts[monthKey] += amount;
           }
         }
@@ -369,7 +370,7 @@ export default function FinancialReportsPage() {
     // Calculate projected values for each month
     const data = months.map((month, i) => ({
       month,
-      projected: Math.round(monthlyAmounts[month] || 0),
+      projected: Math.round(monthlyAmounts[i] || 0),
       confidence: Math.round(90 - (i * 5)), // Decreasing confidence
     }));
     
