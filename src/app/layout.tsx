@@ -19,9 +19,24 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "AXION - Gestão de Crédito",
   description: "Plataforma de infraestrutura de crédito e confiança digital",
+  manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
-    apple: "/logo-axion.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/logo-axion.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      { url: "/logo-axion.png", sizes: "512x512", type: "image/png", rel: "apple-touch-icon" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "AXION",
   },
 }
 
