@@ -110,13 +110,13 @@ export default function FinancialReportsPage() {
       months[key] = { revenue: 0, expenses: 0, profit: 0 };
     }
 
-    // Sum payments by month
+    // Sum payments by month (use paid_date for when payment was made)
     paymentsData?.payments?.forEach((payment) => {
-      const date = new Date(payment.created_at);
+      const date = new Date(payment.paid_date || payment.due_date);
       const key = formatDate(date);
       if (months[key]) {
-        months[key].revenue += Number(payment.amount || 0);
-        months[key].profit += Number(payment.amount || 0);
+        months[key].revenue += Number(payment.amount_paid || 0);
+        months[key].profit += Number(payment.amount_paid || 0);
       }
     });
 
@@ -389,7 +389,7 @@ export default function FinancialReportsPage() {
                               {item.month}: {formatCurrency(item.revenue)}
                             </div>
                           </div>
-                        ))}
+                        );})}
                       </div>
                     </div>
 
@@ -441,7 +441,7 @@ export default function FinancialReportsPage() {
                               {item.month}: {formatCurrency(item.profit)}
                             </div>
                           </div>
-                        ))}
+                        );})}
                       </div>
                     </div>
 
