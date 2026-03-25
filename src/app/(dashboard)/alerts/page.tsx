@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import { AlertTriangle, CreditCard, Settings, TrendingUp, Bell, DollarSign, Clock, UserX, Loader2 } from "lucide-react"
@@ -15,7 +15,11 @@ interface Alert {
   timestamp: string;
 }
 
+type FilterType = 'all' | 'credit' | 'operational' | 'strategic' | 'high';
+
 export default function AlertsPage() {
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  
   // Fetch real alerts from the API
   const { data: overdueData, isLoading: loadingOverdue } = trpc.payment.list.useQuery({
     overdueOnly: true,
@@ -117,6 +121,17 @@ export default function AlertsPage() {
   const strategicCount = alerts.filter(a => a.type === 'strategic').length;
   const highPriorityCount = alerts.filter(a => a.priority === 'high').length;
 
+  // Filter alerts based on active filter
+  const filteredAlerts = alerts.filter(alert => {
+    if (activeFilter === 'all') return true
+    if (activeFilter === 'high') return alert.priority === 'high'
+    return alert.type === activeFilter
+  })
+
+  const handleFilterClick = (filter: FilterType) => {
+    setActiveFilter(filter)
+  }
+
   return (
     isLoading ? (
       <div className="flex items-center justify-center py-12">
@@ -141,19 +156,28 @@ export default function AlertsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100">
-                  <CreditCard className="h-5 w-5 text-red-600" />
+          <button
+            onClick={() => handleFilterClick('credit')}
+            className={`w-full text-left border transition-all duration-300 ${
+              activeFilter === 'credit' 
+                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
+                : 'hover:shadow-md'
+            }`}
+          >
+            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'credit' ? 'bg-green-50' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <CreditCard className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Crédito</p>
+                    <p className="text-2xl font-bold text-gray-900">{creditCount}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Crédito</p>
-                  <p className="text-2xl font-bold text-gray-900">{creditCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </button>
         </motion.div>
 
         <motion.div
@@ -161,19 +185,28 @@ export default function AlertsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <Settings className="h-5 w-5 text-blue-600" />
+          <button
+            onClick={() => handleFilterClick('operational')}
+            className={`w-full text-left border transition-all duration-300 ${
+              activeFilter === 'operational' 
+                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
+                : 'hover:shadow-md'
+            }`}
+          >
+            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'operational' ? 'bg-green-50' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Settings className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Operacional</p>
+                    <p className="text-2xl font-bold text-gray-900">{operationalCount}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Operacional</p>
-                  <p className="text-2xl font-bold text-gray-900">{operationalCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </button>
         </motion.div>
 
         <motion.div
@@ -181,19 +214,28 @@ export default function AlertsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-100">
-                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+          <button
+            onClick={() => handleFilterClick('strategic')}
+            className={`w-full text-left border transition-all duration-300 ${
+              activeFilter === 'strategic' 
+                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
+                : 'hover:shadow-md'
+            }`}
+          >
+            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'strategic' ? 'bg-green-50' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-100">
+                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Estratégico</p>
+                    <p className="text-2xl font-bold text-gray-900">{strategicCount}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Estratégico</p>
-                  <p className="text-2xl font-bold text-gray-900">{strategicCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </button>
         </motion.div>
 
         <motion.div
@@ -201,21 +243,47 @@ export default function AlertsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300 border-l-4 border-red-500">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+          <button
+            onClick={() => handleFilterClick('high')}
+            className={`w-full text-left border transition-all duration-300 ${
+              activeFilter === 'high' 
+                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
+                : 'hover:shadow-md'
+            }`}
+          >
+            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'high' ? 'bg-green-50' : ''} border-l-4 border-red-500`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Alta Prioridade</p>
+                    <p className="text-2xl font-bold text-red-600">{highPriorityCount}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Alta Prioridade</p>
-                  <p className="text-2xl font-bold text-red-600">{highPriorityCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </button>
         </motion.div>
       </div>
+
+      {/* Filter indicator */}
+      {activeFilter !== 'all' && (
+        <div className="flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg">
+          <span className="text-sm text-gray-600">
+            Filtrando por: <span className="font-semibold text-gray-900">
+              {activeFilter === 'high' ? 'Alta Prioridade' : activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)}
+            </span>
+          </span>
+          <button 
+            onClick={() => setActiveFilter('all')}
+            className="text-sm text-[#22C55E] hover:underline"
+          >
+            Limpar filtro
+          </button>
+        </div>
+      )}
 
       <Card className="border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
         <CardHeader className="pb-4 border-b border-gray-100/50">
@@ -223,8 +291,14 @@ export default function AlertsPage() {
         </CardHeader>
         <CardContent className="pt-4">
           <div className="space-y-4">
-            <AnimatePresence>
-              {alerts.map((alert, index) => {
+            {filteredAlerts.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p>Nenhum alerta encontrado para o filtro selecionado.</p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {filteredAlerts.map((alert, index) => {
                 const config = getTypeConfig(alert.type);
                 const priorityConfig = getPriorityConfig(alert.priority);
                 const IconComponent = config.icon;
@@ -262,6 +336,7 @@ export default function AlertsPage() {
                 );
               })}
             </AnimatePresence>
+            )}
           </div>
         </CardContent>
       </Card>
