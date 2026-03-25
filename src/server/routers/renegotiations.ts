@@ -141,6 +141,13 @@ export const renegotiationsRouter = router({
 
       if (error) {
         console.error("Erro database:", error)
+        // Check if table doesn't exist
+        if (error.message.includes("does not exist")) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Tabela de renegociações não existe no banco. Execute o SQL do schema.",
+          })
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Erro ao criar renegociação: " + error.message,
