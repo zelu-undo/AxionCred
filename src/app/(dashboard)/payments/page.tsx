@@ -659,9 +659,9 @@ interface LoanForPayment {
                           </td>
                           <td className="px-4 py-4">
                             <div>
-                              <p className="font-semibold text-gray-900">{formatCurrency(payment.amount_paid)}</p>
-                              {payment.status === "partial" && (
-                                <p className="text-xs text-gray-500">de {formatCurrency(payment.installment_total)}</p>
+                              <p className="font-semibold text-gray-900">{formatCurrency(payment.amount_due)}</p>
+                              {payment.amount_paid > 0 && payment.amount_paid < payment.amount_due && (
+                                <p className="text-xs text-gray-500">pago: {formatCurrency(payment.amount_paid)}</p>
                               )}
                             </div>
                           </td>
