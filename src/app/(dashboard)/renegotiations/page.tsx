@@ -139,12 +139,39 @@ export default function RenegotiationsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [selectedRenegotiation, setSelectedRenegotiation] = useState<any>(null)
   
+  // State for new renegotiation form
+  const [selectedLoanId, setSelectedLoanId] = useState("")
+  const [newTotalAmount, setNewTotalAmount] = useState("")
+  const [newInstallments, setNewInstallments] = useState("6")
+  const [newInterestRate, setNewInterestRate] = useState("2.0")
+  const [renegotiationNotes, setRenegotiationNotes] = useState("")
+  
   // Fetch real data from API
   const { data: renegotiationsData, isLoading } = trpc.renegotiations.list.useQuery({ status: statusFilter as any }, {
     refetchOnMount: true,
   })
   
+  // Fetch loans for selection in new renegotiation modal
+  const { data: loansData } = trpc.loan.list.useQuery({ status: "active", limit: 100 }, {
+    enabled: isCreateOpen,
+  })
+  
+  // Create renegotiation mutation
+  const createMutation = trpc.renegotiations.create.useMutation({
+    onSuccess: () => {
+      setIsCreateOpen(false)
+      setSelectedLoanId("")
+      setNewTotalAmount("")
+      setNewInstallments("6")
+      setNewInterestRate("2.0")
+      setRenegotiationNotes("")
+    }
+  })
+  
   const renegotiations = renegotiationsData?.renegotiations || []
+  
+  // Get selected loan details
+  const selectedLoan = loansData?.loans?.find(l => l.id === selectedLoanId)
 
   const filteredRenegotiations = renegotiations.filter((r: Renegotiation) => {
     const customerName = r.loan?.customer?.name || ""
@@ -387,42 +414,46 @@ export default function RenegotiationsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
-            {/* Customer Selection */}
+            {/* Loan Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Selecione o Cliente</label>
-              <Select>
+              <label className="text-sm font-medium">Selecione o Empréstimo</label>
+              <Select value={selectedLoanId} onValueChange={setSelectedLoanId}>
                 <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Buscar cliente por nome ou CPF..." />
+                  <SelectValue placeholder="Buscar empréstimo por cliente..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="joao">João Silva - 123.456.789-00</SelectItem>
-                  <SelectItem value="maria">Maria Santos - 987.654.321-00</SelectItem>
-                  <SelectItem value="pedro">Pedro Costa - 456.789.123-00</SelectItem>
+                  {loansData?.loans?.map((loan) => (
+                    <SelectItem key={loan.id} value={loan.id}>
+                      {loan.customer?.name || "Cliente"} - {loan.contract_number} - {formatCurrency(loan.remaining_amount || loan.total_amount)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Original Loan Info */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Informações do Empréstimo Original
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">Contrato</p>
-                  <p className="font-semibold">CX-2024-0001</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Valor Original</p>
-                  <p className="font-semibold">{formatCurrency(10000)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Dívida Atual</p>
-                  <p className="font-semibold text-red-600">{formatCurrency(8500)}</p>
+            {selectedLoan && (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Informações do Empréstimo Original
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Contrato</p>
+                    <p className="font-semibold">{selectedLoan.contract_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Valor Original</p>
+                    <p className="font-semibold">{formatCurrency(selectedLoan.total_amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Saldo Devedor</p>
+                    <p className="font-semibold text-red-600">{formatCurrency(selectedLoan.remaining_amount)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* New Terms */}
             <div className="space-y-3">
@@ -433,11 +464,16 @@ export default function RenegotiationsPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Novo Valor</label>
-                  <Input type="number" placeholder="R$ 0,00" defaultValue={9200} />
+                  <Input 
+                    type="number" 
+                    placeholder="R$ 0,00" 
+                    value={newTotalAmount}
+                    onChange={(e) => setNewTotalAmount(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Parcelas</label>
-                  <Select defaultValue="12">
+                  <Select value={newInstallments} onValueChange={setNewInstallments}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -453,39 +489,68 @@ export default function RenegotiationsPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Juros (% a.m.)</label>
-                  <Input type="number" placeholder="0%" step="0.1" defaultValue={2.5} />
+                  <Input 
+                    type="number" 
+                    placeholder="0%" 
+                    step="0.1" 
+                    value={newInterestRate}
+                    onChange={(e) => setNewInterestRate(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
 
             {/* Simulation */}
-            <div className="p-4 bg-gradient-to-r from-[#22C55E]/10 to-[#4ADE80]/10 rounded-lg border border-[#22C55E]/20">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Valor da Parcela</span>
-                <span className="text-xl font-bold text-[#22C55E]">{formatCurrency(9200 / 12)}</span>
+            {selectedLoan && newTotalAmount && (
+              <div className="p-4 bg-gradient-to-r from-[#22C55E]/10 to-[#4ADE80]/10 rounded-lg border border-[#22C55E]/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Valor da Parcela</span>
+                  <span className="text-xl font-bold text-[#22C55E]">
+                    {formatCurrency(Number(newTotalAmount) / Number(newInstallments))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Total a Pagar</span>
+                  <span className="font-semibold text-gray-900">{formatCurrency(Number(newTotalAmount))}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Total a Pagar</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(9200)}</span>
-              </div>
-            </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Observações</label>
-              <Textarea placeholder="Descreva os motivos da renegociação..." rows={3} />
+              <Textarea 
+                placeholder="Descreva os motivos da renegociação..." 
+                rows={3}
+                value={renegotiationNotes}
+                onChange={(e) => setRenegotiationNotes(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
               Cancelar
             </Button>
-            <Button variant="outline" className="gap-2">
-              <Calculator className="h-4 w-4" />
-              Simular
-            </Button>
-            <Button className="bg-[#22C55E] hover:bg-[#16A34A] gap-2">
-              <CheckCircle className="h-4 w-4" />
+            <Button 
+              className="bg-[#22C55E] hover:bg-[#16A34A] gap-2"
+              disabled={!selectedLoanId || !newTotalAmount || createMutation.isPending}
+              onClick={() => {
+                if (selectedLoanId && newTotalAmount) {
+                  createMutation.mutate({
+                    loan_id: selectedLoanId,
+                    new_installments: Number(newInstallments),
+                    new_interest_rate: Number(newInterestRate),
+                    new_total_amount: Number(newTotalAmount),
+                    notes: renegotiationNotes,
+                  })
+                }
+              }}
+            >
+              {createMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
               Criar Renegociação
             </Button>
           </DialogFooter>

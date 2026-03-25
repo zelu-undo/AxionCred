@@ -31,9 +31,11 @@ export const renegotiationsRouter = router({
           *,
           loan:loans(
             id,
+            contract_number,
             customer_id,
             principal_amount,
             total_amount,
+            remaining_amount,
             customer:customers(name, document)
           )
         `, { count: "exact" })
