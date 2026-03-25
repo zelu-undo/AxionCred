@@ -450,7 +450,7 @@ export default function RenegotiationsPage() {
 
       {/* New Renegotiation Modal */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5 text-[#22C55E]" />
@@ -460,7 +460,7 @@ export default function RenegotiationsPage() {
               Crie um novo contrato com condições renegociadas mantendo o histórico original
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
+          <div className="grid gap-4 py-4">
             {/* Customer Selection - Searchable */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Selecione o Cliente</label>
@@ -543,11 +543,7 @@ export default function RenegotiationsPage() {
                   <FileText className="h-4 w-4" />
                   Informações do Empréstimo Original
                 </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Contrato</p>
-                    <p className="font-semibold">{selectedLoan.contract_number}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Valor Original</p>
                     <p className="font-semibold">{formatCurrency(selectedLoan.total_amount)}</p>
@@ -567,7 +563,7 @@ export default function RenegotiationsPage() {
                   <Calculator className="h-4 w-4" />
                   Novas Condições
                 </h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Novo Valor (mín: {formatCurrency(selectedLoan.remaining_amount)})</label>
                     <Input 
