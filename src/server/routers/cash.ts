@@ -201,23 +201,23 @@ export const cashRouter = router({
       try {
         let query = ctx.supabase
           .from("cash_transactions")
-          .select("amount, value, valor, type, category, created_at")
+          .select("id, tipo, categoria, valor, descricao, data_transacao, created_at")
           .eq("tenant_id", ctx.tenantId)
-          .eq("type", "saida")
-          .in("category", ["retirada", "despesa", "operacional"]);
+          .eq("tipo", "saida")
+          .in("categoria", ["retirada", "ajuste"]);
 
         if (input.dateFrom) {
-          query = query.gte("created_at", input.dateFrom);
+          query = query.gte("data_transacao", input.dateFrom);
         }
         if (input.dateTo) {
-          query = query.lte("created_at", input.dateTo);
+          query = query.lte("data_transacao", input.dateTo);
         }
 
         const { data: txData, error: txError } = await query;
 
         if (!txError && txData) {
           const totalExpenses = txData.reduce((sum, tx) => {
-            return sum + Number(tx.amount || tx.value || tx.valor || 0);
+            return sum + Number(tx.valor || 0);
           }, 0);
 
           return {

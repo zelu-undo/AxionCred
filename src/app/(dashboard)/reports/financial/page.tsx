@@ -13,6 +13,7 @@ import {
   TrendingDown, 
   Wallet, 
   AlertTriangle, 
+  Users,
   Calendar,
   Download,
   Filter,
@@ -85,7 +86,7 @@ export default function FinancialReportsPage() {
   // Fetch real data with error handling and fallback
   const { data: paymentsData, isLoading: loadingPayments, error: paymentsError } = trpc.payment.list.useQuery({
     limit: 100,
-    dateFrom: dateFrom,
+    // Don't filter by date - get all payments for proper cash flow calculation
   }, {
     retry: 1,
     refetchOnMount: false,
@@ -125,15 +126,30 @@ export default function FinancialReportsPage() {
     }
 
     // Sum payments by month (use paid_date for when payment was made)
-    // Handle case where paymentsData or payments is undefined
+    // Only count payments that were actually paid (status = 'paid')
     const payments = paymentsData?.payments;
     if (payments && Array.isArray(payments)) {
       payments.forEach((payment: any) => {
-        const date = new Date(payment.paid_date || payment.due_date);
-        const key = formatDate(date);
-        if (months[key]) {
-          months[key].revenue += Number(payment.amount_paid || 0);
-          months[key].profit += Number(payment.amount_paid || 0);
+        // Only count paid installments
+        if (payment.status === 'paid' && payment.amount_paid > 0) {
+          const paidDate = payment.paid_date ? new Date(payment.paid_date) : null;
+          const dueDate = new Date(payment.due_date);
+          
+          // Use paid_date if available, otherwise skip (pending/late not paid yet)
+          const date = paidDate || dueDate;
+          const key = formatDate(date);
+          
+          // Only add if within the selected date range
+          const checkDate = new Date(date);
+          const startDate = new Date(now.getFullYear(), now.getMonth() - dateRangeMonths + 1, 1);
+          const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          
+          if (checkDate >= startDate && checkDate <= endDate) {
+            if (months[key]) {
+              months[key].revenue += Number(payment.amount_paid || 0);
+              months[key].profit += Number(payment.amount_paid || 0);
+            }
+          }
         }
       });
     }
@@ -685,8 +701,8 @@ export default function FinancialReportsPage() {
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#22C55E] flex items-center justify-center text-white font-bold">
-                            {member.name.split(" ").map(n => n[0]).join("")}
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#22C55E] flex items-center justify-center text-white">
+                            <Users className="h-5 w-5" />
                           </div>
                           <div>
                             <p className="font-semibold text-gray-900">{member.name}</p>
