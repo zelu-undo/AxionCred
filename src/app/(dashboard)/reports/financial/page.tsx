@@ -371,7 +371,18 @@ export default function FinancialReportsPage() {
     const data = months.map((month, i) => ({
       month,
       projected: Math.round(monthlyAmounts[i] || 0),
-      confidence: Math.round(90 - (i * 5)), // Decreasing confidence
+      installments: Object.entries(
+        allPendingPayments.filter((p: any) => {
+          if (p?.status !== 'pending' && p?.status !== 'late') return false;
+          const dueDate = p.due_date ? new Date(p.due_date) : null;
+          if (!dueDate || isNaN(dueDate.getTime())) return false;
+          const dueMonth = dueDate.getMonth();
+          const dueYear = dueDate.getFullYear();
+          let m = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
+          if (m < 0) m = 0;
+          return m === i;
+        })
+      ).length,
     }));
     
     // Calculate total projected for 4 months
@@ -666,16 +677,7 @@ export default function FinancialReportsPage() {
                         <p className="text-xl font-bold text-gray-900 mt-1">
                           {isLoading ? "..." : formatCurrency(item.projected)}
                         </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-[#22C55E] to-[#4ADE80] rounded-full"
-                              style={{ width: `${item.confidence}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-500">{item.confidence}%</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">confiança</p>
+                        <p className="text-xs text-gray-400 mt-1">{item.installments} parcelas</p>
                       </motion.div>
                     ))}
                   </div>
