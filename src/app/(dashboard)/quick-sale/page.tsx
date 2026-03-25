@@ -19,26 +19,16 @@ import {
   Calculator,
   AlertCircle,
   Loader2,
-  Percent
+  Percent,
+  Search
 } from 'lucide-react';
 import { trpc } from "@/trpc/client";
 import { showSuccessToast, showErrorToast } from "@/lib/toast";
 
-// Basic customer interface for quick-sale
-interface CustomerBasic {
-  id: string
-  name: string
-  document?: string
-  phone?: string
-  credit_limit?: number
-}
-
-// Demo data for customers
-const demoCustomers: CustomerBasic[] = [
-  { id: '1', name: 'João Silva', document: '123.456.789-00', phone: '(11) 99999-8888', credit_limit: 5000 },
-  { id: '2', name: 'Maria Santos', document: '987.654.321-00', phone: '(11) 98888-7777', credit_limit: 8000 },
-  { id: '3', name: 'Pedro Costa', document: '456.789.123-00', phone: '(11) 97777-6666', credit_limit: 3000 },
-  { id: '4', name: 'Ana Pereira', document: '321.654.987-00', phone: '(11) 96666-5555', credit_limit: 10000 },
+// Demo data for customers (fallback only)
+const demoCustomers = [
+  { id: 'demo-1', name: 'João Silva', document: '123.456.789-00', phone: '(11) 99999-8888', credit_limit: 5000 },
+  { id: 'demo-2', name: 'Maria Santos', document: '987.654.321-00', phone: '(11) 98888-7777', credit_limit: 8000 },
 ];
 
 interface InstallmentOption {
@@ -55,19 +45,26 @@ export default function QuickSalePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Get customer data
-  const { data: customersData } = trpc.customer.list.useQuery({
+  // Get customer data from API
+  const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({
     limit: 100,
     offset: 0,
+    status: "active",
   }, {
     retry: 1,
     refetchOnWindowFocus: false,
   });
 
-  // Use demo data if no real data
-  const customers: CustomerBasic[] = customersData?.customers?.length ? customersData.customers : demoCustomers;
+  // Get customer by ID for additional info
+  const { data: customerData } = trpc.customer.byId.useQuery(
+    { id: selectedCustomer },
+    { enabled: !!selectedCustomer }
+  );
+
+  // Use real data, fallback to demo only if no data
+  const customers = customersData?.customers?.length ? customersData.customers : demoCustomers;
   
-  const customer = customers.find(c => c.id === selectedCustomer);
+  const customer = customers.find(c => c.id === selectedCustomer) || customerData;
 
   // Installment options with interest rates
   const installmentOptions: InstallmentOption[] = [
@@ -105,6 +102,24 @@ export default function QuickSalePage() {
   // Check credit limit
   const isOverLimit = customer && loanAmount ? parseFloat(loanAmount) > (customer.credit_limit || 0) : false;
 
+  // Create loan mutation
+  const createLoanMutation = trpc.loan.create.useMutation({
+    onSuccess: () => {
+      showSuccessToast('Empréstimo criado com sucesso!');
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setSelectedCustomer('');
+        setLoanAmount('');
+        setInstallments('1');
+      }, 3000);
+    },
+    onError: (error) => {
+      showErrorToast(error.message);
+      setIsSubmitting(false);
+    }
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -120,19 +135,22 @@ export default function QuickSalePage() {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Parse amount from Brazilian format
+    const principalStr = loanAmount.replace(/[^0-9]/g, "");
+    const principal = principalStr.length > 2 
+      ? parseFloat(principalStr.slice(0, -2) + "." + principalStr.slice(-2))
+      : parseFloat(principalStr) / 100;
+
+    // Calculate first payment date (today + installments months)
+    const firstPaymentDate = new Date();
+    firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
     
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    
-    setTimeout(() => {
-      setShowSuccess(false);
-      // Reset form
-      setSelectedCustomer('');
-      setLoanAmount('');
-      setInstallments('1');
-    }, 3000);
+    createLoanMutation.mutate({
+      customer_id: selectedCustomer,
+      principal_amount: principal,
+      installments_count: parseInt(installments),
+      first_due_date: firstPaymentDate.toISOString().split('T')[0],
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -140,6 +158,11 @@ export default function QuickSalePage() {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('pt-BR');
   };
 
   return (
@@ -201,21 +224,32 @@ export default function QuickSalePage() {
               {/* Customer Selection */}
               <div className="space-y-2">
                 <Label htmlFor="customer">Cliente *</Label>
-                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                <Select value={selectedCustomer} onValueChange={setSelectedCustomer} disabled={loadingCustomers}>
                   <SelectTrigger className="border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
-                    <SelectValue placeholder="Selecione um cliente" />
+                    <SelectValue placeholder={loadingCustomers ? "Carregando clientes..." : "Selecione um cliente"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{c.name}</span>
-                          <span className="text-gray-400 text-sm ml-2">
-                            {c.document ? `(${c.document})` : ''}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {loadingCustomers ? (
+                      <div className="flex items-center justify-center p-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-[#22C55E]" />
+                        <span className="ml-2 text-sm text-gray-500">Carregando...</span>
+                      </div>
+                    ) : customers.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        Nenhum cliente encontrado
+                      </div>
+                    ) : (
+                      customers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{c.name}</span>
+                            <span className="text-gray-400 text-sm ml-2">
+                              {c.document ? `(${c.document})` : ''}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
