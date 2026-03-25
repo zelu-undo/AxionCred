@@ -554,46 +554,10 @@ export const creditRouter = router({
       const availableCash = totalIn - totalOut
       const usableCash = availableCash * ((settings.max_box_percentage || 80) / 100)
 
-      // Buscar loans do cliente para calcular limite - usando JOIN com customers
-      const { data: loansWithCustomer } = await ctx.supabase
-        .from("loans")
-        .select(`
-          principal_amount,
-          status,
-          customer:customers!inner(document)
-        `)
-        .eq("tenant_id", ctx.tenantId)
-        .in("status", ["active", "overdue"])
-
-      // Filtrar loans pelo documento do cliente (normalizado)
-      const clientUsed = loansWithCustomer?.reduce((sum: number, loan: any) => {
-        // O documento pode vir como string ou objeto dependendo do JOIN
-        const loanDoc = loan.customer?.document || ""
-        const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
-        if (normalizedLoanDoc === document) {
-          return sum + (loan.principal_amount || 0)
-        }
-        return sum
-      }, 0) || 0
-
-      // Contar empréstimos ativos
-      const activeLoansCount = loansWithCustomer?.reduce((count: number, loan: any) => {
-        const loanDoc = loan.customer?.document || ""
-        const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
-        if (normalizedLoanDoc === document) {
-          return count + 1
-        }
-        return count
-      }, 0) || 0
-
-      // Buscar score usando o endpoint getCustomerScore (com pesos configuráveis)
-      let finalScore = 500
-      let riskLevel = "medium"
-      
       // Buscar configurações de peso do score
       const { data: settingsWithWeights } = await ctx.supabase
         .from("credit_settings")
-        .select("score_payment_weight, score_time_weight, score_default_weight, score_usage_weight, score_stability_weight")
+        .select("score_payment_weight, score_time_weight, score_default_weight, score_usage_weight, score_stability_weight, max_box_percentage_per_client")
         .eq("tenant_id", ctx.tenantId)
         .single()
 
@@ -606,7 +570,7 @@ export const creditRouter = router({
         stability: settingsWithWeights?.score_stability_weight || 10,
       }
       
-      // Buscar cliente pelo documento
+      // Buscar cliente pelo documento - agora incluindo loans ativos para limite
       const { data: customer } = await ctx.supabase
         .from("customers")
         .select("id, created_at")
@@ -614,8 +578,27 @@ export const creditRouter = router({
         .eq("document", document)
         .single()
 
+      // Buscar loans ativos do cliente para calcular limite_used
+      let clientUsed = 0
+      let activeLoansCount = 0
+      
       if (customer) {
-        // Buscar dados do cliente
+        const { data: customerLoans } = await ctx.supabase
+          .from("loans")
+          .select("principal_amount, status")
+          .eq("tenant_id", ctx.tenantId)
+          .eq("customer_id", customer.id)
+          .in("status", ["active", "late", "overdue"])
+
+        clientUsed = customerLoans?.reduce((sum, loan) => sum + (loan.principal_amount || 0), 0) || 0
+        activeLoansCount = customerLoans?.length || 0
+      }
+
+      // Buscar todos os loans do cliente para calcular score
+      let finalScore = 500
+      let riskLevel = "medium"
+      
+      if (customer) {
         const { data: loans } = await ctx.supabase
           .from("loans")
           .select("status, installments_count, created_at")
@@ -682,7 +665,7 @@ export const creditRouter = router({
       else if (finalScore >= 301) riskLevel = "high"
       else riskLevel = "very_high"
 
-      // Calcular limite do cliente usando getClientLimit
+      // Calcular limite do cliente
       let clientLimit = 5000
       
       try {
@@ -695,13 +678,7 @@ export const creditRouter = router({
       } catch {
         // Fallback: calcular limite baseado na renda e caixa
         if (monthlyIncome > 0) {
-          const { data: limitSettings } = await ctx.supabase
-            .from("credit_settings")
-            .select("max_box_percentage_per_client")
-            .eq("tenant_id", ctx.tenantId)
-            .single()
-          
-          const maxPercentagePerClient = limitSettings?.max_box_percentage_per_client || 20
+          const maxPercentagePerClient = settingsWithWeights?.max_box_percentage_per_client || 20
           clientLimit = Math.min(monthlyIncome * 0.3, usableCash * (maxPercentagePerClient / 100))
           clientLimit = Math.max(500, Math.round(clientLimit))
         }
