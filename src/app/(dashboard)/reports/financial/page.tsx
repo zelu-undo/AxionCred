@@ -130,10 +130,14 @@ export default function FinancialReportsPage() {
     const payments = paymentsData?.payments;
     if (payments && Array.isArray(payments)) {
       payments.forEach((payment: any) => {
-        // Only count paid installments
-        if (payment.status === 'paid' && payment.amount_paid > 0) {
+        // Only count paid installments with valid data
+        if (payment?.status === 'paid' && Number(payment.amount_paid) > 0) {
           const paidDate = payment.paid_date ? new Date(payment.paid_date) : null;
           const dueDate = new Date(payment.due_date);
+          
+          // Skip invalid dates
+          if (paidDate && isNaN(paidDate.getTime())) return;
+          if (isNaN(dueDate.getTime())) return;
           
           // Use paid_date if available, otherwise skip (pending/late not paid yet)
           const date = paidDate || dueDate;
@@ -146,8 +150,9 @@ export default function FinancialReportsPage() {
           
           if (checkDate >= startDate && checkDate <= endDate) {
             if (months[key]) {
-              months[key].revenue += Number(payment.amount_paid || 0);
-              months[key].profit += Number(payment.amount_paid || 0);
+              const amount = Number(payment.amount_paid) || 0;
+              months[key].revenue += amount;
+              months[key].profit += amount;
             }
           }
         }
@@ -157,12 +162,14 @@ export default function FinancialReportsPage() {
     // Convert to array
     const data = Object.entries(months).map(([month, values]) => ({
       month,
-      ...values,
+      revenue: isNaN(values.revenue) ? 0 : values.revenue,
+      expenses: isNaN(values.expenses) ? 0 : values.expenses,
+      profit: isNaN(values.profit) ? 0 : values.profit,
     }));
 
     // Calculate summary - use real expenses from cash (with fallback to 0 if error)
-    const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-    const realExpenses = expensesData?.total ?? 0;
+    const totalRevenue = data.reduce((sum, d) => sum + (isNaN(d.revenue) ? 0 : d.revenue), 0);
+    const realExpenses = isNaN(expensesData?.total) ? 0 : (expensesData?.total ?? 0);
     const totalProfit = totalRevenue - realExpenses;
 
     return {
@@ -170,7 +177,7 @@ export default function FinancialReportsPage() {
       summary: {
         totalRevenue,
         totalExpenses: realExpenses,
-        totalProfit,
+        totalProfit: isNaN(totalProfit) ? 0 : totalProfit,
       }
     };
   }, [paymentsData, expensesData, dateRangeMonths]);
@@ -187,13 +194,20 @@ export default function FinancialReportsPage() {
 
     const now = new Date();
     
-    // Handle case where overdueData or payments is undefined
+    // Handle case where overdueData or payments is undefined - safely access payments
     const payments = overdueData?.payments;
     if (payments && Array.isArray(payments)) {
       payments.forEach((payment: any) => {
+        // Skip if payment or due_date is invalid
+        if (!payment?.due_date) return;
+        
         const dueDate = new Date(payment.due_date);
+        if (isNaN(dueDate.getTime())) return;
+        
         const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        const amount = Number(payment.amount_due || 0) - Number(payment.amount_paid || 0);
+        const amountDue = Number(payment.amount_due) || 0;
+        const amountPaid = Number(payment.amount_paid) || 0;
+        const amount = amountDue - amountPaid;
 
         if (daysDiff <= 7) {
           stats[0].count++;
@@ -217,36 +231,11 @@ export default function FinancialReportsPage() {
     // Calculate rates
     const totalOverdue = payments?.length || 1;
     stats.forEach(s => {
-      s.rate = (s.count / totalOverdue) * 100;
+      s.rate = totalOverdue > 1 ? (s.count / totalOverdue) * 100 : 0;
     });
 
     return stats;
-  }, [overdueData, paymentsData]);
-
-  // Calculate default rate based on overdue data
-  const defaultRateData = useMemo(() => {
-    // Calculate from overdue stats
-    const totalOverdue = overdueStats.reduce((sum, s) => sum + s.count, 0);
-    const totalOverdueAmount = overdueStats.reduce((sum, s) => sum + s.amount, 0);
-    
-    // Get total installments from payments
-    const totalInstallments = paymentsData?.payments?.length || 0;
-    
-    // Calculate rate (percentage of overdue installments)
-    const rate = totalInstallments > 0 ? (totalOverdue / totalInstallments) * 100 : 0;
-    
-    // Calculate average days overdue
-    const avgDays = totalOverdue > 0 
-      ? overdueStats.reduce((sum, s) => sum + (s.count * getAvgDaysFromPeriod(s.period)), 0) / totalOverdue 
-      : 0;
-    
-    return {
-      rate: rate,
-      totalCount: totalOverdue,
-      totalAmount: totalOverdueAmount,
-      avgDays: avgDays
-    };
-  }, [overdueStats, paymentsData]);
+  }, [overdueData]);
 
   // Helper function to get average days from period name
   function getAvgDaysFromPeriod(period: string): number {
@@ -256,6 +245,32 @@ export default function FinancialReportsPage() {
     if (period.includes("60")) return 60;
     return 90;
   }
+
+  // Calculate default rate based on overdue data
+  const defaultRateData = useMemo(() => {
+    // Calculate from overdue stats - safely handle undefined data
+    const totalOverdue = overdueStats.reduce((sum, s) => sum + (isNaN(s.count) ? 0 : s.count), 0);
+    const totalOverdueAmount = overdueStats.reduce((sum, s) => sum + (isNaN(s.amount) ? 0 : s.amount), 0);
+    
+    // Get total installments from payments - safely access
+    const payments = paymentsData?.payments;
+    const totalInstallments = (payments && Array.isArray(payments)) ? payments.length : 0;
+    
+    // Calculate rate (percentage of overdue installments)
+    const rate = totalInstallments > 0 && totalOverdue > 0 ? (totalOverdue / totalInstallments) * 100 : 0;
+    
+    // Calculate average days overdue
+    const avgDays = totalOverdue > 0 
+      ? overdueStats.reduce((sum, s) => sum + (s.count * getAvgDaysFromPeriod(s.period)), 0) / totalOverdue 
+      : 0;
+    
+    return {
+      rate: isNaN(rate) ? 0 : rate,
+      totalCount: isNaN(totalOverdue) ? 0 : totalOverdue,
+      totalAmount: isNaN(totalOverdueAmount) ? 0 : totalOverdueAmount,
+      avgDays: isNaN(avgDays) ? 0 : avgDays
+    };
+  }, [overdueStats, paymentsData]);
 
   // Team performance placeholder (would need payment collector tracking)
   const teamPerformance = useMemo(() => {
