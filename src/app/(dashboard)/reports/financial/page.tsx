@@ -313,11 +313,23 @@ export default function FinancialReportsPage() {
 
   // Calculate projected cash flow based on real pending installments
   const projectedCashFlow = useMemo(() => {
-    // Labels for the next 4 months from now
-    const months = ["Próximo mês", "2 meses", "3 meses", "4 meses"];
+    // Labels for the 4 months starting from current month
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
+    
+    // Generate month labels dynamically based on current date
+    const getMonthLabel = (monthsAhead: number) => {
+      const targetDate = new Date(currentYear, currentMonth + monthsAhead, 1);
+      return targetDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    };
+    
+    const months = [
+      getMonthLabel(0), // Current month
+      getMonthLabel(1), // Next month
+      getMonthLabel(2), // 2 months from now
+      getMonthLabel(3), // 3 months from now
+    ];
     
     // Group pending payments by month index (0 = current month, 1 = next month, etc.)
     const monthlyAmounts: { [key: number]: number } = {
@@ -685,7 +697,7 @@ export default function FinancialReportsPage() {
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800 flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
-                      <strong>Total projetado:</strong> {isLoading ? "..." : `${formatCurrency(projectedCashFlow.total)} nos próximos 4 meses`}
+                      <strong>Total projetado:</strong> {isLoading ? "..." : `${formatCurrency(projectedCashFlow.total)} para os próximos 4 meses`}
                     </p>
                   </div>
                 </CardContent>
