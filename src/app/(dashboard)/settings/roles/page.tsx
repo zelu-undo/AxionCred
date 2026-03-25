@@ -29,6 +29,7 @@ import {
   Copy,
   Info
 } from 'lucide-react';
+import { trpc } from "@/trpc/client";
 import type { CustomRole, RolePermission } from '@/types';
 
 // Available modules for permissions
@@ -125,7 +126,30 @@ const createDefaultPermissions = (): RolePermission[] => {
 };
 
 export default function RolesManagementPage() {
-  const [roles, setRoles] = useState<CustomRole[]>(demoRoles);
+  // Fetch roles from API
+  const { data: rolesData, refetch: refetchRoles } = trpc.users.listRoles.useQuery()
+  
+  // Create role mutation
+  const createRoleMutation = trpc.users.createRole.useMutation({
+    onSuccess: () => refetchRoles(),
+    onError: (error: any) => alert('Erro: ' + error.message)
+  })
+  
+  // Update role mutation
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
+    onSuccess: () => refetchRoles(),
+    onError: (error: any) => alert('Erro: ' + error.message)
+  })
+  
+  // Delete role mutation
+  const deleteRoleMutation = trpc.users.deleteRole.useMutation({
+    onSuccess: () => refetchRoles(),
+    onError: (error: any) => alert('Erro: ' + error.message)
+  })
+  
+  // Use API data or demo
+  const roles: CustomRole[] = rolesData?.roles || demoRoles
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -201,48 +225,32 @@ export default function RolesManagementPage() {
   const handleSaveRole = async () => {
     if (!formData.name) return;
     
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Convert permissions to array of strings
+    const permissionsArray = formData.permissions
+      .filter(p => p.view || p.create || p.edit || p.delete)
+      .map(p => `${p.module}:${p.view ? 'view' : ''}${p.create ? ',create' : ''}${p.edit ? ',edit' : ''}${p.delete ? ',delete' : ''}`)
     
     if (isEditing && selectedRole) {
-      // Update existing role
-      setRoles(roles.map(r => 
-        r.id === selectedRole.id 
-          ? { ...r, ...formData, updated_at: new Date().toISOString().split('T')[0] }
-          : r
-      ));
-      setSuccessMessage('Função atualizada com sucesso!');
+      updateRoleMutation.mutate({
+        id: selectedRole.id,
+        name: formData.name,
+        permissions: permissionsArray,
+      })
     } else {
-      // Create new role
-      const newRole: CustomRole = {
-        id: String(Date.now()),
-        owner_id: 'owner-1',
-        ...formData,
-        is_default: false,
-        created_at: new Date().toISOString().split('T')[0],
-        updated_at: new Date().toISOString().split('T')[0],
-      };
-      setRoles([...roles, newRole]);
-      setSuccessMessage('Função criada com sucesso!');
+      createRoleMutation.mutate({
+        name: formData.name,
+        permissions: permissionsArray,
+      })
     }
     
     setIsRoleDialogOpen(false);
-    setIsLoading(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   // Handle delete role
   const handleDeleteRole = async () => {
     if (!selectedRole) return;
-    
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setRoles(roles.filter(r => r.id !== selectedRole.id));
-    setSuccessMessage('Função excluída com sucesso!');
+    deleteRoleMutation.mutate({ id: selectedRole.id })
     setIsDeleteDialogOpen(false);
-    setIsLoading(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   // Get permission count
