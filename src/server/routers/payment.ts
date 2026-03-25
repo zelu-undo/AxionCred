@@ -55,6 +55,9 @@ export const paymentRouter = router({
           due_date,
           paid_date,
           status,
+          late_fee_applied,
+          late_interest_applied,
+          days_in_delay,
           loan:loans(
             id,
             customer_id,
@@ -177,6 +180,9 @@ export const paymentRouter = router({
           due_date: inst.due_date,
           paid_date: inst.paid_date,
           status: inst.status,
+          late_fee_applied: inst.late_fee_applied || 0,
+          late_interest_applied: inst.late_interest_applied || 0,
+          days_in_delay: inst.days_in_delay || 0,
           payment_method: transaction?.method || null,
           notes: transaction?.notes || null,
         }

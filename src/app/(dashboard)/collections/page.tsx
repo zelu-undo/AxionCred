@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Phone, MessageCircle, AlertCircle, CheckCircle, Clock, Loader2 } from "lucide-react"
+import { Search, Phone, MessageCircle, AlertCircle, CheckCircle, Clock, Loader2, DollarSign, TrendingUp } from "lucide-react"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -35,6 +35,16 @@ export default function CollectionsPage() {
     refetchOnMount: true,
   })
   
+  // Fetch recovered in last 30 days
+  const { data: recoveredData } = trpc.payment.list.useQuery({
+    status: "paid",
+    dateFrom: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    dateTo: today,
+    limit: 100,
+  }, {
+    refetchOnMount: true,
+  })
+  
   // Transform API data to collection format
   const overduePayments = (overdueData?.payments || []).map((p) => ({
     id: p.id,
@@ -42,7 +52,9 @@ export default function CollectionsPage() {
     phone: p.customer_phone || "",
     amount: p.amount_due - (p.amount_paid || 0),
     dueDate: p.due_date,
-    daysOverdue: Math.floor((new Date().getTime() - new Date(p.due_date).getTime()) / (1000 * 60 * 60 * 24)),
+    daysOverdue: p.days_in_delay || Math.floor((new Date().getTime() - new Date(p.due_date).getTime()) / (1000 * 60 * 60 * 24)),
+    lateFee: p.late_fee_applied || 0,
+    lateInterest: p.late_interest_applied || 0,
     loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
   }))
   
@@ -52,6 +64,8 @@ export default function CollectionsPage() {
     phone: p.customer_phone || "",
     amount: p.amount_due - (p.amount_paid || 0),
     dueDate: p.due_date,
+    lateFee: p.late_fee_applied || 0,
+    lateInterest: p.late_interest_applied || 0,
     loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
   }))
   
@@ -60,8 +74,17 @@ export default function CollectionsPage() {
     payment.phone.includes(searchQuery)
   )
 
+  // Calculate totals from real data
   const totalOverdue = overduePayments.reduce((sum, p) => sum + p.amount, 0)
+  const totalLateFees = overduePayments.reduce((sum, p) => sum + p.lateFee, 0)
+  const totalLateInterest = overduePayments.reduce((sum, p) => sum + p.lateInterest, 0)
   const totalToday = todayPayments.reduce((sum, p) => sum + p.amount, 0)
+  
+  // Calculate recovered amount (last 30 days)
+  const recoveredPayments = recoveredData?.payments || []
+  const totalRecovered = recoveredPayments.reduce((sum, p) => sum + (p.amount_paid || 0), 0)
+  const overdueTotal = overduePayments.length > 0 ? totalOverdue : 1
+  const recoveryRate = totalOverdue > 0 ? Math.round((totalRecovered / (totalRecovered + totalOverdue)) * 100) : 0
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -105,8 +128,14 @@ export default function CollectionsPage() {
             <div className="flex items-center justify-between relative z-10">
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Inadimplente</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalOverdue)}</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalOverdue + totalLateFees + totalLateInterest)}</p>
                 <p className="text-xs text-gray-500 mt-1">{overduePayments.length} parcelas atrasadas</p>
+                {(totalLateFees > 0 || totalLateInterest > 0) && (
+                  <div className="text-xs text-orange-600 mt-1">
+                    <span>Multa: {formatCurrency(totalLateFees)}</span>
+                    {totalLateInterest > 0 && <span className="ml-2">Juros: {formatCurrency(totalLateInterest)}</span>}
+                  </div>
+                )}
               </div>
               <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center shadow-sm">
                 <AlertCircle className="h-6 w-6 text-red-500" />
@@ -149,8 +178,8 @@ export default function CollectionsPage() {
             <div className="flex items-center justify-between relative z-10">
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recuperado (30d)</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">R$ 12.450</p>
-                <p className="text-xs text-gray-500 mt-1">85% de taxa de recuperação</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(totalRecovered)}</p>
+                <p className="text-xs text-gray-500 mt-1">{recoveryRate}% de taxa de recuperação</p>
               </div>
               <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center shadow-sm">
                 <CheckCircle className="h-6 w-6 text-green-600" />
@@ -201,7 +230,21 @@ export default function CollectionsPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="font-bold text-red-600">{formatCurrency(payment.amount)}</p>
-                    <p className="text-xs text-gray-500">Venceu em {new Date(payment.dueDate).toLocaleDateString("pt-BR")}</p>
+                    <div className="text-xs text-gray-500 space-y-0.5">
+                      {payment.lateFee > 0 && (
+                        <div className="flex justify-end gap-2">
+                          <span>Multa:</span>
+                          <span className="text-orange-600">+{formatCurrency(payment.lateFee)}</span>
+                        </div>
+                      )}
+                      {payment.lateInterest > 0 && (
+                        <div className="flex justify-end gap-2">
+                          <span>Juros:</span>
+                          <span className="text-orange-600">+{formatCurrency(payment.lateInterest)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Venceu em {new Date(payment.dueDate).toLocaleDateString("pt-BR")}</p>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" asChild>
