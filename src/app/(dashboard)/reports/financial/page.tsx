@@ -80,23 +80,21 @@ export default function FinancialReportsPage() {
 
   // Fetch real data
   const { data: paymentsData, isLoading: loadingPayments } = trpc.payment.list.useQuery({
-    limit: 1000,
+    limit: 100,
     dateFrom: new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
-  }, { refetchOnMount: true });
+  });
 
   const { data: overdueData, isLoading: loadingOverdue } = trpc.payment.list.useQuery({
     overdueOnly: true,
-    limit: 1000,
-  }, { refetchOnMount: true });
-
-  const { data: loanDashboard } = trpc.loan.dashboard.useQuery(undefined, {
-    refetchOnMount: true,
+    limit: 100,
   });
 
-  // Fetch real expenses from cash
+  const { data: loanDashboard } = trpc.loan.dashboard.useQuery();
+
+  // Fetch real expenses from cash (only operational expenses - exclude loan releases)
   const { data: expensesData, isLoading: loadingExpenses } = trpc.cash.getExpensesByPeriod.useQuery({
     dateFrom: new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
-  }, { refetchOnMount: true });
+  });
 
   // Process data for charts
   const { cashFlowData, summary } = useMemo(() => {
@@ -210,11 +208,6 @@ export default function FinancialReportsPage() {
 
   // Loading state
   const isLoading = loadingPayments || loadingOverdue || loadingExpenses;
-
-  // Debug logging (remove in production)
-  console.log("[Financial] Payments:", paymentsData?.payments?.length);
-  console.log("[Financial] Expenses:", expensesData?.total);
-  console.log("[Financial] Summary:", summary);
 
   return (
     <motion.div 

@@ -161,7 +161,7 @@ export const cashRouter = router({
       return data
     }),
 
-  // Get expenses by date range for financial reports
+  // Get expenses by date range for financial reports (operational expenses only - excludes loan releases)
   getExpensesByPeriod: protectedProcedure
     .input(
       z.object({
@@ -170,12 +170,13 @@ export const cashRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      // Get only operational expenses (retirada and ajuste categories, NOT loan releases)
       const { data, error } = await ctx.supabase.rpc("get_cash_transactions", {
         p_tenant_id: ctx.tenantId,
         p_limit: 1000,
         p_offset: 0,
         p_tipo: "saida",
-        p_categoria: null,
+        p_categoria: "retirada", // Only retiradas, not loan releases
         p_data_inicio: input.dateFrom || null,
         p_data_fim: input.dateTo || null,
       })
