@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Zap, 
@@ -358,57 +357,79 @@ export default function QuickSalePage() {
               {/* Loan Amount */}
               <div className="space-y-2">
                 <Label htmlFor="principal">Valor do Empréstimo *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
-                  <Input
-                    id="principal"
-                    type="text"
-                    placeholder="0,00"
-                    value={principal}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '');
-                      if (value.length <= 2) {
-                        setPrincipal('0,' + value.padStart(2, '0'));
-                      } else {
-                        const reais = value.slice(0, -2);
-                        const centavos = value.slice(-2);
-                        setPrincipal(`${reais},${centavos}`);
+                <Input
+                  id="principal"
+                  type="text"
+                  placeholder="0,00"
+                  value={principal}
+                  onChange={(e) => {
+                    // Permite apenas dígitos
+                    const digits = e.target.value.replace(/[^0-9]/g, '');
+                    if (!digits) {
+                      setPrincipal('');
+                      return;
+                    }
+                    // Converte para formato brasileiro: 1234 -> 12,34
+                    const numericValue = parseInt(digits) / 100;
+                    setPrincipal(numericValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                  }}
+                  onBlur={() => {
+                    // Formata ao sair do campo
+                    if (principal) {
+                      const digits = principal.replace(/[^0-9]/g, '');
+                      if (digits) {
+                        const numericValue = parseInt(digits) / 100;
+                        setPrincipal(numericValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                       }
-                    }}
-                    className="pl-12 border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
-                  />
-                </div>
+                    }
+                  }}
+                  className="border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
+                />
               </div>
 
               {/* Installments */}
               <div className="space-y-2">
                 <Label htmlFor="installments">Parcelas *</Label>
-                <Select value={installments} onValueChange={setInstallments}>
-                  <SelectTrigger className="border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
-                    <SelectValue placeholder="Selecione o número de parcelas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      { value: 1, label: '1x' },
-                      { value: 2, label: '2x' },
-                      { value: 3, label: '3x' },
-                      { value: 4, label: '4x' },
-                      { value: 5, label: '5x' },
-                      { value: 6, label: '6x' },
-                      { value: 10, label: '10x' },
-                      { value: 12, label: '12x' },
-                    ].map((option) => (
-                      <SelectItem key={option.value} value={option.value.toString()}>
-                        {option.label}
-                        {getCurrentInterestRate() > 0 && (
-                          <span className="text-gray-400 text-sm ml-2">
-                            {' '} ({Math.round(getCurrentInterestRate() * 100)}% juros)
-                          </span>
-                        )}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="installments"
+                  type="number"
+                  placeholder="Digite o número de parcelas"
+                  value={installments}
+                  onChange={(e) => {
+                    const num = e.target.value.replace(/[^0-9]/g, '');
+                    setInstallments(num);
+                  }}
+                  onBlur={() => {
+                    // Valida contra as regras de negócio
+                    const num = parseInt(installments) || 0;
+                    const rules = businessRulesData?.interestRules || [];
+                    
+                    if (rules.length > 0) {
+                      const validRule = rules.find(
+                        (r: InterestRule) => num >= r.min_installments && num <= r.max_installments
+                      );
+                      
+                      if (!validRule) {
+                        // Se não estiver válido, ajusta para o intervalo válido mais próximo
+                        const minAllowed = Math.min(...rules.map((r: InterestRule) => r.min_installments));
+                        const maxAllowed = Math.max(...rules.map((r: InterestRule) => r.max_installments));
+                        
+                        if (num < minAllowed) {
+                          setInstallments(String(minAllowed));
+                        } else if (num > maxAllowed) {
+                          setInstallments(String(maxAllowed));
+                        }
+                      }
+                    }
+                  }}
+                  className="border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
+                />
+                {/* Mostra as faixas disponíveis */}
+                {businessRulesData?.interestRules && businessRulesData.interestRules.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Faixas disponíveis: {businessRulesData.interestRules.map((r: InterestRule) => `${r.min_installments}-${r.max_installments}x`).join(", ")}
+                  </p>
+                )}
               </div>
 
               {/* First Payment Date */}
