@@ -104,12 +104,13 @@ const itemVariants = {
 export default function PaymentsPage() {
   const { t } = useI18n()
   const router = useRouter()
+  const searchParams = useSearchParams()
   
-  // Filters state
+  // Filters state - initialize from URL params if available
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") || "")
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") || "")
   const [todayOnly, setTodayOnly] = useState(false)
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [sortBy, setSortBy] = useState<"due_date" | "paid_date" | "amount">("due_date")
