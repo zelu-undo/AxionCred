@@ -193,6 +193,10 @@ export default function RenegotiationsPage() {
       setNewInstallments("6")
       setNewInterestRate("2.0")
       setRenegotiationNotes("")
+    },
+    onError: (error) => {
+      console.error("Erro ao criar renegociação:", error.message)
+      alert("Erro ao criar renegociação: " + error.message)
     }
   })
   
@@ -650,10 +654,18 @@ export default function RenegotiationsPage() {
               disabled={!selectedLoanId || !newTotalAmount || isInvalidAmount || createMutation.isPending}
               onClick={() => {
                 if (selectedLoanId && newTotalAmount && !isInvalidAmount) {
+                  const interestRate = newInterestRate ? Number(newInterestRate) : 0
+                  console.log("Criando renegociação:", {
+                    loan_id: selectedLoanId,
+                    new_installments: Number(newInstallments),
+                    new_interest_rate: interestRate,
+                    new_total_amount: Number(newTotalAmount),
+                    notes: renegotiationNotes,
+                  })
                   createMutation.mutate({
                     loan_id: selectedLoanId,
                     new_installments: Number(newInstallments),
-                    new_interest_rate: Number(newInterestRate),
+                    new_interest_rate: interestRate,
                     new_total_amount: Number(newTotalAmount),
                     notes: renegotiationNotes,
                   })
