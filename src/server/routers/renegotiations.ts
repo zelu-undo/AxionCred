@@ -126,13 +126,22 @@ export const renegotiationsRouter = router({
       const rate = input.new_interest_rate / 100
       const installments = input.new_installments
       const total = input.new_total_amount
-      let installmentAmount = total / installments
       
-      if (rate > 0) {
-        // Price table formula
-        const factor = Math.pow(1 + rate, installments)
-        installmentAmount = (total * rate * factor) / (factor - 1)
+      console.log("Valores recebidos:", { rate, installments, total })
+      
+      let installmentAmount = 0
+      
+      if (total && installments) {
+        if (rate > 0) {
+          // Price table formula
+          const factor = Math.pow(1 + rate, installments)
+          installmentAmount = (total * rate * factor) / (factor - 1)
+        } else {
+          installmentAmount = total / installments
+        }
       }
+      
+      console.log(" installmentAmount calculado:", installmentAmount)
       
       const { data, error } = await ctx.supabase
         .from("loan_renegotiations")

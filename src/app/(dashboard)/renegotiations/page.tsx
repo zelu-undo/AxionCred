@@ -583,19 +583,12 @@ export default function RenegotiationsPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Parcelas</label>
-                    <Select value={newInstallments} onValueChange={setNewInstallments}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3">3x</SelectItem>
-                        <SelectItem value="6">6x</SelectItem>
-                        <SelectItem value="9">9x</SelectItem>
-                        <SelectItem value="12">12x</SelectItem>
-                        <SelectItem value="18">18x</SelectItem>
-                        <SelectItem value="24">24x</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input 
+                      type="number" 
+                      placeholder="Número de parcelas" 
+                      value={newInstallments}
+                      onChange={(e) => setNewInstallments(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Juros (% a.m.)</label>
