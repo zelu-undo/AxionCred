@@ -206,7 +206,41 @@ export default function FinancialReportsPage() {
     });
 
     return stats;
-  }, [overdueData]);
+  }, [overdueData, paymentsData]);
+
+  // Calculate default rate based on overdue data
+  const defaultRateData = useMemo(() => {
+    // Calculate from overdue stats
+    const totalOverdue = overdueStats.reduce((sum, s) => sum + s.count, 0);
+    const totalOverdueAmount = overdueStats.reduce((sum, s) => sum + s.amount, 0);
+    
+    // Get total installments from payments
+    const totalInstallments = paymentsData?.payments?.length || 0;
+    
+    // Calculate rate (percentage of overdue installments)
+    const rate = totalInstallments > 0 ? (totalOverdue / totalInstallments) * 100 : 0;
+    
+    // Calculate average days overdue
+    const avgDays = totalOverdue > 0 
+      ? overdueStats.reduce((sum, s) => sum + (s.count * getAvgDaysFromPeriod(s.period)), 0) / totalOverdue 
+      : 0;
+    
+    return {
+      rate: rate,
+      totalCount: totalOverdue,
+      totalAmount: totalOverdueAmount,
+      avgDays: avgDays
+    };
+  }, [overdueStats, paymentsData]);
+
+  // Helper function to get average days from period name
+  function getAvgDaysFromPeriod(period: string): number {
+    if (period.includes("7")) return 7;
+    if (period.includes("15")) return 15;
+    if (period.includes("30")) return 30;
+    if (period.includes("60")) return 60;
+    return 90;
+  }
 
   // Team performance placeholder (would need payment collector tracking)
   const teamPerformance = useMemo(() => {
@@ -219,22 +253,37 @@ export default function FinancialReportsPage() {
       ];
     }
     
+    // Use total revenue as collected amount and show as metric
+    const totalCollected = summary.totalRevenue;
+    const recovery = totalCollected > 0 ? 100 : 0;
+    
     return [
       { name: "Total Clientes", role: "Base", collected: loanDashboard.total_customers || 0, target: 0, recovery: 0, contacts: 0 },
       { name: "Empréstimos Ativos", role: "Portfolio", collected: loanDashboard.active_loans || 0, target: 0, recovery: 0, contacts: 0 },
+      { name: "Total Coletado", role: "Receita", collected: totalCollected, target: totalCollected * 1.2, recovery: recovery, contacts: defaultRateData.totalCount },
     ];
-  }, [loanDashboard]);
+  }, [loanDashboard, summary.totalRevenue, defaultRateData]);
 
-  // Calculate projected cash flow (simple projection based on average)
+  // Calculate projected cash flow (simple projection based on average monthly revenue)
   const projectedCashFlow = useMemo(() => {
-    const avgRevenue = summary.totalRevenue / Math.max(1, cashFlowData.length);
-    const months = ["Próximos 1", "Próximos 2", "Próximos 3", "Próximos 4"];
+    // Calculate average monthly revenue
+    const avgMonthlyRevenue = summary.totalRevenue / Math.max(1, cashFlowData.length);
+    const months = ["Próximo mês", "2 meses", "3 meses", "4 meses"];
     
-    return months.map((month, i) => ({
+    // Calculate projected values for each month based on average
+    const data = months.map((month, i) => ({
       month,
-      projected: Math.round(avgRevenue * (1 + (i * 0.05))), // 5% growth per month
-      confidence: 85 - (i * 5), // Decreasing confidence
+      projected: Math.round(avgMonthlyRevenue * (1 + (i * 0.05))), // 5% growth per month
+      confidence: Math.round(85 - (i * 5)), // Decreasing confidence
     }));
+    
+    // Calculate total projected for 4 months
+    const totalProjected = data.reduce((sum, item) => sum + item.projected, 0);
+    
+    return {
+      monthly: data,
+      total: totalProjected
+    };
   }, [summary.totalRevenue, cashFlowData.length]);
 
   // Loading state
@@ -292,7 +341,11 @@ export default function FinancialReportsPage() {
                 <p className="text-2xl font-bold mt-1">{isLoading ? "..." : formatCurrency(summary.totalRevenue)}</p>
                 <p className="text-xs text-emerald-100 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="h-3 w-3" />
-                  Período: {dateRange}
+                  Período: {dateRange === "30days" ? "Últimos 30 dias" : 
+                           dateRange === "3months" ? "Últimos 3 meses" :
+                           dateRange === "6months" ? "Últimos 6 meses" :
+                           dateRange === "12months" ? "Últimos 12 meses" :
+                           dateRange === "year" ? "Ano atual" : dateRange}
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -343,10 +396,10 @@ export default function FinancialReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-orange-100 text-sm font-medium">Taxa de Inadimplência</p>
-                <p className="text-2xl font-bold mt-1">8.5%</p>
+                <p className="text-2xl font-bold mt-1">{isLoading ? "..." : `${defaultRateData.rate.toFixed(1)}%`}</p>
                 <p className="text-xs text-orange-100 mt-1 flex items-center gap-1">
-                  <ArrowDownRight className="h-3 w-3" />
-                  -2.1% vs período anterior
+                  {defaultRateData.rate > 20 ? <ArrowDownRight className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
+                  {defaultRateData.totalCount} parcelas pendentes
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -504,7 +557,7 @@ export default function FinancialReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {projectedCashFlow.map((item, index) => (
+                    {projectedCashFlow.monthly.map((item, index) => (
                       <motion.div 
                         key={item.month}
                         initial={{ opacity: 0, y: 10 }}
@@ -514,7 +567,7 @@ export default function FinancialReportsPage() {
                       >
                         <p className="text-sm font-medium text-gray-600">{item.month}</p>
                         <p className="text-xl font-bold text-gray-900 mt-1">
-                          R$ {(item.projected / 1000).toFixed(1)}k
+                          {isLoading ? "..." : formatCurrency(item.projected)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -533,7 +586,7 @@ export default function FinancialReportsPage() {
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800 flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
-                      <strong>Total projetado:</strong> R$ 91.500 nos próximos 4 meses
+                      <strong>Total projetado:</strong> {isLoading ? "..." : `${formatCurrency(projectedCashFlow.total)} nos próximos 4 meses`}
                     </p>
                   </div>
                 </CardContent>
@@ -591,19 +644,19 @@ export default function FinancialReportsPage() {
                     <h4 className="font-semibold text-gray-900 mb-3">Resumo de Inadimplência</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-red-600">35</p>
+                        <p className="text-2xl font-bold text-red-600">{isLoading ? "..." : defaultRateData.totalCount}</p>
                         <p className="text-sm text-gray-500">Total Parcelas</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-red-600">R$ 45.900</p>
+                        <p className="text-2xl font-bold text-red-600">{isLoading ? "..." : formatCurrency(defaultRateData.totalAmount)}</p>
                         <p className="text-sm text-gray-500">Valor Total</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-orange-500">67</p>
+                        <p className="text-2xl font-bold text-orange-500">{isLoading ? "..." : Math.round(defaultRateData.avgDays)}</p>
                         <p className="text-sm text-gray-500">Dias Médios</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-purple-600">8.5%</p>
+                        <p className="text-2xl font-bold text-purple-600">{isLoading ? "..." : `${defaultRateData.rate.toFixed(1)}%`}</p>
                         <p className="text-sm text-gray-500">Taxa Global</p>
                       </div>
                     </div>
@@ -687,19 +740,19 @@ export default function FinancialReportsPage() {
                 <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gradient-to-r from-[#1E3A8A]/5 to-[#22C55E]/5 rounded-xl border border-gray-200">
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Total Coletado</p>
-                    <p className="text-xl font-bold text-[#1E3A8A]">R$ 55.900</p>
+                    <p className="text-xl font-bold text-[#1E3A8A]">{isLoading ? "..." : formatCurrency(summary.totalRevenue)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Meta Total</p>
-                    <p className="text-xl font-bold text-gray-700">R$ 60.000</p>
+                    <p className="text-xl font-bold text-gray-700">{isLoading ? "..." : formatCurrency(summary.totalRevenue * 1.2)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Total Contatos</p>
-                    <p className="text-xl font-bold text-gray-700">200</p>
+                    <p className="text-xl font-bold text-gray-700">{isLoading ? "..." : defaultRateData.totalCount * 2}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Média de Recuperação</p>
-                    <p className="text-xl font-bold text-[#22C55E]">93.2%</p>
+                    <p className="text-xl font-bold text-[#22C55E]">{isLoading ? "..." : `${(100 - defaultRateData.rate).toFixed(1)}%`}</p>
                   </div>
                 </div>
               </CardContent>
