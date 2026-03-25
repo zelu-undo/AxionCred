@@ -59,7 +59,7 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(date: Date) {
-  return date.toLocaleDateString('pt-BR', { month: 'short' })
+  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
 }
 
 export default function FinancialReportsPage() {
@@ -210,6 +210,11 @@ export default function FinancialReportsPage() {
 
   // Loading state
   const isLoading = loadingPayments || loadingOverdue || loadingExpenses;
+
+  // Debug logging (remove in production)
+  console.log("[Financial] Payments:", paymentsData?.payments?.length);
+  console.log("[Financial] Expenses:", expensesData?.total);
+  console.log("[Financial] Summary:", summary);
 
   return (
     <motion.div 
