@@ -32,7 +32,6 @@ export const renegotiationsRouter = router({
           loan:loans(
             id,
             customer_id,
-            principal_amount,
             total_amount,
             remaining_amount,
             customer:customers(name, document)
@@ -127,25 +126,24 @@ export const renegotiationsRouter = router({
         .from("loan_renegotiations")
         .insert({
           tenant_id: tenantId,
-          user_id: userId,
           loan_id: input.loan_id,
-          original_amount: loan.total_amount,
-          original_installments: loan.installments_count,
-          original_interest_rate: loan.interest_rate,
-          new_installments: input.new_installments,
-          new_interest_rate: input.new_interest_rate,
+          renegotiation_date: new Date().toISOString().split('T')[0],
+          original_total_amount: loan.total_amount,
+          original_installments_count: loan.installments_count,
           new_total_amount: input.new_total_amount,
-          reason: input.reason,
-          notes: input.notes,
+          new_installments_count: input.new_installments,
+          interest_rate: input.new_interest_rate,
           status: "pending",
+          notes: input.notes,
         })
         .select()
         .single()
 
       if (error) {
+        console.error("Erro database:", error)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Erro ao criar renegociação",
+          message: "Erro ao criar renegociação: " + error.message,
         })
       }
 
