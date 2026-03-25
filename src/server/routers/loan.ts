@@ -8,7 +8,7 @@ export const loanRouter = router({
     .input(
       z.object({
         customerId: z.string().optional(),
-        status: z.enum(["pending", "active", "paid", "cancelled", "renegotiated", "late"]).optional(),
+        status: z.enum(["pending", "active", "paid", "cancelled", "renegotiated", "late", "all"]).optional(),
         search: z.string().optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
@@ -75,7 +75,8 @@ export const loanRouter = router({
         query = query.eq("customer_id", customerId)
       }
 
-      if (status) {
+      // Only apply status filter if explicitly provided (not when fetching by customerId alone)
+      if (status && status !== "all" && status !== undefined) {
         query = query.eq("status", status)
       }
 

@@ -174,9 +174,10 @@ export default function RenegotiationsPage() {
     enabled: isCreateOpen,
   })
   
-  // Fetch loans for selected customer
+  // Fetch loans for selected customer - don't filter by status to show all loans
   const { data: loansData } = trpc.loan.list.useQuery({ 
     customerId: selectedCustomerId,
+    limit: 50,
   }, {
     enabled: !!selectedCustomerId && isCreateOpen,
   })
@@ -507,12 +508,12 @@ export default function RenegotiationsPage() {
                 <label className="text-sm font-medium">Selecione o Empréstimo</label>
                 <Select value={selectedLoanId} onValueChange={setSelectedLoanId}>
                   <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Selecione um empréstimo..." />
+                    <SelectValue placeholder={loansData?.loans?.length === 0 ? "Nenhum empréstimo encontrado" : "Selecione um empréstimo..."} />
                   </SelectTrigger>
                   <SelectContent>
                     {loansData?.loans?.map((loan) => (
                       <SelectItem key={loan.id} value={loan.id}>
-                        {loan.contract_number} - {formatCurrency(loan.remaining_amount || loan.total_amount)}
+                        {loan.contract_number || loan.id?.slice(0, 8)} - {formatCurrency(loan.remaining_amount || loan.total_amount)}
                       </SelectItem>
                     ))}
                   </SelectContent>
