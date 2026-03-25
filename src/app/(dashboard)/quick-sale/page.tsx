@@ -24,83 +24,141 @@ import {
 } from 'lucide-react';
 import { trpc } from "@/trpc/client";
 import { showSuccessToast, showErrorToast } from "@/lib/toast";
+import { useLoanCalculator, type InterestType } from "@/hooks/use-loan-calculator";
+import type { InterestRule } from "@/types";
 
-// Demo data for customers (fallback only)
-const demoCustomers = [
-  { id: 'demo-1', name: 'João Silva', document: '123.456.789-00', phone: '(11) 99999-8888', credit_limit: 5000 },
-  { id: 'demo-2', name: 'Maria Santos', document: '987.654.321-00', phone: '(11) 98888-7777', credit_limit: 8000 },
-];
-
-interface InstallmentOption {
-  value: number;
-  label: string;
-  interestRate: number;
+interface InstallmentPreview {
+  number: number;
+  amount: number;
+  dueDate: string;
 }
 
 export default function QuickSalePage() {
   const router = useRouter();
-  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [loanAmount, setLoanAmount] = useState<string>('');
-  const [installments, setInstallments] = useState<string>('1');
+  
+  // Customer search
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  
+  // Form data
+  const [customerId, setCustomerId] = useState("");
+  const [principal, setPrincipal] = useState("");
+  const [installments, setInstallments] = useState("");
+  const [firstPaymentDate, setFirstPaymentDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [debouncedPrincipal, setDebouncedPrincipal] = useState("");
 
-  // Get customer data from API
+  // Debounce customer search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customerSearch.length > 3) {
+        setDebouncedSearch(customerSearch);
+      } else {
+        setDebouncedSearch("");
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [customerSearch]);
+
+  // Debounce principal for preview
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPrincipal(principal);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [principal]);
+
+  // Get customers with search
   const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({
-    limit: 100,
-    offset: 0,
+    limit: 5,
+    search: debouncedSearch || undefined,
     status: "active",
   }, {
-    retry: 1,
-    refetchOnWindowFocus: false,
+    enabled: true,
   });
 
-  // Get customer by ID for additional info
-  const { data: customerData } = trpc.customer.byId.useQuery(
-    { id: selectedCustomer },
-    { enabled: !!selectedCustomer }
+  const customers = customersData?.customers || [];
+  const shouldShowDropdown = showDropdown && (customers.length > 0 || customerSearch.length > 0);
+
+  // Get selected customer
+  const { data: selectedCustomer } = trpc.customer.byId.useQuery(
+    { id: customerId },
+    { enabled: !!customerId }
   );
 
-  // Use real data, fallback to demo only if no data
-  const customers = customersData?.customers?.length ? customersData.customers : demoCustomers;
-  
-  const customer = customers.find(c => c.id === selectedCustomer) || customerData;
+  // Business rules for interest rates
+  const { data: businessRulesData, isLoading: isLoadingRules } = trpc.businessRules.get.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Installment options with interest rates
-  const installmentOptions: InstallmentOption[] = [
-    { value: 1, label: '1x', interestRate: 0 },
-    { value: 2, label: '2x', interestRate: 0.05 },
-    { value: 3, label: '3x', interestRate: 0.10 },
-    { value: 4, label: '4x', interestRate: 0.15 },
-    { value: 5, label: '5x', interestRate: 0.20 },
-    { value: 6, label: '6x', interestRate: 0.25 },
-    { value: 10, label: '10x', interestRate: 0.40 },
-    { value: 12, label: '12x', interestRate: 0.50 },
-  ];
+  // Use loan calculator hook
+  const { calculateLoan: computeLoan, generateSchedule } = useLoanCalculator();
 
-  const selectedInstallment = installmentOptions.find(opt => opt.value === parseInt(installments));
+  // Calculate preview
+  const [preview, setPreview] = useState<{
+    monthlyPayment: number;
+    totalInterest: number;
+    totalAmount: number;
+    installments: InstallmentPreview[];
+  } | null>(null);
 
-  // Calculate loan details
   const calculateLoan = () => {
-    const amount = parseFloat(loanAmount) || 0;
-    const interestRate = selectedInstallment?.interestRate || 0;
-    const totalInterest = amount * interestRate;
-    const totalAmount = amount + totalInterest;
-    const installmentValue = totalAmount / (parseInt(installments) || 1);
+    const principalStr = principal.replace(/[^0-9]/g, "");
+    const principalValue = principalStr.length > 2 
+      ? parseFloat(principalStr.slice(0, -2) + "." + principalStr.slice(-2))
+      : parseFloat(principalStr) / 100;
     
-    return {
-      amount,
+    const numInstallments = parseInt(installments);
+    
+    if (!principalValue || !numInstallments) {
+      setPreview(null);
+      return;
+    }
+
+    // Get interest rate from business rules
+    const rules = businessRulesData?.interestRules || [];
+    const rule = rules.find(
+      (rule: InterestRule) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
+    );
+    
+    const interestRate = rule ? rule.interest_rate : 0;
+    const interestType = (rule?.interest_type || 'monthly') as InterestType;
+
+    // Calculate using hook
+    const calculation = computeLoan(principalValue, interestRate, numInstallments, interestType);
+
+    // Generate schedule
+    const installmentList = generateSchedule(
+      principalValue,
       interestRate,
-      totalInterest,
-      totalAmount,
-      installmentValue,
-    };
+      numInstallments,
+      interestType,
+      firstPaymentDate
+    ).map(inst => ({
+      number: inst.number,
+      amount: inst.amount,
+      dueDate: inst.dueDate,
+    }));
+    
+    setPreview({
+      monthlyPayment: calculation.installmentAmount,
+      totalInterest: calculation.totalInterest,
+      totalAmount: calculation.totalAmount,
+      installments: installmentList,
+    });
   };
 
-  const loan = calculateLoan();
-
-  // Check credit limit
-  const isOverLimit = customer && loanAmount ? parseFloat(loanAmount) > (customer.credit_limit || 0) : false;
+  // Recalculate when values change
+  useEffect(() => {
+    if (principal && installments && businessRulesData) {
+      calculateLoan();
+    }
+  }, [principal, installments, firstPaymentDate, businessRulesData]);
 
   // Create loan mutation
   const createLoanMutation = trpc.loan.create.useMutation({
@@ -109,9 +167,10 @@ export default function QuickSalePage() {
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        setSelectedCustomer('');
-        setLoanAmount('');
-        setInstallments('1');
+        setCustomerId("");
+        setPrincipal("");
+        setInstallments("");
+        setCustomerSearch("");
       }, 3000);
     },
     onError: (error) => {
@@ -123,33 +182,23 @@ export default function QuickSalePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedCustomer || !loanAmount || !installments) {
+    if (!customerId || !principal || !installments) {
       showErrorToast('Preencha todos os campos');
-      return;
-    }
-
-    if (isOverLimit) {
-      showErrorToast('Valor excede o limite de crédito do cliente');
       return;
     }
 
     setIsSubmitting(true);
     
-    // Parse amount from Brazilian format
-    const principalStr = loanAmount.replace(/[^0-9]/g, "");
-    const principal = principalStr.length > 2 
+    const principalStr = principal.replace(/[^0-9]/g, "");
+    const principalValue = principalStr.length > 2 
       ? parseFloat(principalStr.slice(0, -2) + "." + principalStr.slice(-2))
       : parseFloat(principalStr) / 100;
 
-    // Calculate first payment date (today + installments months)
-    const firstPaymentDate = new Date();
-    firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
-    
     createLoanMutation.mutate({
-      customer_id: selectedCustomer,
-      principal_amount: principal,
+      customer_id: customerId,
+      principal_amount: principalValue,
       installments_count: parseInt(installments),
-      first_due_date: firstPaymentDate.toISOString().split('T')[0],
+      first_due_date: firstPaymentDate,
     });
   };
 
@@ -160,9 +209,20 @@ export default function QuickSalePage() {
     }).format(value);
   };
 
-  const formatDate = (date: Date | string) => {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString('pt-BR');
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  // Get current interest rate for display
+  const getCurrentInterestRate = () => {
+    const numInstallments = parseInt(installments);
+    if (!numInstallments || !businessRulesData) return 0;
+    
+    const rules = businessRulesData.interestRules || [];
+    const rule = rules.find(
+      (rule: InterestRule) => numInstallments >= rule.min_installments && numInstallments <= rule.max_installments
+    );
+    return rule ? rule.interest_rate : 0;
   };
 
   return (
@@ -221,41 +281,61 @@ export default function QuickSalePage() {
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Customer Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="customer">Cliente *</Label>
-                <Select value={selectedCustomer} onValueChange={setSelectedCustomer} disabled={loadingCustomers}>
-                  <SelectTrigger className="border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
-                    <SelectValue placeholder={loadingCustomers ? "Carregando clientes..." : "Selecione um cliente"} />
-                  </SelectTrigger>
-                  <SelectContent>
+              {/* Customer Search */}
+              <div className="space-y-2 relative">
+                <Label htmlFor="customer-search">Cliente *</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="customer-search"
+                    type="text"
+                    placeholder="Buscar cliente por nome, CPF ou telefone..."
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                    className="pl-10 border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
+                  />
+                </div>
+                
+                {/* Dropdown de resultados */}
+                {shouldShowDropdown && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {loadingCustomers ? (
                       <div className="flex items-center justify-center p-4">
                         <Loader2 className="h-5 w-5 animate-spin text-[#22C55E]" />
-                        <span className="ml-2 text-sm text-gray-500">Carregando...</span>
+                        <span className="ml-2 text-sm text-gray-500">Buscando...</span>
                       </div>
-                    ) : customers.length === 0 ? (
+                    ) : customers.length > 0 ? (
+                      customers.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                          onClick={() => {
+                            setCustomerId(c.id);
+                            setCustomerSearch(c.name);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium text-gray-900">{c.name}</div>
+                          <div className="text-sm text-gray-500">{c.document}</div>
+                        </button>
+                      ))
+                    ) : customerSearch.length > 3 ? (
                       <div className="p-4 text-center text-sm text-gray-500">
                         Nenhum cliente encontrado
                       </div>
-                    ) : (
-                      customers.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{c.name}</span>
-                            <span className="text-gray-400 text-sm ml-2">
-                              {c.document ? `(${c.document})` : ''}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               {/* Customer Info */}
-              {customer && (
+              {selectedCustomer && customerId && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -266,36 +346,36 @@ export default function QuickSalePage() {
                       <User className="h-4 w-4 text-blue-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-blue-900">{customer.name}</p>
+                      <p className="text-sm font-medium text-blue-900">{selectedCustomer.name}</p>
                       <p className="text-xs text-blue-700">
-                        Limite de crédito: {formatCurrency(customer.credit_limit || 0)}
+                        {selectedCustomer.document} • {selectedCustomer.phone}
                       </p>
                     </div>
-                    {isOverLimit && (
-                      <div className="flex items-center gap-1 text-red-600">
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="text-xs font-medium">Excede limite</span>
-                      </div>
-                    )}
                   </div>
                 </motion.div>
               )}
 
               {/* Loan Amount */}
               <div className="space-y-2">
-                <Label htmlFor="amount">Valor do Empréstimo *</Label>
+                <Label htmlFor="principal">Valor do Empréstimo *</Label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
                   <Input
-                    id="amount"
+                    id="principal"
                     type="text"
                     placeholder="0,00"
-                    value={loanAmount}
+                    value={principal}
                     onChange={(e) => {
                       const value = e.target.value.replace(/[^0-9]/g, '');
-                      setLoanAmount((parseInt(value) / 100).toFixed(2));
+                      if (value.length <= 2) {
+                        setPrincipal('0,' + value.padStart(2, '0'));
+                      } else {
+                        const reais = value.slice(0, -2);
+                        const centavos = value.slice(-2);
+                        setPrincipal(`${reais},${centavos}`);
+                      }
                     }}
-                    className="pl-10 border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
+                    className="pl-12 border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
                   />
                 </div>
               </div>
@@ -305,29 +385,51 @@ export default function QuickSalePage() {
                 <Label htmlFor="installments">Parcelas *</Label>
                 <Select value={installments} onValueChange={setInstallments}>
                   <SelectTrigger className="border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20">
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione o número de parcelas" />
                   </SelectTrigger>
                   <SelectContent>
-                    {installmentOptions.map((option) => (
+                    {[
+                      { value: 1, label: '1x' },
+                      { value: 2, label: '2x' },
+                      { value: 3, label: '3x' },
+                      { value: 4, label: '4x' },
+                      { value: 5, label: '5x' },
+                      { value: 6, label: '6x' },
+                      { value: 10, label: '10x' },
+                      { value: 12, label: '12x' },
+                    ].map((option) => (
                       <SelectItem key={option.value} value={option.value.toString()}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{option.label}</span>
-                          {option.interestRate > 0 && (
-                            <span className="text-gray-400 text-sm ml-2">
-                              +{(option.interestRate * 100).toFixed(0)}%
-                            </span>
-                          )}
-                        </div>
+                        {option.label}
+                        {getCurrentInterestRate() > 0 && (
+                          <span className="text-gray-400 text-sm ml-2">
+                            {' '} ({Math.round(getCurrentInterestRate() * 100)}% juros)
+                          </span>
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* First Payment Date */}
+              <div className="space-y-2">
+                <Label htmlFor="firstPaymentDate">Data da Primeira Parcela *</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="firstPaymentDate"
+                    type="date"
+                    value={firstPaymentDate}
+                    onChange={(e) => setFirstPaymentDate(e.target.value)}
+                    className="pl-10 border-gray-200 focus:border-[#22C55E] focus:ring-[#22C55E]/20"
+                  />
+                </div>
+              </div>
+
               {/* Submit Button */}
               <Button 
                 type="submit"
-                disabled={isSubmitting || !selectedCustomer || !loanAmount || isOverLimit}
+                disabled={isSubmitting || !customerId || !principal || !installments}
                 className="
                   w-full py-6 text-lg font-semibold
                   bg-[#22C55E] hover:bg-[#4ADE80] 
@@ -366,26 +468,35 @@ export default function QuickSalePage() {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              {loanAmount && selectedCustomer ? (
+              {isLoadingRules ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#22C55E]" />
+                  <span className="ml-2 text-gray-500">Carregando...</span>
+                </div>
+              ) : principal && customerId ? (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600">Valor solicitado</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(loan.amount)}</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(parseFloat(principal.replace(/[^0-9]/g, "")) / 100 || 0)}
+                    </span>
                   </div>
                   
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <div className="flex items-center gap-2">
                       <Percent className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-600">Juros ({selectedInstallment?.label})</span>
+                      <span className="text-gray-600">Juros ({installments}x)</span>
                     </div>
                     <span className="font-semibold text-amber-600">
-                      +{formatCurrency(loan.totalInterest)}
+                      +{preview ? formatCurrency(preview.totalInterest) : formatCurrency(0)}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center py-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-green-50 -mx-6 px-6">
                     <span className="font-semibold text-gray-900">Total a pagar</span>
-                    <span className="text-xl font-bold text-emerald-600">{formatCurrency(loan.totalAmount)}</span>
+                    <span className="text-xl font-bold text-emerald-600">
+                      {preview ? formatCurrency(preview.totalAmount) : formatCurrency(0)}
+                    </span>
                   </div>
                   
                   <div className="flex justify-between items-center py-3">
@@ -393,13 +504,9 @@ export default function QuickSalePage() {
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <span className="text-gray-600">Valor da parcela</span>
                     </div>
-                    <span className="font-bold text-gray-900">{formatCurrency(loan.installmentValue)}</span>
-                  </div>
-                  
-                  <div className="pt-4">
-                    <div className="text-sm text-gray-500">
-                      {installments}x de {formatCurrency(loan.installmentValue)} sem entrada
-                    </div>
+                    <span className="font-bold text-gray-900">
+                      {preview ? formatCurrency(preview.monthlyPayment) : formatCurrency(0)}
+                    </span>
                   </div>
                 </div>
               ) : (
