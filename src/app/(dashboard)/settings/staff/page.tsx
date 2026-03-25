@@ -71,7 +71,8 @@ export default function StaffManagementPage() {
       setSuccessMessage('Usuário criado com sucesso!')
       setTimeout(() => setSuccessMessage(''), 3000)
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Erro ao criar usuário:", error)
       alert('Erro ao criar usuário: ' + error.message)
     }
   })
@@ -153,7 +154,8 @@ export default function StaffManagementPage() {
   const handleInvite = async () => {
     if (!newInvite.email || !newInvite.name) return;
     
-    setIsLoading(true);
+    console.log("Enviando convite:", { email: newInvite.email, name: newInvite.name, role: newInvite.role_id })
+    
     createMutation.mutate({
       email: newInvite.email,
       name: newInvite.name,
@@ -523,10 +525,10 @@ export default function StaffManagementPage() {
             </Button>
             <Button 
               onClick={handleInvite} 
-              disabled={isLoading || !newInvite.email || !newInvite.name}
+              disabled={createMutation.isPending || !newInvite.email || !newInvite.name}
               className="bg-[#22C55E] hover:bg-[#4ADE80]"
             >
-              {isLoading ? (
+              {createMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Enviando...
