@@ -98,13 +98,16 @@ export default function BusinessRulesPage() {
           const hasLateFee = lateFeeData.percentage !== null || lateFeeData.fixed_fee !== null
           const hasLateInterest = lateFeeData.daily_interest !== null || lateFeeData.monthly_interest !== null
           
+          // Determine charge type: if daily_interest exists, it's daily; if monthly_interest exists, it's monthly
+          const chargeType = lateFeeData.daily_interest !== null ? 'daily' : (lateFeeData.monthly_interest !== null ? 'monthly' : 'daily')
+          
           setConfig(prev => ({
             ...prev,
             lateFeeType: hasLateFee ? (lateFeeData.percentage ? 'percentage' : 'fixed') : null,
             lateFeeValue: lateFeeData.percentage || lateFeeData.fixed_fee || 0,
             lateInterestType: hasLateInterest ? 'percentage' : null,
             lateInterestValue: lateFeeData.daily_interest || lateFeeData.monthly_interest || 0,
-            lateInterestChargeType: 'daily',
+            lateInterestChargeType: chargeType,
             pushInstallmentsOnInterestPayment: lateFeeData.push_installments_on_interest_payment || false
           }))
         }
@@ -273,7 +276,8 @@ export default function BusinessRulesPage() {
           .update({
             percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
             fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
-            daily_interest: lateInterestEnabled ? config.lateInterestValue : null,
+            daily_interest: config.lateInterestChargeType === 'daily' && lateInterestEnabled ? config.lateInterestValue : null,
+            monthly_interest: config.lateInterestChargeType === 'monthly' && lateInterestEnabled ? config.lateInterestValue : null,
             push_installments_on_interest_payment: config.pushInstallmentsOnInterestPayment,
           })
           .eq("tenant_id", user?.tenantId)
@@ -286,7 +290,8 @@ export default function BusinessRulesPage() {
             tenant_id: user?.tenantId,
             percentage: config.lateFeeType === 'percentage' && lateFeeEnabled ? config.lateFeeValue : null,
             fixed_fee: config.lateFeeType === 'fixed' && lateFeeEnabled ? config.lateFeeValue : null,
-            daily_interest: lateInterestEnabled ? config.lateInterestValue : null,
+            daily_interest: config.lateInterestChargeType === 'daily' && lateInterestEnabled ? config.lateInterestValue : null,
+            monthly_interest: config.lateInterestChargeType === 'monthly' && lateInterestEnabled ? config.lateInterestValue : null,
             push_installments_on_interest_payment: config.pushInstallmentsOnInterestPayment,
           })
 
