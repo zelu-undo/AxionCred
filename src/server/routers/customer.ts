@@ -239,7 +239,7 @@ export const customerRouter = router({
         `)
         .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", input.customerId)
-        .neq("status", "paid")
+        .in("status", ["active", "pending", "late", "partial", "overdue"])
         .order("created_at", { ascending: false })
 
       if (loansError) {
