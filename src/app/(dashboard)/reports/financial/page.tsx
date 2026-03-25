@@ -103,7 +103,7 @@ export default function FinancialReportsPage() {
   // Fetch pending payments for projected cash flow
   const { data: pendingData, isLoading: loadingPending } = trpc.payment.list.useQuery({
     status: "pending",
-    limit: 200,
+    limit: 100,
   }, {
     retry: 1,
     refetchOnMount: false,
