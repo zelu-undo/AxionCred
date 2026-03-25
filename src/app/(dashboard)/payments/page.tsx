@@ -631,24 +631,12 @@ interface LoanForPayment {
                           className={`hover:bg-gray-50/80 transition-colors ${payment.status === "late" ? "bg-red-50/30" : ""}`}
                         >
                           <td className="px-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-gray-400" />
-                              <span className="font-medium text-gray-900">{formatDate(payment.due_date)}</span>
-                            </div>
+                            <span className="font-medium text-gray-900">{formatDate(payment.due_date)}</span>
                           </td>
                           <td className="px-4 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-                                payment.status === "late" ? "bg-red-400" :
-                                payment.status === "paid" ? "bg-green-500" :
-                                "bg-blue-500"
-                              }`}>
-                                {payment.customer_name.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{payment.customer_name}</p>
-                                <p className="text-xs text-gray-500">{payment.customer_document}</p>
-                              </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{payment.customer_name}</p>
+                              <p className="text-xs text-gray-500">{payment.customer_document}</p>
                             </div>
                           </td>
                           <td className="px-4 py-4">
