@@ -78,25 +78,42 @@ export default function FinancialReportsPage() {
     }
   }, [dateRange]);
 
-  // Fetch real data
-  const { data: paymentsData, isLoading: loadingPayments } = trpc.payment.list.useQuery({
+  // Calculate date range strings
+  const dateFrom = useMemo(() => {
+    return new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString();
+  }, [dateRangeMonths]);
+
+  // Fetch real data with error handling and fallback
+  const { data: paymentsData, isLoading: loadingPayments, error: paymentsError } = trpc.payment.list.useQuery({
     limit: 100,
-    dateFrom: new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
+    dateFrom: dateFrom,
+  }, {
+    retry: 1,
+    refetchOnMount: false,
   });
 
-  const { data: overdueData, isLoading: loadingOverdue } = trpc.payment.list.useQuery({
+  const { data: overdueData, isLoading: loadingOverdue, error: overdueError } = trpc.payment.list.useQuery({
     overdueOnly: true,
     limit: 100,
+  }, {
+    retry: 1,
+    refetchOnMount: false,
   });
 
-  const { data: loanDashboard } = trpc.loan.dashboard.useQuery();
+  const { data: loanDashboard, error: loanError } = trpc.loan.dashboard.useQuery(undefined, {
+    retry: 1,
+    refetchOnMount: false,
+  });
 
   // Fetch real expenses from cash (only operational expenses - exclude loan releases)
-  const { data: expensesData, isLoading: loadingExpenses } = trpc.cash.getExpensesByPeriod.useQuery({
-    dateFrom: new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
+  const { data: expensesData, isLoading: loadingExpenses, error: expensesError } = trpc.cash.getExpensesByPeriod.useQuery({
+    dateFrom: dateFrom,
+  }, {
+    retry: 1,
+    refetchOnMount: false,
   });
 
-  // Process data for charts
+  // Process data for charts - with fallback for when data is undefined due to errors
   const { cashFlowData, summary } = useMemo(() => {
     const months: { [key: string]: { revenue: number; expenses: number; profit: number } } = {};
     const now = new Date();
@@ -109,14 +126,18 @@ export default function FinancialReportsPage() {
     }
 
     // Sum payments by month (use paid_date for when payment was made)
-    paymentsData?.payments?.forEach((payment) => {
-      const date = new Date(payment.paid_date || payment.due_date);
-      const key = formatDate(date);
-      if (months[key]) {
-        months[key].revenue += Number(payment.amount_paid || 0);
-        months[key].profit += Number(payment.amount_paid || 0);
-      }
-    });
+    // Handle case where paymentsData or payments is undefined
+    const payments = paymentsData?.payments;
+    if (payments && Array.isArray(payments)) {
+      payments.forEach((payment: any) => {
+        const date = new Date(payment.paid_date || payment.due_date);
+        const key = formatDate(date);
+        if (months[key]) {
+          months[key].revenue += Number(payment.amount_paid || 0);
+          months[key].profit += Number(payment.amount_paid || 0);
+        }
+      });
+    }
 
     // Convert to array
     const data = Object.entries(months).map(([month, values]) => ({
@@ -124,9 +145,9 @@ export default function FinancialReportsPage() {
       ...values,
     }));
 
-    // Calculate summary - use real expenses from cash
+    // Calculate summary - use real expenses from cash (with fallback to 0 if error)
     const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-    const realExpenses = expensesData?.total || 0;
+    const realExpenses = expensesData?.total ?? 0;
     const totalProfit = totalRevenue - realExpenses;
 
     return {
@@ -139,7 +160,7 @@ export default function FinancialReportsPage() {
     };
   }, [paymentsData, expensesData, dateRangeMonths]);
 
-  // Calculate overdue statistics
+  // Calculate overdue statistics - with fallback for undefined data
   const overdueStats = useMemo(() => {
     const stats = [
       { period: "Últimos 7 dias", count: 0, amount: 0, rate: 0 },
@@ -151,31 +172,35 @@ export default function FinancialReportsPage() {
 
     const now = new Date();
     
-    overdueData?.payments?.forEach((payment) => {
-      const dueDate = new Date(payment.due_date);
-      const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      const amount = Number(payment.amount_due || 0) - Number(payment.amount_paid || 0);
+    // Handle case where overdueData or payments is undefined
+    const payments = overdueData?.payments;
+    if (payments && Array.isArray(payments)) {
+      payments.forEach((payment: any) => {
+        const dueDate = new Date(payment.due_date);
+        const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const amount = Number(payment.amount_due || 0) - Number(payment.amount_paid || 0);
 
-      if (daysDiff <= 7) {
-        stats[0].count++;
-        stats[0].amount += amount;
-      } else if (daysDiff <= 15) {
-        stats[1].count++;
-        stats[1].amount += amount;
-      } else if (daysDiff <= 30) {
-        stats[2].count++;
-        stats[2].amount += amount;
-      } else if (daysDiff <= 60) {
-        stats[3].count++;
-        stats[3].amount += amount;
-      } else {
-        stats[4].count++;
-        stats[4].amount += amount;
-      }
-    });
+        if (daysDiff <= 7) {
+          stats[0].count++;
+          stats[0].amount += amount;
+        } else if (daysDiff <= 15) {
+          stats[1].count++;
+          stats[1].amount += amount;
+        } else if (daysDiff <= 30) {
+          stats[2].count++;
+          stats[2].amount += amount;
+        } else if (daysDiff <= 60) {
+          stats[3].count++;
+          stats[3].amount += amount;
+        } else {
+          stats[4].count++;
+          stats[4].amount += amount;
+        }
+      });
+    }
 
     // Calculate rates
-    const totalOverdue = overdueData?.payments?.length || 1;
+    const totalOverdue = payments?.length || 1;
     stats.forEach(s => {
       s.rate = (s.count / totalOverdue) * 100;
     });
@@ -186,11 +211,17 @@ export default function FinancialReportsPage() {
   // Team performance placeholder (would need payment collector tracking)
   const teamPerformance = useMemo(() => {
     // Since payment collector is not tracked, show team metrics from dashboard
-    if (!loanDashboard) return [];
+    // Handle case where loanDashboard is undefined due to errors
+    if (!loanDashboard) {
+      return [
+        { name: "Total Clientes", role: "Base", collected: 0, target: 0, recovery: 0, contacts: 0 },
+        { name: "Empréstimos Ativos", role: "Portfolio", collected: 0, target: 0, recovery: 0, contacts: 0 },
+      ];
+    }
     
     return [
-      { name: "Total Clientes", role: "Base", collected: loanDashboard.total_customers, target: 0, recovery: 0, contacts: 0 },
-      { name: "Empréstimos Ativos", role: "Portfolio", collected: loanDashboard.active_loans, target: 0, recovery: 0, contacts: 0 },
+      { name: "Total Clientes", role: "Base", collected: loanDashboard.total_customers || 0, target: 0, recovery: 0, contacts: 0 },
+      { name: "Empréstimos Ativos", role: "Portfolio", collected: loanDashboard.active_loans || 0, target: 0, recovery: 0, contacts: 0 },
     ];
   }, [loanDashboard]);
 
