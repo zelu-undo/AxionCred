@@ -462,6 +462,7 @@ export default function FinancialReportsPage() {
               value="team" 
               className="flex-1 lg:flex-none data-[state=active]:bg-[#22C55E] data-[state=active]:text-white px-4"
             >
+              <Users className="h-4 w-4 mr-2" />
               Performance da Equipe
             </TabsTrigger>
           </TabsList>
