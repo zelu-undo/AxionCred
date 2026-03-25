@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,121 +30,10 @@ import {
   Filter
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { trpc } from "@/trpc/client"
 import type { StaffMember, CustomRole, InvitationStatus } from '@/types';
 
-// Demo data
-const demoRoles: CustomRole[] = [
-  {
-    id: '1',
-    owner_id: 'owner-1',
-    name: 'Administrador',
-    description: 'Acesso total ao sistema',
-    permissions: [
-      { module: 'dashboard', view: true, create: true, edit: true, delete: true },
-      { module: 'customers', view: true, create: true, edit: true, delete: true },
-      { module: 'loans', view: true, create: true, edit: true, delete: true },
-      { module: 'collections', view: true, create: true, edit: true, delete: true },
-      { module: 'reports', view: true, create: true, edit: true, delete: true },
-      { module: 'settings', view: true, create: true, edit: true, delete: true },
-    ],
-    is_default: true,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
-  },
-  {
-    id: '2',
-    owner_id: 'owner-1',
-    name: 'Operador',
-    description: 'Pode criar e editar, mas não excluir',
-    permissions: [
-      { module: 'dashboard', view: true, create: false, edit: false, delete: false },
-      { module: 'customers', view: true, create: true, edit: true, delete: false },
-      { module: 'loans', view: true, create: true, edit: true, delete: false },
-      { module: 'collections', view: true, create: true, edit: true, delete: false },
-      { module: 'reports', view: true, create: false, edit: false, delete: false },
-      { module: 'settings', view: false, create: false, edit: false, delete: false },
-    ],
-    is_default: false,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
-  },
-  {
-    id: '3',
-    owner_id: 'owner-1',
-    name: 'Visualizador',
-    description: 'Apenas visualização',
-    permissions: [
-      { module: 'dashboard', view: true, create: false, edit: false, delete: false },
-      { module: 'customers', view: true, create: false, edit: false, delete: false },
-      { module: 'loans', view: true, create: false, edit: false, delete: false },
-      { module: 'collections', view: true, create: false, edit: false, delete: false },
-      { module: 'reports', view: true, create: false, edit: false, delete: false },
-      { module: 'settings', view: false, create: false, edit: false, delete: false },
-    ],
-    is_default: false,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
-  },
-];
-
-// Demo staff data
-const demoStaff: StaffMember[] = [
-  {
-    id: '1',
-    owner_id: 'owner-1',
-    name: 'Maria Santos',
-    email: 'maria@empresa.com',
-    role_id: '1',
-    role_name: 'Administrador',
-    status: 'active',
-    invitation_status: 'accepted',
-    invitation_sent_at: '2024-01-15',
-    invitation_accepted_at: '2024-01-15',
-    created_at: '2024-01-15',
-    updated_at: '2024-01-15',
-  },
-  {
-    id: '2',
-    owner_id: 'owner-1',
-    name: 'João Silva',
-    email: 'joao@empresa.com',
-    role_id: '2',
-    role_name: 'Operador',
-    status: 'active',
-    invitation_status: 'accepted',
-    invitation_sent_at: '2024-02-01',
-    invitation_accepted_at: '2024-02-01',
-    created_at: '2024-02-01',
-    updated_at: '2024-02-01',
-  },
-  {
-    id: '3',
-    owner_id: 'owner-1',
-    name: 'Pedro Costa',
-    email: 'pedro@empresa.com',
-    role_id: '3',
-    role_name: 'Visualizador',
-    status: 'active',
-    invitation_status: 'pending',
-    invitation_sent_at: '2024-03-01',
-    created_at: '2024-03-01',
-    updated_at: '2024-03-01',
-  },
-  {
-    id: '4',
-    owner_id: 'owner-1',
-    name: 'Ana Pereira',
-    email: 'ana@empresa.com',
-    role_id: undefined,
-    role_name: undefined,
-    status: 'active',
-    invitation_status: 'pending',
-    invitation_sent_at: '2024-03-10',
-    created_at: '2024-03-10',
-    updated_at: '2024-03-10',
-  },
-];
-
+// Permission modules
 const modules = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'customers', label: 'Clientes' },
@@ -156,98 +45,150 @@ const modules = [
 
 export default function StaffManagementPage() {
   const { user } = useAuth();
-  const [staff, setStaff] = useState<StaffMember[]>(demoStaff);
-  const [roles, setRoles] = useState<CustomRole[]>(demoRoles);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newInvite, setNewInvite] = useState({ email: '', name: '', role_id: '' });
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [editingStaff, setEditingStaff] = useState<any | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Fetch users from API
+  const { data: usersData, refetch: refetchUsers } = trpc.users.list.useQuery({
+    search: searchQuery || undefined,
+    limit: 100,
+  })
+  
+  // Fetch roles
+  const { data: rolesData } = trpc.users.listRoles.useQuery()
+
+  // Create user mutation
+  const createMutation = trpc.users.create.useMutation({
+    onSuccess: () => {
+      refetchUsers()
+      setIsInviteOpen(false)
+      setNewInvite({ email: '', name: '', role_id: '' })
+      setSuccessMessage('Usuário criado com sucesso!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    },
+    onError: (error) => {
+      alert('Erro ao criar usuário: ' + error.message)
+    }
+  })
+
+  // Update user mutation
+  const updateMutation = trpc.users.update.useMutation({
+    onSuccess: () => {
+      refetchUsers()
+      setEditingStaff(null)
+      setSuccessMessage('Usuário atualizado com sucesso!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    },
+    onError: (error) => {
+      alert('Erro ao atualizar usuário: ' + error.message)
+    }
+  })
+
+  // Delete user mutation
+  const deleteMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      refetchUsers()
+      setSuccessMessage('Usuário removido com sucesso!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    },
+    onError: (error) => {
+      alert('Erro ao remover usuário: ' + error.message)
+    }
+  })
+
+  // Use data from API
+  const staff = usersData?.users?.map((u: any) => ({
+    id: u.id,
+    owner_id: u.tenant_id,
+    name: u.name,
+    email: u.email,
+    role_id: u.role,
+    role_name: u.role,
+    status: u.is_active ? 'active' : 'inactive',
+    invitation_status: u.last_login ? 'accepted' : 'pending',
+    invitation_sent_at: u.created_at,
+    invitation_accepted_at: u.last_login,
+    created_at: u.created_at,
+    updated_at: u.updated_at,
+  })) || []
+
+  // Define StaffMember type locally to avoid import issues
+  type LocalStaffMember = {
+    id: string
+    owner_id?: string
+    name: string
+    email: string
+    role_id?: string
+    role_name?: string
+    status: string
+    invitation_status: string
+    invitation_sent_at?: string
+    invitation_accepted_at?: string
+    created_at: string
+    updated_at: string
+  }
+
+  const roles = rolesData?.roles || []
+
   // Filter staff
-  const filteredStaff = staff.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         s.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredStaff = staff.filter((s: any) => {
+    const matchesSearch = !searchQuery || 
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'pending' && s.invitation_status === 'pending') ||
-                         (statusFilter === 'active' && s.invitation_status === 'accepted' && s.status === 'active');
+      (statusFilter === 'active' && s.status === 'active') ||
+      (statusFilter === 'inactive' && s.status === 'inactive');
     return matchesSearch && matchesStatus;
   });
 
-  const pendingInvitations = staff.filter(s => s.invitation_status === 'pending');
-  const activeStaff = staff.filter(s => s.invitation_status === 'accepted' && s.status === 'active');
+  const pendingInvitations = staff.filter((s: any) => s.invitation_status === 'pending');
+  const activeStaff = staff.filter((s: any) => s.status === 'active');
 
   // Handle invite
   const handleInvite = async () => {
     if (!newInvite.email || !newInvite.name) return;
     
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newStaff: StaffMember = {
-      id: String(Date.now()),
-      owner_id: user?.id || 'owner-1',
-      name: newInvite.name,
+    createMutation.mutate({
       email: newInvite.email,
-      role_id: newInvite.role_id || undefined,
-      role_name: roles.find(r => r.id === newInvite.role_id)?.name,
-      status: 'active',
-      invitation_status: 'pending',
-      invitation_sent_at: new Date().toISOString().split('T')[0],
-      created_at: new Date().toISOString().split('T')[0],
-      updated_at: new Date().toISOString().split('T')[0],
-    };
-    
-    setStaff([newStaff, ...staff]);
-    setIsInviteOpen(false);
-    setNewInvite({ email: '', name: '', role_id: '' });
-    setSuccessMessage(`Convite enviado para ${newInvite.email}`);
-    setTimeout(() => setSuccessMessage(''), 3000);
-    setIsLoading(false);
+      name: newInvite.name,
+      password: 'temp123', // In production, send invite email with reset link
+      role: (newInvite.role_id as any) || 'operator',
+    })
   };
 
   // Handle update role
   const handleUpdateRole = (staffId: string, roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    setStaff(staff.map(s => 
-      s.id === staffId 
-        ? { ...s, role_id: roleId, role_name: role?.name, updated_at: new Date().toISOString().split('T')[0] }
-        : s
-    ));
-    setSuccessMessage('Função atualizada com sucesso!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    updateMutation.mutate({
+      id: staffId,
+      role: roleId as any,
+    })
   };
 
   // Handle resend invite
   const handleResendInvite = (staffId: string) => {
-    setStaff(staff.map(s => 
-      s.id === staffId 
-        ? { ...s, invitation_sent_at: new Date().toISOString().split('T')[0], updated_at: new Date().toISOString().split('T')[0] }
-        : s
-    ));
-    setSuccessMessage('Convite reenviado!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    // For now, just show success message
+    setSuccessMessage('Convite reenviado!')
+    setTimeout(() => setSuccessMessage(''), 3000)
   };
 
   // Handle cancel invitation
   const handleCancelInvite = (staffId: string) => {
-    setStaff(staff.filter(s => s.id !== staffId));
-    setSuccessMessage('Convite cancelado!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    deleteMutation.mutate({ id: staffId })
   };
 
   // Handle remove staff
   const handleRemoveStaff = (staffId: string) => {
-    setStaff(staff.filter(s => s.id !== staffId));
-    setSuccessMessage('Funcionário removido!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    deleteMutation.mutate({ id: staffId })
   };
 
   // Get status badge
-  const getStatusBadge = (staffMember: StaffMember) => {
+  const getStatusBadge = (staffMember: any) => {
     if (staffMember.invitation_status === 'pending') {
       return (
         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">

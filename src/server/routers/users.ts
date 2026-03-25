@@ -31,12 +31,9 @@ export const usersRouter = router({
 
       let query = ctx.supabase
         .from("users")
-        .select(`
-          *,
-          user_roles!inner(role:roles(id, name, permissions))
-        `)
+        .select("*", { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
-        .order("name", { ascending: true })
+        .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)
 
       if (search) {
@@ -281,7 +278,7 @@ export const usersRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
     }
 
-    return data || []
+    return { roles: data || [] }
   }),
 
   // Create custom role
