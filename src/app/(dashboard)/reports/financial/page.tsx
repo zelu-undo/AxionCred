@@ -763,9 +763,6 @@ export default function FinancialReportsPage() {
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#22C55E] flex items-center justify-center text-white">
-                            <Users className="h-5 w-5" />
-                          </div>
                           <div>
                             <p className="font-semibold text-gray-900">{member.name}</p>
                             <p className="text-sm text-gray-500">{member.role}</p>
