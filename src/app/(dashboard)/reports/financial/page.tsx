@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,8 +64,27 @@ function formatDate(date: Date) {
 }
 
 export default function FinancialReportsPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [dateRange, setDateRange] = useState("6months")
   const [activeTab, setActiveTab] = useState("cashflow")
+
+  // Handle click on projected cash flow card - navigate to payments with date filter
+  const handleProjectedCardClick = (monthIndex: number) => {
+    const now = new Date();
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + monthIndex, 1);
+    
+    // First day of target month
+    const firstDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+    const dateFrom = firstDay.toISOString().split('T')[0];
+    
+    // Last day of target month
+    const lastDay = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
+    const dateTo = lastDay.toISOString().split('T')[0];
+    
+    // Navigate to payments page with date filters
+    router.push(`/payments?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+  };
 
   // Calculate date range
   const dateRangeMonths = useMemo(() => {
@@ -676,7 +696,8 @@ export default function FinancialReportsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 hover:border-[#22C55E] hover:shadow-md transition-all duration-300"
+                        onClick={() => handleProjectedCardClick(index)}
+                        className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 hover:border-[#22C55E] hover:shadow-md transition-all duration-300 cursor-pointer"
                       >
                         <p className="text-sm font-medium text-gray-600">{item.month}</p>
                         <p className="text-xl font-bold text-gray-900 mt-1">
