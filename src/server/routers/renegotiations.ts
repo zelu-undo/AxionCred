@@ -122,6 +122,18 @@ export const renegotiationsRouter = router({
       }
 
       // Create renegotiation record
+      // Calculate installment amount with interest
+      const rate = input.new_interest_rate / 100
+      const installments = input.new_installments
+      const total = input.new_total_amount
+      let installmentAmount = total / installments
+      
+      if (rate > 0) {
+        // Price table formula
+        const factor = Math.pow(1 + rate, installments)
+        installmentAmount = (total * rate * factor) / (factor - 1)
+      }
+      
       const { data, error } = await ctx.supabase
         .from("loan_renegotiations")
         .insert({
@@ -132,6 +144,7 @@ export const renegotiationsRouter = router({
           original_installments_count: loan.installments_count,
           new_total_amount: input.new_total_amount,
           new_installments_count: input.new_installments,
+          new_installment_amount: installmentAmount,
           interest_rate: input.new_interest_rate,
           status: "pending",
           notes: input.notes,
