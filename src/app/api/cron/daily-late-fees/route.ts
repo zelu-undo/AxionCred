@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       }
 
       const hasLateFeeConfig = config.fixed_fee || config.percentage
-      const hasLateInterestConfig = config.late_interest_type && config.late_interest_value
+      const hasLateInterestConfig = config.daily_interest || config.monthly_interest
 
       if (!hasLateFeeConfig && !hasLateInterestConfig) {
         continue
@@ -113,14 +113,14 @@ export async function POST(request: NextRequest) {
 
       const fixedFee = config.fixed_fee || config.percentage || 0
       
-      let dailyInterest = 0
-      if (config.late_interest_type === 'percentage' && config.late_interest_value) {
-        if (config.late_interest_charge_type === 'daily') {
-          dailyInterest = (config.late_interest_value / 100)
-        } else if (config.late_interest_charge_type === 'weekly') {
-          dailyInterest = (config.late_interest_value / 100) / 7
+      // Calcular taxa diária baseada na configuração
+      // daily_interest pode ser valor fixo (ex: 10 = R$10/dia) ou percentual (ex: 0.1 = 0.1%/dia)
+      // monthly_interest é sempre percentual (ex: 5 = 5%/mês)
+      if (config.daily_interest) {
+        if (config.daily_interest > 1) {
+          // É valor fixo por dia (R$), não é taxa percentual
         } else {
-          dailyInterest = (config.late_interest_value / 100) / 30
+          // É percentual diário - será tratado abaixo
         }
       }
 
@@ -147,10 +147,22 @@ export async function POST(request: NextRequest) {
       // Calcular juros apenas para novos dias de atraso (progressivo)
       // Se já tinha juros, calculamos apenas a diferença
       let lateInterest = previousLateInterest
-      if (dailyInterest > 0 && daysLate > 0 && hasLateInterestConfig) {
+      if ((config.daily_interest || config.monthly_interest) && daysLate > 0 && hasLateInterestConfig) {
+        let interestAmount = 0
+        
+        if (config.daily_interest > 1) {
+          // daily_interest é valor fixo por dia (R$)
+          interestAmount = config.daily_interest * daysLate
+        } else if (config.daily_interest > 0) {
+          // daily_interest é percentual diário
+          interestAmount = baseAmount * (config.daily_interest / 100) * daysLate
+        } else if (config.monthly_interest > 0) {
+          // monthly_interest é percentual mensal
+          interestAmount = baseAmount * (config.monthly_interest / 100) * (daysLate / 30)
+        }
+        
         // Calcular juros totais e subtrair os já aplicados
-        const totalInterest = baseAmount * dailyInterest * daysLate
-        lateInterest = totalInterest - previousLateInterest
+        lateInterest = interestAmount - previousLateInterest
         
         // Se resultado negativo, não atualizar (manter os anteriores)
         if (lateInterest < 0) lateInterest = 0
