@@ -316,7 +316,6 @@ export default function NotificationsPage() {
                                   id={`enabled-${type.type}`}
                                   checked={settings[type.type]?.enabled ?? true}
                                   onCheckedChange={(checked) => handleSettingChange(type.type, 'enabled', checked as boolean)}
-                                  className="data-[state=checked]:bg-[#22C55E] data-[state=checked]:border-[#22C55E]"
                                 />
                                 <Label htmlFor={`enabled-${type.type}`} className="text-sm text-gray-600 cursor-pointer">
                                   Ativar
