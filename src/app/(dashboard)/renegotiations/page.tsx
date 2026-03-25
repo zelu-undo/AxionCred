@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +36,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  X,
   AlertTriangle,
   ArrowRight,
   History,
@@ -140,7 +142,10 @@ export default function RenegotiationsPage() {
   const [selectedRenegotiation, setSelectedRenegotiation] = useState<any>(null)
   
   // State for new renegotiation form
+  const [selectedCustomerId, setSelectedCustomerId] = useState("")
   const [selectedLoanId, setSelectedLoanId] = useState("")
+  const [customerSearch, setCustomerSearch] = useState("")
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [newTotalAmount, setNewTotalAmount] = useState("")
   const [newInstallments, setNewInstallments] = useState("6")
   const [newInterestRate, setNewInterestRate] = useState("2.0")
@@ -151,16 +156,38 @@ export default function RenegotiationsPage() {
     refetchOnMount: true,
   })
   
-  // Fetch loans for selection in new renegotiation modal
-  const { data: loansData } = trpc.loan.list.useQuery({ status: "active", limit: 100 }, {
+  // Debounce customer search
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("")
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCustomerSearch(customerSearch)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [customerSearch])
+  
+  // Fetch customers for selection in new renegotiation modal
+  const { data: customersData, isLoading: loadingCustomers } = trpc.customer.list.useQuery({
+    search: debouncedCustomerSearch.length > 2 ? debouncedCustomerSearch : undefined,
+    status: "active",
+    limit: 20,
+  }, {
     enabled: isCreateOpen,
+  })
+  
+  // Fetch loans for selected customer
+  const { data: loansData } = trpc.loan.list.useQuery({ 
+    customerId: selectedCustomerId,
+  }, {
+    enabled: !!selectedCustomerId && isCreateOpen,
   })
   
   // Create renegotiation mutation
   const createMutation = trpc.renegotiations.create.useMutation({
     onSuccess: () => {
       setIsCreateOpen(false)
+      setSelectedCustomerId("")
       setSelectedLoanId("")
+      setCustomerSearch("")
       setNewTotalAmount("")
       setNewInstallments("6")
       setNewInterestRate("2.0")
@@ -169,6 +196,10 @@ export default function RenegotiationsPage() {
   })
   
   const renegotiations = renegotiationsData?.renegotiations || []
+  const customers = customersData?.customers || []
+  
+  // Get selected customer details
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
   
   // Get selected loan details
   const selectedLoan = loansData?.loans?.find(l => l.id === selectedLoanId)
@@ -414,22 +445,80 @@ export default function RenegotiationsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
-            {/* Loan Selection */}
+            {/* Customer Selection - Searchable */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Selecione o Empréstimo</label>
-              <Select value={selectedLoanId} onValueChange={setSelectedLoanId}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Buscar empréstimo por cliente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {loansData?.loans?.map((loan) => (
-                    <SelectItem key={loan.id} value={loan.id}>
-                      {loan.customer?.name || "Cliente"} - {loan.contract_number} - {formatCurrency(loan.remaining_amount || loan.total_amount)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">Selecione o Cliente</label>
+              <div className="relative">
+                <Input 
+                  placeholder="Buscar cliente por nome ou CPF..." 
+                  value={customerSearch}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value)
+                    setShowCustomerDropdown(true)
+                    setSelectedCustomerId("")
+                    setSelectedLoanId("")
+                  }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                />
+                {customerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomerSearch("")
+                      setSelectedCustomerId("")
+                      setSelectedLoanId("")
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                {showCustomerDropdown && customerSearch.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {loadingCustomers ? (
+                      <div className="p-3 text-sm text-gray-500">Buscando...</div>
+                    ) : customers.length > 0 ? (
+                      customers.map((customer: any) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            setSelectedCustomerId(customer.id)
+                            setCustomerSearch(customer.name)
+                            setShowCustomerDropdown(false)
+                            setSelectedLoanId("")
+                          }}
+                          className="p-3 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <p className="font-medium text-gray-900">{customer.name}</p>
+                          <p className="text-sm text-gray-500">{customer.document}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 text-sm text-gray-500">Nenhum cliente encontrado</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Loan Selection - Based on selected customer */}
+            {selectedCustomerId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Selecione o Empréstimo</label>
+                <Select value={selectedLoanId} onValueChange={setSelectedLoanId}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Selecione um empréstimo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loansData?.loans?.map((loan) => (
+                      <SelectItem key={loan.id} value={loan.id}>
+                        {loan.contract_number} - {formatCurrency(loan.remaining_amount || loan.total_amount)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Original Loan Info */}
             {selectedLoan && (
@@ -456,49 +545,51 @@ export default function RenegotiationsPage() {
             )}
 
             {/* New Terms */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                <Calculator className="h-4 w-4" />
-                Novas Condições
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Novo Valor</label>
-                  <Input 
-                    type="number" 
-                    placeholder="R$ 0,00" 
-                    value={newTotalAmount}
-                    onChange={(e) => setNewTotalAmount(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Parcelas</label>
-                  <Select value={newInstallments} onValueChange={setNewInstallments}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3">3x</SelectItem>
-                      <SelectItem value="6">6x</SelectItem>
-                      <SelectItem value="9">9x</SelectItem>
-                      <SelectItem value="12">12x</SelectItem>
-                      <SelectItem value="18">18x</SelectItem>
-                      <SelectItem value="24">24x</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Juros (% a.m.)</label>
-                  <Input 
-                    type="number" 
-                    placeholder="0%" 
-                    step="0.1" 
-                    value={newInterestRate}
-                    onChange={(e) => setNewInterestRate(e.target.value)}
-                  />
+            {selectedLoan && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Novas Condições
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Novo Valor</label>
+                    <Input 
+                      type="number" 
+                      placeholder="R$ 0,00" 
+                      value={newTotalAmount}
+                      onChange={(e) => setNewTotalAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Parcelas</label>
+                    <Select value={newInstallments} onValueChange={setNewInstallments}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3x</SelectItem>
+                        <SelectItem value="6">6x</SelectItem>
+                        <SelectItem value="9">9x</SelectItem>
+                        <SelectItem value="12">12x</SelectItem>
+                        <SelectItem value="18">18x</SelectItem>
+                        <SelectItem value="24">24x</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Juros (% a.m.)</label>
+                    <Input 
+                      type="number" 
+                      placeholder="0%" 
+                      step="0.1" 
+                      value={newInterestRate}
+                      onChange={(e) => setNewInterestRate(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Simulation */}
             {selectedLoan && newTotalAmount && (
@@ -517,15 +608,17 @@ export default function RenegotiationsPage() {
             )}
 
             {/* Notes */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Observações</label>
-              <Textarea 
-                placeholder="Descreva os motivos da renegociação..." 
-                rows={3}
-                value={renegotiationNotes}
-                onChange={(e) => setRenegotiationNotes(e.target.value)}
-              />
-            </div>
+            {selectedLoan && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Observações</label>
+                <Textarea 
+                  placeholder="Descreva os motivos da renegociação..." 
+                  rows={3}
+                  value={renegotiationNotes}
+                  onChange={(e) => setRenegotiationNotes(e.target.value)}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
