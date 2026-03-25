@@ -158,13 +158,9 @@ export default function AlertsPage() {
         >
           <button
             onClick={() => handleFilterClick('credit')}
-            className={`w-full text-left transition-all duration-300 ${
-              activeFilter === 'credit' 
-                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
-                : 'hover:shadow-md'
-            }`}
+            className="w-full text-left"
           >
-            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'credit' ? 'bg-green-50 border-[#22C55E]' : ''}`}>
+            <Card className={`border-2 shadow-sm transition-all duration-300 ${activeFilter === 'credit' ? 'border-[#22C55E] bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-red-100">
@@ -187,13 +183,9 @@ export default function AlertsPage() {
         >
           <button
             onClick={() => handleFilterClick('operational')}
-            className={`w-full text-left transition-all duration-300 ${
-              activeFilter === 'operational' 
-                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
-                : 'hover:shadow-md'
-            }`}
+            className="w-full text-left"
           >
-            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'operational' ? 'bg-green-50 border-[#22C55E]' : ''}`}>
+            <Card className={`border-2 shadow-sm transition-all duration-300 ${activeFilter === 'operational' ? 'border-[#22C55E] bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-100">
@@ -216,13 +208,9 @@ export default function AlertsPage() {
         >
           <button
             onClick={() => handleFilterClick('strategic')}
-            className={`w-full text-left transition-all duration-300 ${
-              activeFilter === 'strategic' 
-                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
-                : 'hover:shadow-md'
-            }`}
+            className="w-full text-left"
           >
-            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'strategic' ? 'bg-green-50 border-[#22C55E]' : ''}`}>
+            <Card className={`border-2 shadow-sm transition-all duration-300 ${activeFilter === 'strategic' ? 'border-[#22C55E] bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-emerald-100">
@@ -245,13 +233,9 @@ export default function AlertsPage() {
         >
           <button
             onClick={() => handleFilterClick('high')}
-            className={`w-full text-left transition-all duration-300 ${
-              activeFilter === 'high' 
-                ? 'ring-2 ring-[#22C55E] ring-offset-2' 
-                : 'hover:shadow-md'
-            }`}
+            className="w-full text-left"
           >
-            <Card className={`border-gray-200/60 shadow-sm ${activeFilter === 'high' ? 'bg-green-50 border-[#22C55E]' : ''} border-l-4 border-red-500`}>
+            <Card className={`border-2 shadow-sm transition-all duration-300 ${activeFilter === 'high' ? 'border-[#22C55E] bg-green-50' : 'border-gray-200 hover:border-gray-300'} border-l-4 border-red-500`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-red-100">
