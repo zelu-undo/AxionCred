@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,54 +28,10 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react"
-
-// Demo data for financial reports
-const cashFlowData = [
-  { month: "Jan", revenue: 12500, expenses: 4200, profit: 8300 },
-  { month: "Fev", revenue: 15800, expenses: 5100, profit: 10700 },
-  { month: "Mar", revenue: 18200, expenses: 4800, profit: 13400 },
-  { month: "Abr", revenue: 14500, expenses: 6200, profit: 8300 },
-  { month: "Mai", revenue: 21000, expenses: 5500, profit: 15500 },
-  { month: "Jun", revenue: 19500, expenses: 7100, profit: 12400 },
-]
-
-const projectedCashFlow = [
-  { month: "Jul", projected: 22000, confidence: 85 },
-  { month: "Ago", projected: 23500, confidence: 80 },
-  { month: "Set", projected: 21000, confidence: 75 },
-  { month: "Out", projected: 25000, confidence: 70 },
-]
-
-const defaultData = [
-  { month: "Jan", revenue: 12500, expenses: 4200, profit: 8300 },
-  { month: "Fev", revenue: 15800, expenses: 5100, profit: 10700 },
-  { month: "Mar", revenue: 18200, expenses: 4800, profit: 13400 },
-]
-
-const defaultProjected = [
-  { month: "Jul", projected: 22000, confidence: 85 },
-  { month: "Ago", projected: 23500, confidence: 80 },
-]
-
-const overdueData = [
-  { period: "Últimos 7 dias", count: 3, amount: 2500, rate: 5.5 },
-  { period: "Últimos 15 dias", count: 5, amount: 5200, rate: 11.4 },
-  { period: "Últimos 30 dias", count: 8, amount: 8750, rate: 19.1 },
-  { period: "Últimos 60 dias", count: 12, amount: 14200, rate: 31.0 },
-  { period: "Acima de 60 dias", count: 7, amount: 8750, rate: 19.1 },
-]
-
-const teamPerformance = [
-  { name: "Carlos Silva", role: "Cobrador", collected: 12500, target: 15000, recovery: 83.3, contacts: 45 },
-  { name: "Maria Santos", role: "Cobrador", collected: 18200, target: 15000, recovery: 121.3, contacts: 62 },
-  { name: "Pedro Costa", role: "Cobrador", collected: 9800, target: 15000, recovery: 65.3, contacts: 38 },
-  { name: "Ana Oliveira", role: "Cobrador", collected: 15400, target: 15000, recovery: 102.7, contacts: 55 },
-]
-
-const maxProjected = Math.max(...projectedCashFlow.map(d => d.projected))
-const maxCollected = Math.max(...teamPerformance.map(d => d.collected))
+import { trpc } from "@/trpc/client"
 
 // Animation variants
 const containerVariants = {
@@ -95,9 +51,161 @@ const itemVariants = {
   }
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value)
+}
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('pt-BR', { month: 'short' })
+}
+
 export default function FinancialReportsPage() {
   const [dateRange, setDateRange] = useState("6months")
   const [activeTab, setActiveTab] = useState("cashflow")
+
+  // Calculate date range
+  const dateRangeMonths = useMemo(() => {
+    switch (dateRange) {
+      case "30days": return 1;
+      case "3months": return 3;
+      case "6months": return 6;
+      case "12months": return 12;
+      case "year": return new Date().getMonth() + 1;
+      default: return 6;
+    }
+  }, [dateRange]);
+
+  // Fetch real data
+  const { data: paymentsData, isLoading: loadingPayments } = trpc.payment.list.useQuery({
+    limit: 1000,
+    dateFrom: new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
+  }, { refetchOnMount: true });
+
+  const { data: overdueData, isLoading: loadingOverdue } = trpc.payment.list.useQuery({
+    overdueOnly: true,
+    limit: 1000,
+  }, { refetchOnMount: true });
+
+  const { data: loanDashboard } = trpc.loan.dashboard.useQuery(undefined, {
+    refetchOnMount: true,
+  });
+
+  // Process data for charts
+  const { cashFlowData, summary } = useMemo(() => {
+    const months: { [key: string]: { revenue: number; expenses: number; profit: number } } = {};
+    const now = new Date();
+    
+    // Initialize months
+    for (let i = dateRangeMonths - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = formatDate(date);
+      months[key] = { revenue: 0, expenses: 0, profit: 0 };
+    }
+
+    // Sum payments by month
+    paymentsData?.payments?.forEach((payment) => {
+      const date = new Date(payment.created_at);
+      const key = formatDate(date);
+      if (months[key]) {
+        months[key].revenue += Number(payment.amount || 0);
+        months[key].profit += Number(payment.amount || 0);
+      }
+    });
+
+    // Convert to array
+    const data = Object.entries(months).map(([month, values]) => ({
+      month,
+      ...values,
+    }));
+
+    // Calculate summary
+    const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
+    // Note: Expenses are not tracked in the system, using a placeholder
+    const estimatedExpenses = totalRevenue * 0.3; // Estimated 30%
+    const totalProfit = totalRevenue - estimatedExpenses;
+
+    return {
+      cashFlowData: data,
+      summary: {
+        totalRevenue,
+        totalExpenses: estimatedExpenses,
+        totalProfit,
+      }
+    };
+  }, [paymentsData, dateRangeMonths]);
+
+  // Calculate overdue statistics
+  const overdueStats = useMemo(() => {
+    const stats = [
+      { period: "Últimos 7 dias", count: 0, amount: 0, rate: 0 },
+      { period: "Últimos 15 dias", count: 0, amount: 0, rate: 0 },
+      { period: "Últimos 30 dias", count: 0, amount: 0, rate: 0 },
+      { period: "Últimos 60 dias", count: 0, amount: 0, rate: 0 },
+      { period: "Acima de 60 dias", count: 0, amount: 0, rate: 0 },
+    ];
+
+    const now = new Date();
+    
+    overdueData?.payments?.forEach((payment) => {
+      const dueDate = new Date(payment.due_date);
+      const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const amount = Number(payment.amount_due || 0) - Number(payment.amount_paid || 0);
+
+      if (daysDiff <= 7) {
+        stats[0].count++;
+        stats[0].amount += amount;
+      } else if (daysDiff <= 15) {
+        stats[1].count++;
+        stats[1].amount += amount;
+      } else if (daysDiff <= 30) {
+        stats[2].count++;
+        stats[2].amount += amount;
+      } else if (daysDiff <= 60) {
+        stats[3].count++;
+        stats[3].amount += amount;
+      } else {
+        stats[4].count++;
+        stats[4].amount += amount;
+      }
+    });
+
+    // Calculate rates
+    const totalOverdue = overdueData?.payments?.length || 1;
+    stats.forEach(s => {
+      s.rate = (s.count / totalOverdue) * 100;
+    });
+
+    return stats;
+  }, [overdueData]);
+
+  // Team performance placeholder (would need payment collector tracking)
+  const teamPerformance = useMemo(() => {
+    // Since payment collector is not tracked, show team metrics from dashboard
+    if (!loanDashboard) return [];
+    
+    return [
+      { name: "Total Clientes", role: "Base", collected: loanDashboard.total_customers, target: 0, recovery: 0, contacts: 0 },
+      { name: "Empréstimos Ativos", role: "Portfolio", collected: loanDashboard.active_loans, target: 0, recovery: 0, contacts: 0 },
+    ];
+  }, [loanDashboard]);
+
+  // Calculate projected cash flow (simple projection based on average)
+  const projectedCashFlow = useMemo(() => {
+    const avgRevenue = summary.totalRevenue / Math.max(1, cashFlowData.length);
+    const months = ["Próximos 1", "Próximos 2", "Próximos 3", "Próximos 4"];
+    
+    return months.map((month, i) => ({
+      month,
+      projected: Math.round(avgRevenue * (1 + (i * 0.05))), // 5% growth per month
+      confidence: 85 - (i * 5), // Decreasing confidence
+    }));
+  }, [summary.totalRevenue, cashFlowData.length]);
+
+  // Loading state
+  const isLoading = loadingPayments || loadingOverdue;
 
   return (
     <motion.div 
@@ -148,10 +256,10 @@ export default function FinancialReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-emerald-100 text-sm font-medium">Receita Total</p>
-                <p className="text-2xl font-bold mt-1">R$ 101.500</p>
+                <p className="text-2xl font-bold mt-1">{isLoading ? "..." : formatCurrency(summary.totalRevenue)}</p>
                 <p className="text-xs text-emerald-100 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="h-3 w-3" />
-                  +12.5% vs período anterior
+                  Período: {dateRange}
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -166,10 +274,10 @@ export default function FinancialReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm font-medium">Despesas</p>
-                <p className="text-2xl font-bold mt-1">R$ 32.900</p>
+                <p className="text-2xl font-bold mt-1">{isLoading ? "..." : formatCurrency(summary.totalExpenses)}</p>
                 <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
                   <ArrowDownRight className="h-3 w-3" />
-                  -3.2% vs período anterior
+                  Estimado (30%)
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -184,10 +292,10 @@ export default function FinancialReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-100 text-sm font-medium">Lucro Líquido</p>
-                <p className="text-2xl font-bold mt-1">R$ 68.600</p>
+                <p className="text-2xl font-bold mt-1">{isLoading ? "..." : formatCurrency(summary.totalProfit)}</p>
                 <p className="text-xs text-purple-100 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="h-3 w-3" />
-                  +18.3% vs período anterior
+                  Receita - Despesas
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -262,17 +370,19 @@ export default function FinancialReportsPage() {
                           <TrendingUp className="h-4 w-4 text-emerald-500" />
                           Receita
                         </span>
-                        <span className="text-sm font-semibold text-gray-900">R$ 101.500</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(summary.totalRevenue)}</span>
                       </div>
                       <div className="h-8 bg-gray-100 rounded-lg overflow-hidden flex">
-                        {cashFlowData.map((item, index) => (
+                        {cashFlowData.map((item, index) => {
+                          const maxRevenue = Math.max(...cashFlowData.map(d => d.revenue), 1);
+                          return (
                           <div 
                             key={index}
                             className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 border-r border-white/20 last:border-0 relative group"
-                            style={{ width: `${(item.revenue / 21000) * 100}%` }}
+                            style={{ width: `${(item.revenue / maxRevenue) * 100}%` }}
                           >
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              {item.month}: R$ {item.revenue.toLocaleString("pt-BR")}
+                              {item.month}: {formatCurrency(item.revenue)}
                             </div>
                           </div>
                         ))}
@@ -286,20 +396,22 @@ export default function FinancialReportsPage() {
                           <TrendingDown className="h-4 w-4 text-red-500" />
                           Despesas
                         </span>
-                        <span className="text-sm font-semibold text-gray-900">R$ 32.900</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(summary.totalExpenses)}</span>
                       </div>
                       <div className="h-8 bg-gray-100 rounded-lg overflow-hidden flex">
-                        {cashFlowData.map((item, index) => (
+                        {cashFlowData.map((item, index) => {
+                          const maxExpenses = Math.max(...cashFlowData.map(d => d.expenses), 1);
+                          return (
                           <div 
                             key={index}
                             className="h-full bg-gradient-to-r from-red-400 to-red-500 border-r border-white/20 last:border-0 relative group"
-                            style={{ width: `${(item.expenses / 8000) * 100}%` }}
+                            style={{ width: `${(item.expenses / maxExpenses) * 100}%` }}
                           >
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              {item.month}: R$ {item.expenses.toLocaleString("pt-BR")}
+                              {item.month}: {formatCurrency(item.expenses)}
                             </div>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     </div>
 
@@ -310,17 +422,19 @@ export default function FinancialReportsPage() {
                           <Wallet className="h-4 w-4 text-purple-500" />
                           Lucro
                         </span>
-                        <span className="text-sm font-semibold text-gray-900">R$ 68.600</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(summary.totalProfit)}</span>
                       </div>
                       <div className="h-8 bg-gray-100 rounded-lg overflow-hidden flex">
-                        {cashFlowData.map((item, index) => (
+                        {cashFlowData.map((item, index) => {
+                          const maxProfit = Math.max(...cashFlowData.map(d => d.profit), 1);
+                          return (
                           <div 
                             key={index}
                             className="h-full bg-gradient-to-r from-purple-400 to-purple-500 border-r border-white/20 last:border-0 relative group"
-                            style={{ width: `${(item.profit / 16000) * 100}%` }}
+                            style={{ width: `${(item.profit / maxProfit) * 100}%` }}
                           >
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              {item.month}: R$ {item.profit.toLocaleString("pt-BR")}
+                              {item.month}: {formatCurrency(item.profit)}
                             </div>
                           </div>
                         ))}
@@ -407,7 +521,7 @@ export default function FinancialReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {overdueData.map((item, index) => (
+                    {overdueStats.map((item, index) => (
                       <motion.div 
                         key={item.period}
                         initial={{ opacity: 0, x: -20 }}
@@ -431,7 +545,7 @@ export default function FinancialReportsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-gray-900">R$ {item.amount.toLocaleString("pt-BR")}</p>
+                          <p className="font-bold text-gray-900">{formatCurrency(item.amount)}</p>
                           <Badge variant={item.rate > 20 ? "destructive" : item.rate > 10 ? "warning" : "default"}>
                             {item.rate}%
                           </Badge>
@@ -500,11 +614,11 @@ export default function FinancialReportsPage() {
                         <div className="flex flex-wrap items-center gap-6">
                           <div className="text-center">
                             <p className="text-sm text-gray-500">Valor Coletado</p>
-                            <p className="font-bold text-gray-900">R$ {member.collected.toLocaleString("pt-BR")}</p>
+                            <p className="font-bold text-gray-900">{formatCurrency(member.collected)}</p>
                           </div>
                           <div className="text-center">
                             <p className="text-sm text-gray-500">Meta</p>
-                            <p className="font-semibold text-gray-600">R$ {member.target.toLocaleString("pt-BR")}</p>
+                            <p className="font-semibold text-gray-600">{member.target > 0 ? formatCurrency(member.target) : '-'}</p>
                           </div>
                           <div className="text-center">
                             <p className="text-sm text-gray-500">Contatos</p>
