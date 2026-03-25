@@ -250,7 +250,7 @@ export default function NotificationsPage() {
       </motion.div>
 
       {/* Tabs for categories */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(activeTab === value ? 'all' : value)} className="w-full">
         <TabsList className="bg-gray-100 p-1 h-auto flex-wrap">
           <TabsTrigger value="all" className="data-[state=active]:bg-white">
             Todas

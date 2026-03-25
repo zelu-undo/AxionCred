@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   
+  // Favicon configuration - ensure our favicon is used
+  trailingSlash: false,
+  
   // Image optimization
   images: {
     formats: ['image/avif', 'image/webp'],
