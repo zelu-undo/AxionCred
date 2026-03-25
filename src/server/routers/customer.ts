@@ -78,7 +78,10 @@ export const customerRouter = router({
         // Query direta - busca por nome_normalized ou documento
         let query = ctx.supabase
           .from("customers")
-          .select("*", { count: "exact" })
+          .select(`
+            *,
+            loans(id, status, principal_amount, remaining_amount, installments_count, paid_installments, created_at)
+          `, { count: "exact" })
           .eq("tenant_id", ctx.tenantId!)
           .or(`name_normalized.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
           .order("created_at", { ascending: false })
@@ -97,13 +100,24 @@ export const customerRouter = router({
           })
         }
 
-        return { customers: data || [], total: count || 0 }
+        // Add loan count for easier access
+        const customersWithCount = (data || []).map(customer => ({
+          ...customer,
+          _count: {
+            loans: customer.loans?.length || 0
+          }
+        }))
+
+        return { customers: customersWithCount, total: count || 0 }
       }
 
       // Sem busca - usa query normal com filtros
       let query = ctx.supabase
         .from("customers")
-        .select("*", { count: "exact" })
+        .select(`
+          *,
+          loans(id, status, principal_amount, remaining_amount, installments_count, paid_installments, created_at)
+        `, { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
         .order("created_at", { ascending: false })
 
@@ -122,7 +136,15 @@ export const customerRouter = router({
         })
       }
 
-      return { customers: data || [], total: count || 0 }
+      // Add loan count for easier access
+      const customersWithCount = (data || []).map(customer => ({
+        ...customer,
+        _count: {
+          loans: customer.loans?.length || 0
+        }
+      }))
+
+      return { customers: customersWithCount, total: count || 0 }
     }),
 
   // Search customers for payment selection

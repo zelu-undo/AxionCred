@@ -586,24 +586,77 @@ export const creditRouter = router({
         return count
       }, 0) || 0
 
-      // Buscar score
-      const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
-        p_tenant_id: ctx.tenantId,
-        p_customer_document: document,
-      })
+      // Buscar score - com fallback para cálculo manual
+      let finalScore = 500
+      let riskLevel = "medium"
+      
+      try {
+        const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
+          p_tenant_id: ctx.tenantId,
+          p_customer_document: document,
+        })
+        const score = Array.isArray(scoreData) ? scoreData[0] : null
+        finalScore = score?.final_score || 500
+        riskLevel = score?.risk_level || "medium"
+      } catch {
+        // Fallback: calcular score manualmente
+        const { data: customer } = await ctx.supabase
+          .from("customers")
+          .select("id, created_at")
+          .eq("tenant_id", ctx.tenantId)
+          .eq("document", document)
+          .single()
 
-      const score = Array.isArray(scoreData) ? scoreData[0] : null
-      const finalScore = score?.final_score || 500
-      const riskLevel = score?.risk_level || "medium"
+        if (customer) {
+          const { data: loans } = await ctx.supabase
+            .from("loans")
+            .select("status, installments_count")
+            .eq("tenant_id", ctx.tenantId)
+            .eq("customer_id", customer.id)
 
-      // Calcular limite do cliente
-      const { data: limitData } = await ctx.supabase.rpc("calculate_client_credit_limit", {
-        p_tenant_id: ctx.tenantId,
-        p_customer_document: document,
-        p_monthly_income: monthlyIncome,
-      })
+          const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+          const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+          const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
+          
+          let paymentScore = 500
+          if (totalParcelas > 0) {
+            paymentScore = Math.min(1000, Math.max(0,
+              (parcelasPagas / totalParcelas * 1000) - (parcelasAtrasadas / totalParcelas * 300)
+            ))
+          }
+          
+          const monthsAsCustomer = customer.created_at 
+            ? Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+            : 0
+          const timeScore = Math.min(1000, (monthsAsCustomer / 24 * 1000))
+          const defaultScore = Math.max(0, 1000 - (parcelasAtrasadas * 250))
+          
+          finalScore = Math.round((0.30 * paymentScore) + (0.25 * timeScore) + (0.20 * defaultScore) + (0.25 * 500))
+          
+          if (finalScore >= 801) riskLevel = "low"
+          else if (finalScore >= 601) riskLevel = "medium"
+          else if (finalScore >= 301) riskLevel = "high"
+          else riskLevel = "very_high"
+        }
+      }
 
-      const clientLimit = Array.isArray(limitData) ? limitData[0] || 5000 : 5000
+      // Calcular limite do cliente - com fallback
+      let clientLimit = 5000
+      
+      try {
+        const { data: limitData } = await ctx.supabase.rpc("calculate_client_credit_limit", {
+          p_tenant_id: ctx.tenantId,
+          p_customer_document: document,
+          p_monthly_income: monthlyIncome,
+        })
+        clientLimit = Array.isArray(limitData) ? (limitData[0]?.calculated_limit || 5000) : 5000
+      } catch {
+        // Fallback: calcular limite baseado na renda
+        if (monthlyIncome > 0) {
+          clientLimit = Math.min(monthlyIncome * 0.3, usableCash * 0.2)
+          clientLimit = Math.max(500, Math.round(clientLimit))
+        }
+      }
 
       // Verificações
       const boxCheck = amount <= usableCash
