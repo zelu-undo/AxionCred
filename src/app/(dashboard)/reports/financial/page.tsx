@@ -108,15 +108,6 @@ export default function FinancialReportsPage() {
     refetchOnMount: false,
   });
 
-  // Also fetch overdue payments for complete projection
-  const { data: overdueDataForProjection } = trpc.payment.list.useQuery({
-    overdueOnly: true,
-    limit: 100,
-  }, {
-    retry: 1,
-    refetchOnMount: false,
-  });
-
   const { data: loanDashboard, error: loanError } = trpc.loan.dashboard.useQuery(undefined, {
     retry: 1,
     refetchOnMount: false,
@@ -339,10 +330,9 @@ export default function FinancialReportsPage() {
       3: 0, // 3 months from now
     };
     
-    // Combine pending and overdue payments
+    // Combine pending and overdue payments (all non-paid installments)
     const allPendingPayments = [
-      ...(pendingData?.payments || []),
-      ...(overdueDataForProjection?.payments || [])
+      ...(pendingData?.payments || [])
     ];
     
     // Remove duplicates by ID
@@ -380,22 +370,25 @@ export default function FinancialReportsPage() {
     });
     
     // Calculate projected values for each month
-    const data = months.map((month, i) => ({
-      month,
-      projected: Math.round(monthlyAmounts[i] || 0),
-      installments: Object.entries(
-        allPendingPayments.filter((p: any) => {
-          if (p?.status !== 'pending' && p?.status !== 'late') return false;
-          const dueDate = p.due_date ? new Date(p.due_date) : null;
-          if (!dueDate || isNaN(dueDate.getTime())) return false;
-          const dueMonth = dueDate.getMonth();
-          const dueYear = dueDate.getFullYear();
-          let m = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
-          if (m < 0) m = 0;
-          return m === i;
-        })
-      ).length,
-    }));
+    const data = months.map((month, i) => {
+      // Count installments for this month
+      const count = allPendingPayments.filter((p: any) => {
+        if (p?.status !== 'pending' && p?.status !== 'late') return false;
+        const dueDate = p.due_date ? new Date(p.due_date) : null;
+        if (!dueDate || isNaN(dueDate.getTime())) return false;
+        const dueMonth = dueDate.getMonth();
+        const dueYear = dueDate.getFullYear();
+        let m = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
+        if (m < 0) m = 0;
+        return m === i;
+      }).length;
+      
+      return {
+        month,
+        projected: Math.round(monthlyAmounts[i] || 0),
+        installments: count,
+      };
+    });
     
     // Calculate total projected for 4 months
     const totalProjected = data.reduce((sum, item) => sum + item.projected, 0);
@@ -404,7 +397,7 @@ export default function FinancialReportsPage() {
       monthly: data,
       total: totalProjected
     };
-  }, [pendingData, overdueDataForProjection]);
+  }, [pendingData]);
 
   // Loading state
   const isLoading = loadingPayments || loadingOverdue || loadingExpenses || loadingPending;
