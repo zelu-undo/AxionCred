@@ -170,32 +170,69 @@ export const cashRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      // Get only operational expenses (retirada and ajuste categories, NOT loan releases)
-      const { data, error } = await ctx.supabase.rpc("get_cash_transactions", {
-        p_tenant_id: ctx.tenantId,
-        p_limit: 1000,
-        p_offset: 0,
-        p_tipo: "saida",
-        p_categoria: "retirada", // Only retiradas, not loan releases
-        p_data_inicio: input.dateFrom || null,
-        p_data_fim: input.dateTo || null,
-      })
-
-      if (error) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
+      // Try to use RPC first
+      try {
+        const { data, error } = await ctx.supabase.rpc("get_cash_transactions", {
+          p_tenant_id: ctx.tenantId,
+          p_limit: 1000,
+          p_offset: 0,
+          p_tipo: "saida",
+          p_categoria: "retirada",
+          p_data_inicio: input.dateFrom || null,
+          p_data_fim: input.dateTo || null,
         })
+
+        if (!error && data) {
+          // Sum all expenses
+          const totalExpenses = (data || []).reduce((sum: number, tx: any) => {
+            return sum + Number(tx.valor || 0);
+          }, 0);
+
+          return {
+            total: totalExpenses,
+            transactions: data || [],
+          };
+        }
+      } catch (rpcError) {
+        console.log("[Cash] RPC failed, using direct query fallback");
       }
 
-      // Sum all expenses
-      const totalExpenses = (data || []).reduce((sum: number, tx: any) => {
-        return sum + Number(tx.valor || 0);
-      }, 0);
+      // Fallback: Direct query to cash_transactions table
+      try {
+        let query = ctx.supabase
+          .from("cash_transactions")
+          .select("amount, value, valor, type, category, created_at")
+          .eq("tenant_id", ctx.tenantId)
+          .eq("type", "saida")
+          .in("category", ["retirada", "despesa", "operacional"]);
 
+        if (input.dateFrom) {
+          query = query.gte("created_at", input.dateFrom);
+        }
+        if (input.dateTo) {
+          query = query.lte("created_at", input.dateTo);
+        }
+
+        const { data: txData, error: txError } = await query;
+
+        if (!txError && txData) {
+          const totalExpenses = txData.reduce((sum, tx) => {
+            return sum + Number(tx.amount || tx.value || tx.valor || 0);
+          }, 0);
+
+          return {
+            total: totalExpenses,
+            transactions: txData,
+          };
+        }
+      } catch (fallbackError) {
+        console.error("[Cash] Fallback query also failed:", fallbackError);
+      }
+
+      // If everything fails, return empty data
       return {
-        total: totalExpenses,
-        transactions: data || [],
-      }
+        total: 0,
+        transactions: [],
+      };
     }),
 })

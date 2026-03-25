@@ -670,8 +670,7 @@ export default function FinancialReportsPage() {
           <TabsContent value="team" className="space-y-4">
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="h-5 w-5 text-[#22C55E]" />
+                <CardTitle className="text-lg">
                   Performance da Equipe de Cobrança
                 </CardTitle>
                 <CardDescription>Resultados individuais e coletivo da equipe</CardDescription>
