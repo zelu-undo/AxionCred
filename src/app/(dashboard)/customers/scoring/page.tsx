@@ -66,27 +66,62 @@ export default function ScoringPage() {
     refetchOnMount: true,
   })
 
-  // Transform real data to scoring format
+  // Transform real data to scoring format - using same logic as credit.ts with configurable weights
   const clientesScore = useMemo(() => {
     const customers = customersData?.customers || []
+    
     return customers.map((c: any) => {
-      // Calculate score based on loan history
-      const totalLoans = c._count?.loans || 0
-      const activeLoans = c.loans?.filter((l: any) => ["active", "late", "overdue"].includes(l.status)).length || 0
-      const paidLoans = c.loans?.filter((l: any) => l.status === "paid").length || 0
+      const loans = c.loans || []
+      const totalLoans = loans.length
+      const activeLoans = loans.filter((l: any) => ["active", "late", "overdue"].includes(l.status)).length
+      const paidLoans = loans.filter((l: any) => l.status === "paid").length
+      const totalParcelas = loans.reduce((sum: number, l: any) => sum + (l.installments_count || 0), 0)
+      const parcelasPagas = loans.filter((l: any) => l.status === "paid").reduce((sum: number, l: any) => sum + (l.installments_count || 0), 0)
+      const parcelasAtrasadas = loans.filter((l: any) => l.status === "late").length
       
-      // Simple score calculation
-      let score = 500
-      if (totalLoans > 0) {
-        const paymentRate = paidLoans / totalLoans
-        score = Math.round(300 + (paymentRate * 700))
+      const mesesCadastro = c.created_at 
+        ? Math.floor((Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+        : 0
+      
+      // Calculate subscores with configurable weights (defaults)
+      const weights = { payment: 30, time: 25, default: 20, usage: 15, stability: 10 }
+      
+      // 1. Score de Pagamento
+      let paymentScore = 500
+      if (totalParcelas > 0) {
+        paymentScore = Math.min(1000, Math.max(0,
+          (parcelasPagas / totalParcelas * 1000) - (parcelasAtrasadas / totalParcelas * 300)
+        ))
       }
       
-      // Add months as customer bonus
-      if (c.created_at) {
-        const months = Math.floor((Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-        score = Math.min(1000, score + months * 10)
+      // 2. Score de Tempo
+      const timeScore = Math.min(1000, (mesesCadastro / 24 * 1000))
+      
+      // 3. Score de Inadimplência
+      const defaultScore = Math.max(0, 1000 - (parcelasAtrasadas * 250))
+      
+      // 4. Score de Uso de Crédito
+      let creditUsageScore = 1000
+      if (activeLoans > 3) creditUsageScore -= (activeLoans - 3) * 100
+      creditUsageScore = Math.max(0, creditUsageScore)
+      
+      // 5. Score de Estabilidade
+      let stabilityScore = 500
+      if (totalParcelas > 0) {
+        stabilityScore = Math.max(0, 1000 - (
+          Math.abs(parcelasPagas - parcelasAtrasadas) / totalParcelas * 500
+        ))
       }
+      
+      // Score Final
+      const totalWeight = weights.payment + weights.time + weights.default + weights.usage + weights.stability
+      const score = Math.round(
+        (weights.payment / totalWeight * paymentScore) +
+        (weights.time / totalWeight * timeScore) +
+        (weights.default / totalWeight * defaultScore) +
+        (weights.usage / totalWeight * creditUsageScore) +
+        (weights.stability / totalWeight * stabilityScore)
+      )
       
       let status = "poor"
       if (score >= 800) status = "excellent"
@@ -104,7 +139,7 @@ export default function ScoringPage() {
       else if (score >= 500) limite = 1000
       
       // Calculate active debt
-      const dividaAtiva = c.loans
+      const dividaAtiva = loans
         ?.filter((l: any) => ["active", "late", "overdue"].includes(l.status))
         .reduce((sum: number, l: any) => sum + (l.remaining_amount || 0), 0) || 0
       

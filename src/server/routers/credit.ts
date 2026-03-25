@@ -586,61 +586,103 @@ export const creditRouter = router({
         return count
       }, 0) || 0
 
-      // Buscar score - com fallback para cálculo manual
+      // Buscar score usando o endpoint getCustomerScore (com pesos configuráveis)
       let finalScore = 500
       let riskLevel = "medium"
       
-      try {
-        const { data: scoreData } = await ctx.supabase.rpc("calculate_credit_score", {
-          p_tenant_id: ctx.tenantId,
-          p_customer_document: document,
-        })
-        const score = Array.isArray(scoreData) ? scoreData[0] : null
-        finalScore = score?.final_score || 500
-        riskLevel = score?.risk_level || "medium"
-      } catch {
-        // Fallback: calcular score manualmente
-        const { data: customer } = await ctx.supabase
-          .from("customers")
-          .select("id, created_at")
+      // Buscar configurações de peso do score
+      const { data: settingsWithWeights } = await ctx.supabase
+        .from("credit_settings")
+        .select("score_payment_weight, score_time_weight, score_default_weight, score_usage_weight, score_stability_weight")
+        .eq("tenant_id", ctx.tenantId)
+        .single()
+
+      // Usar pesos das configurações ou defaults
+      const weights = {
+        payment: settingsWithWeights?.score_payment_weight || 30,
+        time: settingsWithWeights?.score_time_weight || 25,
+        default: settingsWithWeights?.score_default_weight || 20,
+        usage: settingsWithWeights?.score_usage_weight || 15,
+        stability: settingsWithWeights?.score_stability_weight || 10,
+      }
+      
+      // Buscar cliente pelo documento
+      const { data: customer } = await ctx.supabase
+        .from("customers")
+        .select("id, created_at")
+        .eq("tenant_id", ctx.tenantId)
+        .eq("document", document)
+        .single()
+
+      if (customer) {
+        // Buscar dados do cliente
+        const { data: loans } = await ctx.supabase
+          .from("loans")
+          .select("status, installments_count, created_at")
           .eq("tenant_id", ctx.tenantId)
-          .eq("document", document)
-          .single()
+          .eq("customer_id", customer.id)
 
-        if (customer) {
-          const { data: loans } = await ctx.supabase
-            .from("loans")
-            .select("status, installments_count")
-            .eq("tenant_id", ctx.tenantId)
-            .eq("customer_id", customer.id)
+        // Calcular subscores
+        const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+        const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+        const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
+        const mesesCadastro = Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+        const inadimplencias = parcelasAtrasadas
+        const emprestimosAtivos = loans?.filter(l => ["active", "late"].includes(l.status)).length || 0
+        const emprestimos30d = loans?.filter(l => {
+          const created = new Date(l.created_at)
+          const thirtyDaysAgo = new Date()
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+          return created >= thirtyDaysAgo
+        }).length || 0
 
-          const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
-          const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
-          const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
-          
-          let paymentScore = 500
-          if (totalParcelas > 0) {
-            paymentScore = Math.min(1000, Math.max(0,
-              (parcelasPagas / totalParcelas * 1000) - (parcelasAtrasadas / totalParcelas * 300)
-            ))
-          }
-          
-          const monthsAsCustomer = customer.created_at 
-            ? Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-            : 0
-          const timeScore = Math.min(1000, (monthsAsCustomer / 24 * 1000))
-          const defaultScore = Math.max(0, 1000 - (parcelasAtrasadas * 250))
-          
-          finalScore = Math.round((0.30 * paymentScore) + (0.25 * timeScore) + (0.20 * defaultScore) + (0.25 * 500))
-          
-          if (finalScore >= 801) riskLevel = "low"
-          else if (finalScore >= 601) riskLevel = "medium"
-          else if (finalScore >= 301) riskLevel = "high"
-          else riskLevel = "very_high"
+        // 1. Score de Pagamento
+        let paymentScore = 500
+        if (totalParcelas > 0) {
+          paymentScore = Math.min(1000, Math.max(0,
+            (parcelasPagas / totalParcelas * 1000) -
+            (parcelasAtrasadas / totalParcelas * 300)
+          ))
         }
+
+        // 2. Score de Tempo
+        const timeScore = Math.min(1000, (mesesCadastro / 24 * 1000))
+
+        // 3. Score de Inadimplência
+        const defaultScore = Math.max(0, 1000 - (inadimplencias * 250))
+
+        // 4. Score de Uso de Crédito
+        let creditUsageScore = 1000
+        if (emprestimosAtivos > 3) creditUsageScore -= (emprestimosAtivos - 3) * 100
+        if (emprestimos30d > 3) creditUsageScore -= (emprestimos30d - 3) * 150
+        creditUsageScore = Math.max(0, creditUsageScore)
+
+        // 5. Score de Estabilidade
+        let stabilityScore = 500
+        if (totalParcelas > 0) {
+          stabilityScore = Math.max(0, 1000 - (
+            Math.abs(parcelasPagas - parcelasAtrasadas) / totalParcelas * 500
+          ))
+        }
+
+        // Score Final com pesos configuráveis
+        const totalWeight = weights.payment + weights.time + weights.default + weights.usage + weights.stability
+        finalScore = Math.round(
+          (weights.payment / totalWeight * paymentScore) +
+          (weights.time / totalWeight * timeScore) +
+          (weights.default / totalWeight * defaultScore) +
+          (weights.usage / totalWeight * creditUsageScore) +
+          (weights.stability / totalWeight * stabilityScore)
+        )
       }
 
-      // Calcular limite do cliente - com fallback
+      // Classificação de Risco
+      if (finalScore >= 801) riskLevel = "low"
+      else if (finalScore >= 601) riskLevel = "medium"
+      else if (finalScore >= 301) riskLevel = "high"
+      else riskLevel = "very_high"
+
+      // Calcular limite do cliente usando getClientLimit
       let clientLimit = 5000
       
       try {
@@ -651,9 +693,16 @@ export const creditRouter = router({
         })
         clientLimit = Array.isArray(limitData) ? (limitData[0]?.calculated_limit || 5000) : 5000
       } catch {
-        // Fallback: calcular limite baseado na renda
+        // Fallback: calcular limite baseado na renda e caixa
         if (monthlyIncome > 0) {
-          clientLimit = Math.min(monthlyIncome * 0.3, usableCash * 0.2)
+          const { data: limitSettings } = await ctx.supabase
+            .from("credit_settings")
+            .select("max_box_percentage_per_client")
+            .eq("tenant_id", ctx.tenantId)
+            .single()
+          
+          const maxPercentagePerClient = limitSettings?.max_box_percentage_per_client || 20
+          clientLimit = Math.min(monthlyIncome * 0.3, usableCash * (maxPercentagePerClient / 100))
           clientLimit = Math.max(500, Math.round(clientLimit))
         }
       }
