@@ -459,7 +459,9 @@ CREATE TABLE late_fee_config (
     fixed_fee DECIMAL(15,2) DEFAULT 0,
     percentage DECIMAL(5,2) DEFAULT 0,
     daily_interest DECIMAL(15,4) DEFAULT 0, -- daily rate: >1 = R$/day, <=1 = percentage
+    daily_interest_type VARCHAR(20) DEFAULT 'fixed', -- 'fixed' or 'percentage'
     monthly_interest DECIMAL(5,2) DEFAULT 0, -- monthly rate
+    monthly_interest_type VARCHAR(20) DEFAULT 'percentage', -- 'fixed' or 'percentage'
     grace_days INTEGER DEFAULT 0,
     push_installments_on_interest_payment BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),

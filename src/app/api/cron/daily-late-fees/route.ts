@@ -113,17 +113,6 @@ export async function POST(request: NextRequest) {
 
       const fixedFee = config.fixed_fee || config.percentage || 0
       
-      // Calcular taxa diária baseada na configuração
-      // daily_interest pode ser valor fixo (ex: 10 = R$10/dia) ou percentual (ex: 0.1 = 0.1%/dia)
-      // monthly_interest é sempre percentual (ex: 5 = 5%/mês)
-      if (config.daily_interest) {
-        if (config.daily_interest > 1) {
-          // É valor fixo por dia (R$), não é taxa percentual
-        } else {
-          // É percentual diário - será tratado abaixo
-        }
-      }
-
       const dueDate = new Date(inst.due_date)
       const todayDate = new Date(today)
       const daysLate = Math.floor(
@@ -150,14 +139,20 @@ export async function POST(request: NextRequest) {
       if ((config.daily_interest || config.monthly_interest) && daysLate > 0 && hasLateInterestConfig) {
         let interestAmount = 0
         
-        if (config.daily_interest > 1) {
-          // daily_interest é valor fixo por dia (R$)
+        // Daily interest - check type (fixed or percentage)
+        if (config.daily_interest && config.daily_interest_type === 'fixed') {
+          // Valor fixo por dia (R$)
           interestAmount = config.daily_interest * daysLate
-        } else if (config.daily_interest > 0) {
-          // daily_interest é percentual diário
+        } else if (config.daily_interest) {
+          // Percentual diário
           interestAmount = baseAmount * (config.daily_interest / 100) * daysLate
-        } else if (config.monthly_interest > 0) {
-          // monthly_interest é percentual mensal
+        }
+        // Monthly interest - check type (fixed or percentage)
+        else if (config.monthly_interest && config.monthly_interest_type === 'fixed') {
+          // Valor fixo por mês
+          interestAmount = (config.monthly_interest / 30) * daysLate
+        } else if (config.monthly_interest) {
+          // Percentual mensal
           interestAmount = baseAmount * (config.monthly_interest / 100) * (daysLate / 30)
         }
         
