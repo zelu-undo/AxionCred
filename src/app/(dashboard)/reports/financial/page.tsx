@@ -100,9 +100,17 @@ export default function FinancialReportsPage() {
     refetchOnMount: false,
   });
 
-  // Fetch pending payments for projected cash flow
+  // Fetch all payments for projected cash flow (filter out paid ones in frontend)
   const { data: pendingData, isLoading: loadingPending } = trpc.payment.list.useQuery({
-    status: "pending",
+    limit: 100,
+  }, {
+    retry: 1,
+    refetchOnMount: false,
+  });
+
+  // Also fetch overdue payments for complete projection
+  const { data: overdueDataForProjection } = trpc.payment.list.useQuery({
+    overdueOnly: true,
     limit: 100,
   }, {
     retry: 1,
@@ -318,33 +326,45 @@ export default function FinancialReportsPage() {
       "4 meses": 0,
     };
     
-    // Get pending payments from API data
-    const pendingPayments = pendingData?.payments;
-    if (pendingPayments && Array.isArray(pendingPayments)) {
-      pendingPayments.forEach((payment: any) => {
-        if (payment?.status === 'pending' || payment?.status === 'late') {
-          const amount = Number(payment.amount_due) || 0;
-          const dueDate = payment.due_date ? new Date(payment.due_date) : null;
+    // Combine pending and overdue payments
+    const allPendingPayments = [
+      ...(pendingData?.payments || []),
+      ...(overdueDataForProjection?.payments || [])
+    ];
+    
+    // Remove duplicates by ID
+    const uniquePayments = new Map();
+    allPendingPayments.forEach((payment: any) => {
+      if (payment?.id) {
+        uniquePayments.set(payment.id, payment);
+      }
+    });
+    
+    // Process each payment
+    uniquePayments.forEach((payment: any) => {
+      // Only include pending and late (not paid)
+      if (payment?.status === 'pending' || payment?.status === 'late') {
+        const amount = Number(payment.amount_due) || 0;
+        const dueDate = payment.due_date ? new Date(payment.due_date) : null;
+        
+        if (dueDate && !isNaN(dueDate.getTime())) {
+          const dueMonth = dueDate.getMonth();
+          const dueYear = dueDate.getFullYear();
           
-          if (dueDate && !isNaN(dueDate.getTime())) {
-            const dueMonth = dueDate.getMonth();
-            const dueYear = dueDate.getFullYear();
-            
-            // Calculate months from now
-            let monthsDiff = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
-            
-            // If due date is in the past but payment is pending, count as next month
-            if (monthsDiff < 1) monthsDiff = 1;
-            if (monthsDiff > 4) monthsDiff = 4; // Cap at 4 months
-            
-            const monthKey = months[monthsDiff - 1];
-            if (monthKey && monthlyAmounts[monthKey] !== undefined) {
-              monthlyAmounts[monthKey] += amount;
-            }
+          // Calculate months from now
+          let monthsDiff = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
+          
+          // If due date is in the past but payment is pending, count as next month
+          if (monthsDiff < 1) monthsDiff = 1;
+          if (monthsDiff > 4) monthsDiff = 4; // Cap at 4 months
+          
+          const monthKey = months[monthsDiff - 1];
+          if (monthKey && monthlyAmounts[monthKey] !== undefined) {
+            monthlyAmounts[monthKey] += amount;
           }
         }
-      });
-    }
+      }
+    });
     
     // Calculate projected values for each month
     const data = months.map((month, i) => ({
@@ -360,7 +380,7 @@ export default function FinancialReportsPage() {
       monthly: data,
       total: totalProjected
     };
-  }, [pendingData]);
+  }, [pendingData, overdueDataForProjection]);
 
   // Loading state
   const isLoading = loadingPayments || loadingOverdue || loadingExpenses || loadingPending;
