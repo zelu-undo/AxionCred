@@ -100,6 +100,15 @@ export default function FinancialReportsPage() {
     refetchOnMount: false,
   });
 
+  // Fetch pending payments for projected cash flow
+  const { data: pendingData, isLoading: loadingPending } = trpc.payment.list.useQuery({
+    status: "pending",
+    limit: 200,
+  }, {
+    retry: 1,
+    refetchOnMount: false,
+  });
+
   const { data: loanDashboard, error: loanError } = trpc.loan.dashboard.useQuery(undefined, {
     retry: 1,
     refetchOnMount: false,
@@ -294,17 +303,54 @@ export default function FinancialReportsPage() {
     ];
   }, [loanDashboard, summary.totalRevenue, defaultRateData]);
 
-  // Calculate projected cash flow (simple projection based on average monthly revenue)
+  // Calculate projected cash flow based on real pending installments
   const projectedCashFlow = useMemo(() => {
-    // Calculate average monthly revenue
-    const avgMonthlyRevenue = summary.totalRevenue / Math.max(1, cashFlowData.length);
     const months = ["Próximo mês", "2 meses", "3 meses", "4 meses"];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
     
-    // Calculate projected values for each month based on average
+    // Group pending payments by month
+    const monthlyAmounts: { [key: string]: number } = {
+      "Próximo mês": 0,
+      "2 meses": 0,
+      "3 meses": 0,
+      "4 meses": 0,
+    };
+    
+    // Get pending payments from API data
+    const pendingPayments = pendingData?.payments;
+    if (pendingPayments && Array.isArray(pendingPayments)) {
+      pendingPayments.forEach((payment: any) => {
+        if (payment?.status === 'pending' || payment?.status === 'late') {
+          const amount = Number(payment.amount_due) || 0;
+          const dueDate = payment.due_date ? new Date(payment.due_date) : null;
+          
+          if (dueDate && !isNaN(dueDate.getTime())) {
+            const dueMonth = dueDate.getMonth();
+            const dueYear = dueDate.getFullYear();
+            
+            // Calculate months from now
+            let monthsDiff = (dueYear - currentYear) * 12 + (dueMonth - currentMonth);
+            
+            // If due date is in the past but payment is pending, count as next month
+            if (monthsDiff < 1) monthsDiff = 1;
+            if (monthsDiff > 4) monthsDiff = 4; // Cap at 4 months
+            
+            const monthKey = months[monthsDiff - 1];
+            if (monthKey && monthlyAmounts[monthKey] !== undefined) {
+              monthlyAmounts[monthKey] += amount;
+            }
+          }
+        }
+      });
+    }
+    
+    // Calculate projected values for each month
     const data = months.map((month, i) => ({
       month,
-      projected: Math.round(avgMonthlyRevenue * (1 + (i * 0.05))), // 5% growth per month
-      confidence: Math.round(85 - (i * 5)), // Decreasing confidence
+      projected: Math.round(monthlyAmounts[month] || 0),
+      confidence: Math.round(90 - (i * 5)), // Decreasing confidence
     }));
     
     // Calculate total projected for 4 months
@@ -314,10 +360,10 @@ export default function FinancialReportsPage() {
       monthly: data,
       total: totalProjected
     };
-  }, [summary.totalRevenue, cashFlowData.length]);
+  }, [pendingData]);
 
   // Loading state
-  const isLoading = loadingPayments || loadingOverdue || loadingExpenses;
+  const isLoading = loadingPayments || loadingOverdue || loadingExpenses || loadingPending;
 
   return (
     <motion.div 
