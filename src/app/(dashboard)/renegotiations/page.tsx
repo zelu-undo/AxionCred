@@ -158,12 +158,12 @@ export default function RenegotiationsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed": 
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-200"><CheckCircle className="h-3 w-3 mr-1" />Concluída</Badge>
+      case "approved": 
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-200"><CheckCircle className="h-3 w-3 mr-1" />Aprovada</Badge>
       case "pending": 
         return <Badge variant="warning"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>
       case "rejected": 
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Recusada</Badge>
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejeitada</Badge>
       default: 
         return <Badge variant="outline">{status}</Badge>
     }
@@ -227,8 +227,8 @@ export default function RenegotiationsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Concluídas</p>
-                <p className="text-2xl font-bold text-green-800 mt-1">{renegotiations.filter(r => r.status === "completed").length}</p>
+                <p className="text-sm font-medium text-green-700">Aprovadas</p>
+                <p className="text-2xl font-bold text-green-800 mt-1">{renegotiations.filter(r => r.status === "approved").length}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-green-200 flex items-center justify-center">
                 <CheckCircle className="h-5 w-5 text-green-600" />
@@ -243,7 +243,7 @@ export default function RenegotiationsPage() {
               <div>
                 <p className="text-sm font-medium text-purple-700">Valor Renegociado</p>
                 <p className="text-2xl font-bold text-purple-800 mt-1">
-                  {formatCurrency(renegotiations.filter(r => r.status === "completed").reduce((acc, r) => acc + r.newValue, 0))}
+                  {formatCurrency(renegotiations.filter(r => r.status === "approved").reduce((acc, r) => acc + (r.new_total_amount || 0), 0))}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-purple-200 flex items-center justify-center">
@@ -259,7 +259,7 @@ export default function RenegotiationsPage() {
               <div>
                 <p className="text-sm font-medium text-orange-700">Taxa de Aprovação</p>
                 <p className="text-2xl font-bold text-orange-800 mt-1">
-                  {Math.round((renegotiations.filter(r => r.status === "completed").length / renegotiations.length) * 100)}%
+                  {renegotiations.length > 0 ? Math.round((renegotiations.filter(r => r.status === "approved").length / renegotiations.length) * 100) : 0}%
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-orange-200 flex items-center justify-center">
@@ -291,8 +291,8 @@ export default function RenegotiationsPage() {
                 <SelectContent>
                   <SelectItem value="all">Todos os Status</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="completed">Concluída</SelectItem>
-                  <SelectItem value="rejected">Recusada</SelectItem>
+                  <SelectItem value="approved">Aprovada</SelectItem>
+                  <SelectItem value="rejected">Rejeitada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -311,22 +311,15 @@ export default function RenegotiationsPage() {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     {/* Customer Info */}
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#22C55E] flex items-center justify-center text-white font-bold">
-                        {renegotiation.customer.name.split(" ").map((n: string) => n[0]).join("")}
-                      </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-gray-900">{renegotiation.customer.name}</p>
+                          <p className="font-semibold text-gray-900">{renegotiation.loan?.customer?.name || "Cliente"}</p>
                           {getStatusBadge(renegotiation.status)}
                         </div>
                         <p className="text-sm text-gray-500 flex items-center gap-2">
-                          <FileText className="h-3 w-3" />{renegotiation.originalLoan}
+                          <FileText className="h-3 w-3" />{renegotiation.loan?.contract_number || renegotiation.loan?.id?.slice(0, 8) || "N/A"}
                           <span>•</span>
-                          <span>{renegotiation.customer.document}</span>
-                        </p>
-                        <p className="text-sm text-gray-500 flex items-center gap-3 mt-1">
-                          <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{renegotiation.customer.phone}</span>
-                          <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{renegotiation.customer.email}</span>
+                          <span>{renegotiation.loan?.customer?.document || "N/A"}</span>
                         </p>
                       </div>
                     </div>
@@ -334,8 +327,8 @@ export default function RenegotiationsPage() {
                     {/* Values Comparison */}
                     <div className="flex items-center gap-6">
                       <div className="text-center hidden md:block">
-                        <p className="text-xs text-gray-500 mb-1">Dívida Atual</p>
-                        <p className="font-semibold text-gray-900">{formatCurrency(renegotiation.currentDebt)}</p>
+                        <p className="text-xs text-gray-500 mb-1">Valor Original</p>
+                        <p className="font-semibold text-gray-900">{formatCurrency(renegotiation.original_amount)}</p>
                       </div>
                       
                       <div className="flex items-center gap-2">
@@ -344,17 +337,17 @@ export default function RenegotiationsPage() {
                       
                       <div className="text-center hidden md:block">
                         <p className="text-xs text-gray-500 mb-1">Novo Valor</p>
-                        <p className="font-semibold text-green-600">{formatCurrency(renegotiation.newValue)}</p>
+                        <p className="font-semibold text-green-600">{formatCurrency(renegotiation.new_total_amount)}</p>
                       </div>
 
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Parcelas</p>
-                        <p className="font-semibold text-gray-900">{renegotiation.newInstallments}x</p>
+                        <p className="font-semibold text-gray-900">{renegotiation.new_installments}x</p>
                       </div>
 
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Juros</p>
-                        <p className="font-semibold text-gray-900">{renegotiation.newInterest}%</p>
+                        <p className="font-semibold text-gray-900">{renegotiation.new_interest_rate}%</p>
                       </div>
 
                       <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-[#22C55E] transition-colors" />
@@ -365,11 +358,7 @@ export default function RenegotiationsPage() {
                   <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-4 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      Solicitado em: {new Date(renegotiation.requestedAt).toLocaleDateString("pt-BR")}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      Por: {renegotiation.requestedBy}
+                      Solicitado em: {new Date(renegotiation.created_at).toLocaleDateString("pt-BR")}
                     </span>
                     {renegotiation.notes && (
                       <span className="flex items-center gap-1">
