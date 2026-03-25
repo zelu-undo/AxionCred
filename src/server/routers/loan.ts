@@ -52,7 +52,6 @@ export const loanRouter = router({
           id,
           tenant_id,
           customer_id,
-          contract_number,
           principal_amount,
           interest_rate,
           total_amount,

@@ -31,7 +31,6 @@ export const renegotiationsRouter = router({
           *,
           loan:loans(
             id,
-            contract_number,
             customer_id,
             principal_amount,
             total_amount,
