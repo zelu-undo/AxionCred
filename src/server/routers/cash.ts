@@ -160,4 +160,41 @@ export const cashRouter = router({
 
       return data
     }),
+
+  // Get expenses by date range for financial reports
+  getExpensesByPeriod: protectedProcedure
+    .input(
+      z.object({
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_cash_transactions", {
+        p_tenant_id: ctx.tenantId,
+        p_limit: 1000,
+        p_offset: 0,
+        p_tipo: "saida",
+        p_categoria: null,
+        p_data_inicio: input.dateFrom || null,
+        p_data_fim: input.dateTo || null,
+      })
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        })
+      }
+
+      // Sum all expenses
+      const totalExpenses = (data || []).reduce((sum: number, tx: any) => {
+        return sum + Number(tx.valor || 0);
+      }, 0);
+
+      return {
+        total: totalExpenses,
+        transactions: data || [],
+      }
+    }),
 })

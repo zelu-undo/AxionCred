@@ -93,6 +93,11 @@ export default function FinancialReportsPage() {
     refetchOnMount: true,
   });
 
+  // Fetch real expenses from cash
+  const { data: expensesData, isLoading: loadingExpenses } = trpc.cash.getExpensesByPeriod.useQuery({
+    dateFrom: new Date(Date.now() - dateRangeMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
+  }, { refetchOnMount: true });
+
   // Process data for charts
   const { cashFlowData, summary } = useMemo(() => {
     const months: { [key: string]: { revenue: number; expenses: number; profit: number } } = {};
@@ -121,21 +126,20 @@ export default function FinancialReportsPage() {
       ...values,
     }));
 
-    // Calculate summary
+    // Calculate summary - use real expenses from cash
     const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-    // Note: Expenses are not tracked in the system, using a placeholder
-    const estimatedExpenses = totalRevenue * 0.3; // Estimated 30%
-    const totalProfit = totalRevenue - estimatedExpenses;
+    const realExpenses = expensesData?.total || 0;
+    const totalProfit = totalRevenue - realExpenses;
 
     return {
       cashFlowData: data,
       summary: {
         totalRevenue,
-        totalExpenses: estimatedExpenses,
+        totalExpenses: realExpenses,
         totalProfit,
       }
     };
-  }, [paymentsData, dateRangeMonths]);
+  }, [paymentsData, expensesData, dateRangeMonths]);
 
   // Calculate overdue statistics
   const overdueStats = useMemo(() => {
@@ -205,7 +209,7 @@ export default function FinancialReportsPage() {
   }, [summary.totalRevenue, cashFlowData.length]);
 
   // Loading state
-  const isLoading = loadingPayments || loadingOverdue;
+  const isLoading = loadingPayments || loadingOverdue || loadingExpenses;
 
   return (
     <motion.div 
@@ -277,7 +281,7 @@ export default function FinancialReportsPage() {
                 <p className="text-2xl font-bold mt-1">{isLoading ? "..." : formatCurrency(summary.totalExpenses)}</p>
                 <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
                   <ArrowDownRight className="h-3 w-3" />
-                  Estimado (30%)
+                  Do Caixa
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
