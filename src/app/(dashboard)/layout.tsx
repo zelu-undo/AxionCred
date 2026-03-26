@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useEffect, useState } from "react"
 import { PageTransition } from "@/components/ui/page-transition"
 import { Toaster } from "@/components/ui/toaster"
+import { UpgradeBanner } from "@/components/dashboard/upgrade-banner"
 
 export default function DashboardLayout({
   children,
@@ -48,6 +49,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <UpgradeBanner />
       <div className="hidden lg:block">
         <Sidebar />
       </div>

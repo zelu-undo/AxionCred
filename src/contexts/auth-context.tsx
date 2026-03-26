@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createBrowserClient } from "@supabase/ssr"
+import { plans, hasModuleAccess, type Plan } from "@/lib/plans"
 
 type AppUser = {
   id: string
@@ -11,6 +12,7 @@ type AppUser = {
   role: string
   tenantId: string
   plan?: string
+  planAccess?: string[] // List of accessible modules
 }
 
 type AuthError = {
@@ -192,64 +194,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.user) {
         let tenantId = ""
+        let userPlan: Plan = "free"
+        
         try {
-          const { data: u } = await supabase.from("users").select("tenant_id").eq("id", data.user.id).single()
+          // Fetch user with tenant info
+          const { data: u, error: userError } = await supabase
+            .from("users")
+            .select("tenant_id, role")
+            .eq("id", data.user.id)
+            .single()
+          
           if (u) {
             tenantId = u.tenant_id || ""
+            
+            // If user has a tenant, fetch the plan
+            if (tenantId) {
+              const { data: tenant } = await supabase
+                .from("tenants")
+                .select("plan")
+                .eq("id", tenantId)
+                .single()
+              
+              if (tenant?.plan) {
+                userPlan = tenant.plan as Plan
+              }
+            }
           }
           
-          // Se não encontrar tenant, criar automaticamente
+          // If no tenant, create one with FREE plan
           if (!tenantId) {
-            
-            // Criar tenant
             const { data: newTenant, error: tenantError } = await supabase
               .from("tenants")
               .insert({
                 name: data.user.email?.split("@")[0] || "Minha Empresa",
                 slug: data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
-                plan: "starter"
+                plan: "free" // Default to free - needs payment to upgrade
               })
               .select()
               .single()
             
-            if (tenantError) {
-              console.error("[Auth] Erro ao criar tenant:", tenantError)
-            } else if (newTenant) {
-              // Criar usuário na tabela users com tenant_id
-              const { error: userError } = await supabase
+            if (!tenantError && newTenant) {
+              await supabase
                 .from("users")
-                .insert({
-                  id: data.user.id,
-                  email: data.user.email,
-                  name: data.user.user_metadata?.name || data.user.email?.split("@")[0] || "Usuário",
-                  tenant_id: newTenant.id,
-                  role: "owner",
-                  is_active: true
-                })
+                .update({ tenant_id: newTenant.id })
+                .eq("id", data.user.id)
               
-              if (userError) {
-                console.error("[Auth] Erro ao criar usuário:", userError)
-              } else {
-                tenantId = newTenant.id
-              }
+              tenantId = newTenant.id
+              userPlan = "free"
             }
           }
         } catch (err) {
           console.error("[Auth] Erro ao buscar/criar usuário:", err)
         }
 
+        // Calculate accessible modules based on plan
+        const planConfig = plans[userPlan]
+        const accessibleModules = planConfig.modules
+          .filter(m => m.access !== 'none')
+          .map(m => m.module)
+        
         const appUser: AppUser = {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
           role: "owner",
           tenantId,
-          plan: "starter"
+          plan: userPlan,
+          planAccess: accessibleModules
         }
         
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
-        router.push("/dashboard")
+        
+        // Redirect based on plan
+        if (userPlan === 'free') {
+          router.push("/dashboard?plan=free") // Show upgrade banner
+        } else {
+          router.push("/dashboard")
+        }
       }
 
       return { error: null }

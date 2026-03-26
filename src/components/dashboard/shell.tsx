@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { useAuth } from "@/contexts/auth-context"
 import { trpc } from "@/trpc/client"
+import { hasModuleAccess, plans, type Plan } from "@/lib/plans"
 import {
   LayoutDashboard,
   Users,
@@ -85,19 +86,19 @@ function NavigationItems() {
     operator: ["dashboard", "customers", "loans"],
   }
   
-  // Starter plan limitations (empty for now - all features visible)
-  const starterLimits = {
-  }
+  // Get user plan
+  const userPlan = (user?.plan || 'free') as Plan
   
-  // Get user permissions based on role
-  const userPermissions = user ? permissions[user.role as keyof typeof permissions] || ["dashboard"] : ["dashboard"]
+  // Check if user has access to a module (role + plan)
   const hasPermission = (feature: string) => {
-    // Check role permission
-    if (!userPermissions.includes(feature)) return false
-    // Check plan limitations for starter plan
-    const limit = starterLimits[feature as keyof typeof starterLimits]
-    if (limit === false) return false
-    return true
+    // First check role permission
+    const rolePermitted = user ? permissions[user.role as keyof typeof permissions]?.includes(feature) || false : false
+    
+    // Then check plan permission
+    const planPermitted = hasModuleAccess(userPlan, feature, 'read')
+    
+    // User needs BOTH role AND plan permission
+    return rolePermitted && planPermitted
   }
 
   // Menu organizado em categorias
