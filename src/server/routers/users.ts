@@ -106,16 +106,17 @@ export const usersRouter = router({
         })
       }
 
-      // Create user (in production, this would use Supabase Auth)
+      // Create user
       const { data, error } = await ctx.supabase
         .from("users")
         .insert({
           tenant_id: ctx.tenantId,
           email,
           name,
-          password_hash: password, // In production: bcrypt hash
+          password_hash: password,
           role,
           avatar_url,
+          is_active: true, // New users are active by default
         })
         .select()
         .single()

@@ -68,8 +68,8 @@ export default function StaffManagementPage() {
       refetchUsers()
       setIsInviteOpen(false)
       setNewInvite({ email: '', name: '', role_id: '' })
-      setSuccessMessage('Usuário criado com sucesso!')
-      setTimeout(() => setSuccessMessage(''), 3000)
+      setSuccessMessage('Usuário criado com sucesso! Informe-o sobre as credenciais de acesso.')
+      setTimeout(() => setSuccessMessage(''), 5000)
     },
     onError: (error: any) => {
       console.error("Erro ao criar usuário:", error)
