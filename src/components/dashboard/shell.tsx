@@ -322,6 +322,7 @@ export function Header() {
     if (searchQuery.trim()) {
       setIsSearching(true)
       // Navigate to customers page with search query
+      // The global search API is available via the search endpoint
       router.push(`/customers?search=${encodeURIComponent(searchQuery.trim())}`)
       setTimeout(() => setIsSearching(false), 500)
     }

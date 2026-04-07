@@ -12,6 +12,9 @@ import { guarantorsRouter } from "./guarantors"
 import { renegotiationsRouter } from "./renegotiations"
 import { creditRouter } from "./credit"
 import { cashRouter } from "./cash"
+import { globalSearchRouter } from "./globalSearch"
+import { notificationsApiRouter } from "./notificationsApi"
+import { financialReportsRouter } from "./financialReports"
 
 export const appRouter = router({
   customer: customerRouter,
@@ -28,6 +31,9 @@ export const appRouter = router({
   renegotiations: renegotiationsRouter,
   credit: creditRouter,
   cash: cashRouter,
+  globalSearch: globalSearchRouter,
+  notificationsApi: notificationsApiRouter,
+  financialReports: financialReportsRouter,
 })
 
 export type AppRouter = typeof appRouter
