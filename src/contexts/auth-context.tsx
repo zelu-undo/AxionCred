@@ -195,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user) {
         let tenantId = ""
         let userPlan: Plan = "free"
+        let userRole = "owner"
         
         try {
           // Fetch user with tenant info
@@ -207,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (u) {
             tenantId = u.tenant_id || ""
             
-            // If user has a tenant, fetch the plan
+            // If user has a tenant, fetch the plan and role
             if (tenantId) {
               const { data: tenant } = await supabase
                 .from("tenants")
@@ -217,6 +218,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               
               if (tenant?.plan) {
                 userPlan = tenant.plan as Plan
+              }
+              
+              // Get user's role from users table
+              const { data: userData } = await supabase
+                .from("users")
+                .select("role")
+                .eq("id", data.user.id)
+                .single()
+              
+              if (userData?.role) {
+                userRole = userData.role
+                // Super admin sempre tem acesso total independente do plano
+                if (userRole === 'super_admin') {
+                  userPlan = 'enterprise'
+                }
               }
             }
           }
@@ -257,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: data.user.id,
           email: data.user.email!,
           name: data.user.user_metadata?.name || data.user.email!.split("@")[0],
-          role: "owner",
+          role: userRole,
           tenantId,
           plan: userPlan,
           planAccess: accessibleModules

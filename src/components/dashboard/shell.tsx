@@ -54,7 +54,7 @@ import { motion } from "framer-motion"
 // Categorias do menu
 type NavCategory = {
   title: string
-  items: { name: string; href: string; icon: React.ElementType; permission: string }[]
+  items: { name: string; href: string; icon: React.ElementType; permission: string; roles?: string[] }[]
 }
 
 function NavigationItems() {
@@ -90,7 +90,16 @@ function NavigationItems() {
   const userPlan = (user?.plan || 'free') as Plan
   
   // Check if user has access to a module (plan is the main factor, role is secondary)
-  const hasPermission = (feature: string) => {
+  const hasPermission = (feature: string, itemRoles?: string[]) => {
+    // Super admin tem acesso a tudo
+    if (user?.role === 'super_admin') {
+      // Se o item tem roles específicas, verificar se o usuário está em uma delas
+      if (itemRoles && itemRoles.length > 0) {
+        return itemRoles.includes(user.role)
+      }
+      return true
+    }
+    
     // First check plan permission - this is the main filter
     const planPermitted = hasModuleAccess(userPlan, feature, 'read')
     
@@ -155,6 +164,8 @@ function NavigationItems() {
         { name: "Crédito", href: "/settings/credit", icon: CreditCard, permission: "settings" },
         { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
         { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
+        // Super Admin only
+        { name: "Super Admin", href: "/super-admin", icon: Crown, permission: "super_admin", roles: ["super_admin"] },
       ],
     },
   ]
@@ -175,7 +186,7 @@ function NavigationItems() {
 
   // Filtrar itens por permissão
   const filterItems = (items: NavCategory["items"]) => {
-    return items.filter(item => hasPermission(item.permission))
+    return items.filter(item => hasPermission(item.permission, item.roles))
   }
 
   return (
