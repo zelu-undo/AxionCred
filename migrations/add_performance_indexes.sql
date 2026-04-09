@@ -3,10 +3,27 @@
 -- Performance optimization indexes
 -- ============================================
 
--- Primeiro, garantir que as colunas necessárias existam
-ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS tenant_id UUID;
-ALTER TABLE notifications ADD COLUMN IF NOT EXISTS tenant_id UUID;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id UUID;
+-- Primeiro, garantir que as colunas necessárias existam (syntax compativel)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'tenant_id') THEN
+        ALTER TABLE audit_logs ADD COLUMN tenant_id UUID;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'tenant_id') THEN
+        ALTER TABLE notifications ADD COLUMN tenant_id UUID;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'tenant_id') THEN
+        ALTER TABLE users ADD COLUMN tenant_id UUID;
+    END IF;
+END $$;
 
 -- ============================================
 -- Indexes para Customers
