@@ -89,16 +89,24 @@ function NavigationItems() {
   // Get user plan
   const userPlan = (user?.plan || 'free') as Plan
   
-  // Check if user has access to a module (role + plan)
+  // Check if user has access to a module (plan is the main factor, role is secondary)
   const hasPermission = (feature: string) => {
-    // First check role permission
-    const rolePermitted = user ? permissions[user.role as keyof typeof permissions]?.includes(feature) || false : false
-    
-    // Then check plan permission
+    // First check plan permission - this is the main filter
     const planPermitted = hasModuleAccess(userPlan, feature, 'read')
     
-    // User needs BOTH role AND plan permission
-    return rolePermitted && planPermitted
+    // If plan doesn't allow, deny access
+    if (!planPermitted) return false
+    
+    // If plan allows, also check role permission for additional filtering
+    const rolePermitted = user ? permissions[user.role as keyof typeof permissions]?.includes(feature) || false : false
+    
+    // For free plan, be more restrictive - require both
+    if (userPlan === 'free') {
+      return rolePermitted
+    }
+    
+    // For paid plans, plan permission is enough
+    return true
   }
 
   // Menu organizado em categorias

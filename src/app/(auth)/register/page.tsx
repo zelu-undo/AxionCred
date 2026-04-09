@@ -9,7 +9,7 @@ import { useI18n } from "@/i18n/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, CheckCircle, Mail, Lock, User, ArrowRight } from "lucide-react"
+import { TrendingUp, CheckCircle, Mail, Lock, User, ArrowRight, Building2 } from "lucide-react"
 
 // Dynamic import for particles (client-side only for performance)
 const FloatingParticles = dynamic(
@@ -19,6 +19,7 @@ const FloatingParticles = dynamic(
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
+  const [companyName, setCompanyName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -27,6 +28,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [createdEmail, setCreatedEmail] = useState("")
+  const [createdCompany, setCreatedCompany] = useState("")
   
   const { signUp, user, loading: authLoading, isInitialized } = useAuth()
   const router = useRouter()
@@ -71,6 +73,13 @@ export default function RegisterPage() {
       return
     }
 
+    if (!companyName.trim()) {
+      setError("Nome da empresa é obrigatório")
+      setIsLoading(false)
+      setIsSubmitting(false)
+      return
+    }
+
     if (password !== confirmPassword) {
       setError(t("auth.passwordMismatch"))
       setIsLoading(false)
@@ -92,6 +101,7 @@ export default function RegisterPage() {
       if (error.code === "EMAIL_CONFIRMATION_REQUIRED") {
         setSuccess(true)
         setCreatedEmail(email)
+        setCreatedCompany(companyName)
         setIsLoading(false)
         // Redirect to login after 3 seconds
         setTimeout(() => {
@@ -137,6 +147,11 @@ export default function RegisterPage() {
                 <p className="text-white/60 mb-6">
                   Enviamos um e-mail de confirmação para <strong className="text-white/80">{createdEmail}</strong>
                 </p>
+                {createdCompany && (
+                  <p className="text-white/50 text-sm mb-4">
+                    Empresa: <strong className="text-white/70">{createdCompany}</strong>
+                  </p>
+                )}
                 <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 mb-6 text-left">
                   <div className="flex items-start gap-3">
                     <Mail className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
@@ -221,6 +236,24 @@ export default function RegisterPage() {
                     className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:bg-white/10 focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all duration-300"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="companyName" className="text-sm font-medium text-white/80">
+                  Nome da Empresa
+                </label>
+                <div className="relative group">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-[#22C55E] transition-colors" />
+                  <Input
+                    id="companyName"
+                    type="text"
+                    placeholder="Nome da sua empresa"
+                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:bg-white/10 focus:border-[#22C55E] focus:ring-[#22C55E]/20 transition-all duration-300"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
                     required
                   />
                 </div>

@@ -48,18 +48,20 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden">
       <UpgradeBanner />
-      <div className="hidden lg:block">
-        <Sidebar />
-      </div>
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-gray-50/50 p-4 sm:p-6">
-          <PageTransition>
-            {children}
-          </PageTransition>
-        </main>
+      <div className="flex flex-1 overflow-hidden pt-12">
+        <div className="hidden lg:block">
+          <Sidebar />
+        </div>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto bg-gray-50/50 p-4 sm:p-6">
+            <PageTransition>
+              {children}
+            </PageTransition>
+          </main>
+        </div>
       </div>
       <Toaster />
     </div>

@@ -27,16 +27,24 @@ export default function PlanPage() {
   const handleSelectPlan = async (planKey: string) => {
     if (planKey === currentPlan) return
     
+    const selectedPlan = planConfigs[planKey as keyof typeof planConfigs]
+    
+    if (planKey !== 'free' && selectedPlan.price > 0) {
+      // For paid plans, show confirmation instead of alert
+      const confirmed = confirm(`Você选择了 ${selectedPlan.name} por R$ ${selectedPlan.price}/mês.\n\nEm um ambiente de produção, você seria redirecionado para o gateway de pagamento.\n\nDeseja continuar (apenas simulado)?`)
+      
+      if (!confirmed) return
+    }
+    
     setLoading(planKey)
     
     // Simulate payment processing (in real app, integrate with payment gateway)
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Update plan in database
-    // const { error } = await supabase.from("tenants").update({ plan: planKey }).eq("id", user.tenantId)
+    await new Promise(resolve => setTimeout(resolve, 1500))
     
     setLoading(null)
-    alert(`Plano ${planConfigs[planKey as keyof typeof planConfigs].name} selecionado! Em um ambiente real, você seria redirecionado para o pagamento.`)
+    
+    // Show success message
+    alert(`Plano ${selectedPlan.name} ativado! (Simulação)`)
   }
   
   const planEntries = Object.entries(plans) as [string, typeof plans.free][]
