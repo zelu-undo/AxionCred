@@ -3,6 +3,11 @@
 -- Performance optimization indexes
 -- ============================================
 
+-- Primeiro, garantir que as colunas necessárias existam
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS tenant_id UUID;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS tenant_id UUID;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id UUID;
+
 -- ============================================
 -- Indexes para Customers
 -- ============================================
@@ -114,7 +119,7 @@ ON notifications(user_id);
 
 -- Index para não lidas
 CREATE INDEX IF NOT EXISTS idx_notifications_unread 
-ON notifications(user_id, read) WHERE read = false;
+ON notifications(user_id, is_read) WHERE is_read = false;
 
 -- Index para tenant
 CREATE INDEX IF NOT EXISTS idx_notifications_tenant 
