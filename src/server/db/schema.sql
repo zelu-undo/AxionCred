@@ -24,7 +24,7 @@ CREATE TABLE tenants (
     address TEXT,
     city VARCHAR(100),
     state VARCHAR(2),
-    zip_code VARCHAR(10),
+    cep VARCHAR(10), -- ZIP code
     logo_url TEXT,
     plan VARCHAR(20) DEFAULT 'free',
     settings JSONB DEFAULT '{}',
@@ -71,7 +71,7 @@ CREATE TABLE customers (
     address TEXT,
     city VARCHAR(100),
     state VARCHAR(2),
-    zip_code VARCHAR(10),
+    cep VARCHAR(10), -- ZIP code
     notes TEXT,
     tags TEXT[],
     credit_limit DECIMAL(15,2) DEFAULT 0,

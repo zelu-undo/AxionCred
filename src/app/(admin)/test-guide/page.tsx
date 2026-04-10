@@ -76,7 +76,7 @@ const defaultTests: TestItem[] = [
   { id: "cust-1", category: "customers", feature: "Listagem", description: "Lista de clientes carrega", status: "pending" },
   { id: "cust-2", category: "customers", feature: "Busca", description: "Buscar por nome funciona", status: "pending" },
   { id: "cust-3", category: "customers", feature: "Criar", description: "Novo cliente é criado (CEP funciona)", status: "pending" },
-  { id: "cust-4", category: "customers", feature: "Editar", description: "Editar dados do cliente (CEP/zip_code)", status: "pending" },
+  { id: "cust-4", category: "customers", feature: "Editar", description: "Editar dados do cliente (CEP)", status: "pending" },
   { id: "cust-5", category: "customers", feature: "Excluir", description: "Excluir cliente", status: "pending" },
   { id: "cust-6", category: "customers", feature: "PDF", description: "Gerar histórico em PDF", status: "pending" },
   { id: "cust-7", category: "customers", feature: "Score", description: "Score de crédito é calculado", status: "pending" },
