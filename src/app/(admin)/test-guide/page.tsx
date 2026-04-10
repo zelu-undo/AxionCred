@@ -23,7 +23,8 @@ import {
   Building,
   Download,
   BookOpen,
-  Save
+  Save,
+  Bell
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
 import { useI18n } from "@/i18n/client"
@@ -43,11 +44,18 @@ const testCategories = [
   { id: "customers", name: "Clientes", icon: Users, color: "text-green-500" },
   { id: "loans", name: "Empréstimos", icon: CreditCard, color: "text-orange-500" },
   { id: "late_fees", name: "Juros Atraso", icon: AlertTriangle, color: "text-red-600" },
+  { id: "payments", name: "Pagamentos", icon: CreditCard, color: "text-teal-500" },
   { id: "cash", name: "Caixa", icon: Wallet, color: "text-emerald-500" },
+  { id: "guarantors", name: "Fiadores", icon: User, color: "text-pink-500" },
   { id: "renegotiations", name: "Renegociações", icon: RefreshCw, color: "text-yellow-500" },
+  { id: "credit", name: "Crédito", icon: BarChart3, color: "text-cyan-500" },
+  { id: "rules", name: "Regras", icon: Settings, color: "text-violet-500" },
   { id: "reports", name: "Relatórios", icon: FileText, color: "text-indigo-500" },
+  { id: "notifications", name: "Notificações", icon: Bell, color: "text-amber-500" },
+  { id: "search", name: "Busca Global", icon: Search, color: "text-slate-500" },
   { id: "settings", name: "Configurações", icon: Settings, color: "text-gray-500" },
-  { id: "pdf", name: "PDF Generation", icon: Download, color: "text-red-500" },
+  { id: "team", name: "Equipe", icon: Users, color: "text-orange-600" },
+  { id: "pdf", name: "PDF", icon: Download, color: "text-red-500" },
 ]
 
 const defaultTests: TestItem[] = [
@@ -124,6 +132,49 @@ const defaultTests: TestItem[] = [
   { id: "pdf-2", category: "pdf", feature: "CustomerHistory", description: "PDF de histórico do cliente", status: "pending" },
   { id: "pdf-3", category: "pdf", feature: "CashFlow", description: "PDF de fluxo de caixa", status: "pending" },
   { id: "pdf-4", category: "pdf", feature: "Refinancing", description: "PDF de refinanciamento", status: "pending" },
+  
+  // Pagamentos
+  { id: "pay-1", category: "payments", feature: "Listagem", description: "Lista de parcelas a pagar", status: "pending" },
+  { id: "pay-2", category: "payments", feature: "Pagar parcela", description: "Pagar parcela única", status: "pending" },
+  { id: "pay-3", category: "payments", feature: "Quitar loan", description: "Quitar empréstimo completo", status: "pending" },
+  { id: "pay-4", category: "payments", feature: "Juros atraso", description: "Valores com juros de mora", status: "pending" },
+  { id: "pay-5", category: "payments", feature: "Recibo", description: "Gerar recibo de pagamento", status: "pending" },
+  { id: "pay-6", category: "payments", feature: "Filtros", description: "Filtros por status e data", status: "pending" },
+  
+  // Fiadores
+  { id: "guar-1", category: "guarantors", feature: "Listagem", description: "Lista de fiadores", status: "pending" },
+  { id: "guar-2", category: "guarantors", feature: "Criar", description: "Cadastrar fiador", status: "pending" },
+  { id: "guar-3", category: "guarantors", feature: "Vincular", description: "Vincular fiador ao loan", status: "pending" },
+  { id: "guar-4", category: "guarantors", feature: "Editar", description: "Editar fiador", status: "pending" },
+  
+  // Crédito
+  { id: "cred-1", category: "credit", feature: "Score", description: "Score de crédito do cliente", status: "pending" },
+  { id: "cred-2", category: "credit", feature: "Limite", description: "Limite de crédito calculado", status: "pending" },
+  { id: "cred-3", category: "credit", feature: "Análise", description: "Análise de crédito completa", status: "pending" },
+  
+  // Regras de Negócio
+  { id: "rule-1", category: "rules", feature: "Juros mora", description: "Configurar juros de mora", status: "pending" },
+  { id: "rule-2", category: "rules", feature: "Taxas", description: "Configurar taxas de juros", status: "pending" },
+  { id: "rule-3", category: "rules", feature: "Parcelas", description: "Regras por quantidade de parcelas", status: "pending" },
+  { id: "rule-4", category: "rules", feature: "Valor mínimo", description: "Valor mínimo por parcela", status: "pending" },
+  
+  // Notificações
+  { id: "notif-1", category: "notifications", feature: "Listagem", description: "Lista de notificações", status: "pending" },
+  { id: "notif-2", category: "notifications", feature: "Ler", description: "Marcar como lida", status: "pending" },
+  { id: "notif-3", category: "notifications", feature: "Config", description: "Configurar notificações", status: "pending" },
+  { id: "notif-4", category: "notifications", feature: "Email", description: "Notificações por email", status: "pending" },
+  
+  // Busca Global
+  { id: "search-1", category: "search", feature: "Abrir", description: "Ctrl+K abre busca global", status: "pending" },
+  { id: "search-2", category: "search", feature: "Clientes", description: "Buscar clientes", status: "pending" },
+  { id: "search-3", category: "search", feature: "Empréstimos", description: "Buscar empréstimos", status: "pending" },
+  { id: "search-4", category: "search", feature: "Navegação", description: "Navegar para resultado", status: "pending" },
+  
+  // Equipe
+  { id: "team-1", category: "team", feature: "Listagem", description: "Lista de membros", status: "pending" },
+  { id: "team-2", category: "team", feature: "Convidar", description: "Convidar novo membro", status: "pending" },
+  { id: "team-3", category: "team", feature: "Permissões", description: "Definir permissões", status: "pending" },
+  { id: "team-4", category: "team", feature: "Remover", description: "Remover membro", status: "pending" },
 ]
 
 export default function TestGuidePage() {
