@@ -55,6 +55,7 @@ import { motion } from "framer-motion"
 // Categorias do menu
 type NavCategory = {
   title: string
+  onlyAdmin?: boolean
   items: { name: string; href: string; icon: React.ElementType; permission: string; roles?: string[] }[]
 }
 
@@ -193,8 +194,12 @@ function NavigationItems() {
   }
 
   // Filtrar itens por permissão
-  const filterItems = (items: NavCategory["items"]) => {
-    // If user is not super_admin, don't show admin category items
+  const filterItems = (items: NavCategory["items"], onlyAdmin?: boolean) => {
+    // If category is only for admin, only show if user is super_admin
+    if (onlyAdmin && user?.role !== 'super_admin') {
+      return []
+    }
+    // If user is not super_admin, filter by permissions
     if (user?.role !== 'super_admin') {
       return items.filter(item => hasPermission(item.permission, item.roles))
     }
@@ -205,7 +210,7 @@ function NavigationItems() {
   return (
     <div className="space-y-1">
       {navigationCategories.map((category) => {
-        const filteredItems = filterItems(category.items)
+        const filteredItems = filterItems(category.items, category.onlyAdmin)
         if (filteredItems.length === 0) return null
         
         const isOpen = openCategories[category.title] || false
