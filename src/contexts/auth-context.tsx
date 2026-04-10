@@ -197,6 +197,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let userPlan: Plan = "free"
         let userRole = "owner"
         
+        console.log("[Auth] Usuário logado:", data.user.email)
+        console.log("[Auth] User metadata:", data.user.user_metadata)
+        
         try {
           // Fetch user with tenant info
           const { data: u, error: userError } = await supabase
@@ -205,40 +208,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq("id", data.user.id)
             .single()
           
+          console.log("[Auth] Dados do usuário no banco:", u, userError)
+          
           if (u) {
             tenantId = u.tenant_id || ""
+            userRole = u.role || "owner"
             
-            // If user has a tenant, fetch the plan and role
-            if (tenantId) {
+            console.log("[Auth] Role do usuário:", userRole)
+            
+            // Super admin sempre tem acesso total independente do plano
+            if (userRole === 'super_admin') {
+              console.log("[Auth] Super Admin detectado - definindo plano enterprise")
+              userPlan = 'enterprise'
+            }
+            // If user has a tenant, fetch the plan
+            else if (tenantId) {
               const { data: tenant } = await supabase
                 .from("tenants")
                 .select("plan")
                 .eq("id", tenantId)
                 .single()
               
+              console.log("[Auth] Tenant:", tenant)
+              
               if (tenant?.plan) {
                 userPlan = tenant.plan as Plan
-              }
-              
-              // Get user's role from users table
-              const { data: userData } = await supabase
-                .from("users")
-                .select("role")
-                .eq("id", data.user.id)
-                .single()
-              
-              if (userData?.role) {
-                userRole = userData.role
-                // Super admin sempre tem acesso total independente do plano
-                if (userRole === 'super_admin') {
-                  userPlan = 'enterprise'
-                }
               }
             }
           }
           
           // If no tenant, create one with FREE plan
           if (!tenantId) {
+            console.log("[Auth] Criando novo tenant para o usuário")
             const { data: newTenant, error: tenantError } = await supabase
               .from("tenants")
               .insert({
@@ -264,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Calculate accessible modules based on plan
+        console.log("[Auth] Plano final:", userPlan, "Role:", userRole)
         const planConfig = plans[userPlan]
         const accessibleModules = planConfig.modules
           .filter(m => m.access !== 'none')

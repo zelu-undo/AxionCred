@@ -91,8 +91,11 @@ function NavigationItems() {
   
   // Check if user has access to a module (plan is the main factor, role is secondary)
   const hasPermission = (feature: string, itemRoles?: string[]) => {
+    console.log("[Shell] hasPermission called:", feature, "user role:", user?.role, "user plan:", userPlan)
+    
     // Super admin tem acesso a tudo
     if (user?.role === 'super_admin') {
+      console.log("[Shell] User is super_admin - granting access")
       // Se o item tem roles específicas, verificar se o usuário está em uma delas
       if (itemRoles && itemRoles.length > 0) {
         return itemRoles.includes(user.role)

@@ -64,8 +64,16 @@ export default function SettingsPage() {
   
   // Buscar dados do usuário ao carregar
   useEffect(() => {
+    console.log("[Settings] useEffect triggered", user?.id, user?.tenantId)
+    
     async function fetchUserData() {
-      if (!user?.id || !user?.tenantId) return
+      if (!user?.id || !user?.tenantId) {
+        console.log("[Settings] User or tenantId missing")
+        setIsLoading(false)
+        return
+      }
+      
+      console.log("[Settings] Fetching data for user:", user.id, "tenant:", user.tenantId)
       
       try {
         // Buscar dados do usuário
@@ -74,6 +82,8 @@ export default function SettingsPage() {
           .select("name, email, phone")
           .eq("id", user.id)
           .single()
+        
+        console.log("[Settings] User data:", userData, userError)
         
         if (userData) {
           setProfileData({
@@ -84,11 +94,13 @@ export default function SettingsPage() {
         }
         
         // Buscar dados do tenant (empresa)
-        const { data: tenantData } = await supabase
+        const { data: tenantData, error: tenantError } = await supabase
           .from("tenants")
           .select("name, plan")
           .eq("id", user.tenantId)
           .single()
+        
+        console.log("[Settings] Tenant data:", tenantData, tenantError)
         
         if (tenantData) {
           setTenantData(tenantData)
@@ -118,7 +130,7 @@ export default function SettingsPage() {
         })
         
       } catch (err) {
-        console.error("Error fetching data:", err)
+        console.error("[Settings] Error fetching data:", err)
       } finally {
         setIsLoading(false)
       }
@@ -127,6 +139,7 @@ export default function SettingsPage() {
     if (user?.id && user?.tenantId) {
       fetchUserData()
     } else {
+      console.log("[Settings] No user or tenant - skipping fetch")
       setIsLoading(false)
     }
   }, [user?.id, user?.tenantId])
