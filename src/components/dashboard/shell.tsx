@@ -32,6 +32,7 @@ import {
   CheckCircle,
   XCircle,
   UserPlus,
+  Crown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
