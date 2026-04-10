@@ -3,6 +3,34 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
 export const adminRouter = router({
+  // Get current user info
+  getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
+    // Get user from database
+    const { data: user, error } = await ctx.supabase
+      .from("users")
+      .select("email, name, role")
+      .eq("id", ctx.userId)
+      .single()
+
+    if (error || !user) {
+      return {
+        user: {
+          email: null,
+          role: ctx.userRole,
+          name: null,
+        }
+      }
+    }
+
+    return {
+      user: {
+        email: user.email,
+        role: user.role || ctx.userRole,
+        name: user.name,
+      }
+    }
+  }),
+
   // Get stats for super admin dashboard
   getStats: protectedProcedure.query(async ({ ctx }) => {
     // Only super_admin can see stats
