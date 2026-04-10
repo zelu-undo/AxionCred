@@ -105,10 +105,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
             
-            // Se não encontrar tenant, criar automaticamente
-            if (!tenantId) {
+            // If no user found, create one
+            if (!data) {
+              // Create user first without tenant
+              const { error: userError } = await supabase
+                .from("users")
+                .upsert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
+                  role: "owner",
+                  is_active: true
+                })
               
-              // Criar tenant
+              if (!userError) {
+                userRole = "owner"
+              }
+            }
+            
+            // If still no tenant, create one
+            if (!tenantId) {
+              // Create tenant
               const { data: newTenant, error: tenantError } = await supabase
                 .from("tenants")
                 .insert({
@@ -119,24 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .select()
                 .maybeSingle()
               
-              if (tenantError) {
-                // Silent fail
-              } else if (newTenant) {
-                // Create user
-                const { error: userError } = await supabase
+              if (!tenantError && newTenant) {
+                // Update user with tenant_id
+                await supabase
                   .from("users")
-                  .upsert({
-                    id: session.user.id,
-                    email: session.user.email,
-                    name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-                    tenant_id: newTenant.id,
-                    role: userRole,
-                    is_active: true
-                  })
+                  .update({ tenant_id: newTenant.id })
+                  .eq("id", session.user.id)
                 
-                if (!userError) {
-                  tenantId = newTenant.id
-                }
+                tenantId = newTenant.id
               }
             }
           } catch (err) {
@@ -239,6 +246,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (tenant?.plan) {
                 userPlan = tenant.plan as Plan
               }
+            }
+          }
+          
+          // If no user found, create one
+          if (!u) {
+            const { error: userError } = await supabase
+              .from("users")
+              .upsert({
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.user_metadata?.name || data.user.email?.split("@")[0] || "Usuário",
+                role: "owner",
+                is_active: true
+              })
+            
+            if (!userError) {
+              userRole = "owner"
             }
           }
           
