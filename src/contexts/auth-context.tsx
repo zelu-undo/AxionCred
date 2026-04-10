@@ -338,9 +338,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
         
-        // Redirect based on plan and role
+        // Redirect based on plan, role and company status
         if (userRole === 'super_admin') {
           router.push("/dashboard")
+        } else if (!tenantId) {
+          // User has no company - redirect to no-company page
+          router.push("/no-company")
         } else if (userPlan === 'free') {
           router.push("/dashboard?plan=free") // Show upgrade banner
         } else {
