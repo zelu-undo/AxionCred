@@ -612,6 +612,7 @@ export const loanRouter = router({
 
       for (let i = 1; i <= installments_count; i++) {
         installments.push({
+          tenant_id: ctx.tenantId,
           loan_id: loan.id,
           installment_number: i,
           amount: installmentAmount,
