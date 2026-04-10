@@ -20,6 +20,7 @@ export default function AdminLayout({
 
   // Check if user is super admin
   useEffect(() => {
+    console.log("[AdminLayout] Auth check:", { mounted, userRole: user?.role, isSuperAdmin: user?.role === 'super_admin' })
     if (mounted && user && user.role !== 'super_admin') {
       router.push('/dashboard')
     }
