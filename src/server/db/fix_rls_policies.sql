@@ -75,12 +75,12 @@ CREATE POLICY "loan_rule_snapshots_tenant_isolation" ON loan_rule_snapshots
 
 -- 4. Adicionar políticas para outras tabelas que precisam de tenant_id
 
--- loan_installments - access via tenant_id
+-- loan_installments - access via tenant_id with WITH CHECK for insert
 DROP POLICY IF EXISTS "loan_installments_tenant_isolation" ON loan_installments;
 CREATE POLICY "loan_installments_tenant_isolation" ON loan_installments
-    FOR ALL USING (
-        tenant_id = current_setting('app.tenant_id', true)::uuid
-    );
+    FOR ALL
+    USING (tenant_id = public.get_current_tenant_id())
+    WITH CHECK (tenant_id = public.get_current_tenant_id());
 
 -- payment_transactions
 DROP POLICY IF EXISTS "payment_transactions_tenant_isolation" ON payment_transactions;
