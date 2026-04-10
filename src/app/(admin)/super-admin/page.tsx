@@ -125,6 +125,12 @@ export default function SuperAdminPage() {
     c.document?.includes(searchQuery)
   )
 
+  // Filter users by search
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   // Statistics
   const stats = {
     total: companies.length,
@@ -360,6 +366,16 @@ export default function SuperAdminPage() {
         >
           Empresas ({companies.length})
         </button>
+        <button 
+          onClick={() => setActiveTab('users')} 
+          className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+            activeTab === 'users' 
+              ? 'border-[#22C55E] text-[#22C55E]' 
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Usuários ({users.length})
+        </button>
       </div>
 
       {activeTab === 'dashboard' && (
@@ -566,6 +582,101 @@ export default function SuperAdminPage() {
                             <option value="enterprise">Enterprise</option>
                           </select>
                         </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar usuários por nome ou email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Users Table */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Nome</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Email</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Empresa</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Função</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      Carregando...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      Nenhum usuário encontrado
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900">{user.name}</div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{user.email}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {companies.find(c => c.id === user.tenant_id)?.name || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Select value={user.role} onValueChange={(v) => handleChangeUserRole(user.id, v)}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">Proprietário</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Gerente</SelectItem>
+                            <SelectItem value="operator">Operador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.status === 'active' ? (
+                          <span className="inline-flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-4 w-4" /> Ativo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-red-600">
+                            <XCircle className="h-4 w-4" /> Inativo
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.role !== 'owner' && user.status === 'active' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDeactivateUser(user.id)}
+                            title="Desativar"
+                            className="text-red-600"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))

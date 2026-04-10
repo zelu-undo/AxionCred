@@ -162,9 +162,8 @@ function NavigationItems() {
       title: "Administrador",
       onlyAdmin: true,
       items: [
-        // Super Admin only
-        { name: "Super Admin", href: "/super-admin", icon: Crown, permission: "super_admin", roles: ["super_admin"] },
-        { name: "Gerenciar Usuários", href: "/super-admin/users", icon: Users, permission: "super_admin", roles: ["super_admin"] },
+        // Super Admin - redirects to super-admin with tabs: Dashboard, Empresas, Usuários
+        { name: "Admin", href: "/super-admin", icon: Crown, permission: "super_admin", roles: ["super_admin"] },
       ],
     },
     {
