@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/components/ui/use-toast"
-import { Search, UserPlus, Pencil, Trash2, AlertTriangle, Users } from "lucide-react"
+import { Search, UserPlus, Pencil, Trash2, AlertTriangle, Users, Trash, Building2 } from "lucide-react"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function UsersPage() {
@@ -49,6 +49,8 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [page, setPage] = useState(0)
+  const [showCleanup, setShowCleanup] = useState(false)
+  const [cleanupDryRun, setCleanupDryRun] = useState(true)
   
   // Dialog states
   const [editUser, setEditUser] = useState<any>(null)
@@ -93,6 +95,23 @@ export default function UsersPage() {
     onError: (error) => {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" })
       setDeleteUser(null)
+    },
+  })
+
+  // Cleanup orphaned tenants mutation
+  const cleanupMutation = trpc.admin.cleanupOrphanedTenants.useMutation({
+    onSuccess: (data) => {
+      toast({ 
+        title: data.message,
+        description: data.tenants.length > 0 
+          ? `${data.tenants.map((t: any) => t.name).join(", ")}`
+          : undefined,
+      })
+      setShowCleanup(false)
+      refetch()
+    },
+    onError: (error) => {
+      toast({ title: "Erro no cleanup", description: error.message, variant: "destructive" })
     },
   })
 
@@ -160,15 +179,17 @@ export default function UsersPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por nome ou email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por nome ou email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             
             <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -195,6 +216,15 @@ export default function UsersPage() {
                 <SelectItem value="false">Inativos</SelectItem>
               </SelectContent>
             </Select>
+
+            <Button
+              variant="outline"
+              onClick={() => setShowCleanup(true)}
+              className="border-orange-500 text-orange-600 hover:bg-orange-50"
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Cleanup
+            </Button>
           </div>
         </CardHeader>
         
@@ -428,6 +458,49 @@ export default function UsersPage() {
               disabled={deleteUserMutation.isPending}
             >
               {deleteUserMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cleanup Orphaned Tenants */}
+      <AlertDialog open={showCleanup} onOpenChange={setShowCleanup}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-orange-500" />
+              Cleanup - Empresas Órfãs
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta função irá remover empresas que não possuem usuários associados.
+              {!cleanupDryRun && (
+                <span className="block mt-2 text-red-600 font-medium">
+                  ⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="my-4 space-y-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={cleanupDryRun}
+                onChange={(e) => setCleanupDryRun(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">Modo Simulation (dry run) - apenas mostrar o que seria deletado</span>
+            </label>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowCleanup(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cleanupMutation.mutate({ dryRun: cleanupDryRun })}
+              disabled={cleanupMutation.isPending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {cleanupMutation.isPending ? "Executando..." : cleanupDryRun ? "Verificar" : "Executar Cleanup"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
