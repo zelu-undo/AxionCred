@@ -71,7 +71,7 @@ export const invitesRouter = router({
       }
 
       // Only owner and admin can invite
-      if (!["owner", "admin"].includes(userRole)) {
+      if (!userRole || !["owner", "admin"].includes(userRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Apenas proprietários e administradores podem convidar",
