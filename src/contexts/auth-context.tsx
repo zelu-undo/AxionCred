@@ -90,10 +90,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           let tenantId = ""
+          let userRole = "owner"
+          let userPlan: Plan = "free"
+          
           try {
-            const { data } = await supabase.from("users").select("tenant_id").eq("id", session.user.id).single()
+            const { data } = await supabase.from("users").select("tenant_id, role").eq("id", session.user.id).maybeSingle()
             if (data) {
               tenantId = data.tenant_id || ""
+              userRole = data.role || "owner"
+              
+              // Super admin tem acesso total
+              if (userRole === 'super_admin') {
+                userPlan = 'enterprise'
+              }
             }
             
             // Se não encontrar tenant, criar automaticamente
@@ -105,10 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .insert({
                   name: session.user.email?.split("@")[0] || "Minha Empresa",
                   slug: session.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
-                  plan: "starter"
+                  plan: userRole === 'super_admin' ? 'enterprise' : 'free'
                 })
                 .select()
-                .single()
+                .maybeSingle()
               
               if (tenantError) {
                 console.error("[Auth] Erro ao criar tenant:", tenantError)
@@ -116,12 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // Criar usuário na tabela users com tenant_id
                 const { error: userError } = await supabase
                   .from("users")
-                  .insert({
+                  .upsert({
                     id: session.user.id,
                     email: session.user.email,
                     name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
                     tenant_id: newTenant.id,
-                    role: "owner",
+                    role: userRole,
                     is_active: true
                   })
                 
@@ -136,13 +145,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("[Auth] Erro ao buscar/criar usuário:", err)
           }
 
+          // Se tenant existe, buscar o plano
+          if (tenantId && userPlan === 'free') {
+            const { data: tenant } = await supabase.from("tenants").select("plan").eq("id", tenantId).maybeSingle()
+            if (tenant?.plan) {
+              userPlan = tenant.plan as Plan
+            }
+          }
+
           const appUser: AppUser = {
             id: session.user.id,
             email: session.user.email || "",
             name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário",
-            role: "owner",
+            role: userRole,
             tenantId,
-            plan: "starter"
+            plan: userPlan,
           }
           setUser(appUser)
           localStorage.setItem("axion_user", JSON.stringify(appUser))
@@ -283,11 +300,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           planAccess: accessibleModules
         }
         
+        console.log("[Auth] AppUser criado:", appUser)
+        
+        // Clear old cached data and set new
+        localStorage.removeItem("axion_user")
         setUser(appUser)
         localStorage.setItem("axion_user", JSON.stringify(appUser))
         
-        // Redirect based on plan
-        if (userPlan === 'free') {
+        // Redirect based on plan and role
+        if (userRole === 'super_admin') {
+          router.push("/dashboard")
+        } else if (userPlan === 'free') {
           router.push("/dashboard?plan=free") // Show upgrade banner
         } else {
           router.push("/dashboard")
