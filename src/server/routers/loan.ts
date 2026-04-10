@@ -24,12 +24,53 @@ export const loanRouter = router({
       // First, check and update any overdue installments (inline instead of RPC for reliability)
       const today = new Date().toISOString().split('T')[0]
       
-      // Update installments that are pending but past due
-      await ctx.supabase
+      // First, get all overdue pending installments
+      const { data: overdueInstallments } = await ctx.supabase
         .from("loan_installments")
-        .update({ status: "late" })
+        .select("id, due_date, amount")
         .eq("status", "pending")
         .lt("due_date", today)
+      
+      if (overdueInstallments && overdueInstallments.length > 0) {
+        // Get late fee config
+        const { data: lateFeeConfig } = await ctx.supabase
+          .from("late_fee_config")
+          .select("*")
+          .limit(1)
+          .single()
+        
+        const fixedFee = lateFeeConfig?.fixed_fee || 0
+        const dailyInterest = lateFeeConfig?.daily_interest || 0.002 // 0.2% default
+        
+        // Calculate and update each overdue installment
+        for (const inst of overdueInstallments) {
+          const dueDate = new Date(inst.due_date)
+          const todayDate = new Date(today)
+          const daysOverdue = Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+          
+          if (daysOverdue > 0) {
+            // Calculate interest: amount * (1 + daily_rate)^days - amount
+            const lateInterest = inst.amount * (Math.pow(1 + dailyInterest, daysOverdue) - 1)
+            const totalAmount = inst.amount + fixedFee + lateInterest
+            
+            await ctx.supabase
+              .from("loan_installments")
+              .update({
+                status: "late",
+                late_fee_applied: fixedFee,
+                late_interest_applied: lateInterest,
+                days_in_delay: daysOverdue,
+                amount: totalAmount
+              })
+              .eq("id", inst.id)
+          } else {
+            await ctx.supabase
+              .from("loan_installments")
+              .update({ status: "late" })
+              .eq("id", inst.id)
+          }
+        }
+      }
       
       // Update loans that have late installments
       const { data: lateLoans } = await ctx.supabase
@@ -178,7 +219,10 @@ export const loanRouter = router({
           paid_amount,
           due_date,
           paid_date,
-          status
+          status,
+          late_fee_applied,
+          late_interest_applied,
+          days_in_delay
         `)
         .eq("loan_id", input.loanId)
         .order("installment_number", { ascending: true })
@@ -188,11 +232,50 @@ export const loanRouter = router({
         return []
       }
 
-      console.log(" [installmentsForPayment] allData:", allData)
+      // Get late fee config for recalculation
+      const { data: lateFeeConfig } = await ctx.supabase
+        .from("late_fee_config")
+        .select("*")
+        .limit(1)
+        .single()
       
-      // Filtrar apenas as que não estão pagas
-      const data = (allData || []).filter(i => i.status !== "paid")
-      console.log(" [installmentsForPayment] filtered data:", data)
+      const fixedFee = lateFeeConfig?.fixed_fee || 0
+      const dailyInterest = lateFeeConfig?.daily_interest || 0.002
+      
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      // Calculate late fees on-the-fly
+      const data = (allData || [])
+        .filter(i => i.status !== "paid")
+        .map(inst => {
+          const dueDate = new Date(inst.due_date)
+          dueDate.setHours(0, 0, 0, 0)
+          
+          // Check if overdue
+          if (dueDate < today && inst.status === "pending") {
+            const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+            
+            if (daysOverdue > 0) {
+              // Calculate late interest (compound)
+              const lateInterest = inst.amount * (Math.pow(1 + dailyInterest, daysOverdue) - 1)
+              const totalLate = fixedFee + lateInterest
+              
+              return {
+                ...inst,
+                status: "late",
+                late_fee_applied: fixedFee,
+                late_interest_applied: lateInterest,
+                days_in_delay: daysOverdue,
+                amount: inst.amount + totalLate
+              }
+            }
+          }
+          
+          return inst
+        })
+      
+      console.log(" [installmentsForPayment] data with late fees:", data)
       
       return data
     }),
