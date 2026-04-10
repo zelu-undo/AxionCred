@@ -67,8 +67,8 @@ export default function SettingsPage() {
     console.log("[Settings] useEffect triggered", user?.id, user?.tenantId)
     
     async function fetchUserData() {
-      if (!user?.id || !user?.tenantId) {
-        console.log("[Settings] User or tenantId missing")
+      if (!user?.id) {
+        console.log("[Settings] User ID missing")
         setIsLoading(false)
         return
       }
@@ -76,10 +76,10 @@ export default function SettingsPage() {
       console.log("[Settings] Fetching data for user:", user.id, "tenant:", user.tenantId)
       
       try {
-        // Buscar dados do usuário
+        // Buscar dados do usuário SEMPRE
         const { data: userData, error: userError } = await supabase
           .from("users")
-          .select("name, email, phone")
+          .select("name, email, phone, tenant_id")
           .eq("id", user.id)
           .maybeSingle()
         
@@ -91,44 +91,48 @@ export default function SettingsPage() {
             email: userData.email || user.email || "",
             phone: userData.phone || "",
           })
-        }
-        
-        // Buscar dados do tenant (empresa)
-        const { data: tenantData, error: tenantError } = await supabase
-          .from("tenants")
-          .select("name, plan")
-          .eq("id", user.tenantId)
-          .maybeSingle()
-        
-        console.log("[Settings] Tenant data:", tenantData, tenantError)
-        
-        if (tenantData) {
-          setTenantData(tenantData)
-        }
-        
-        // Buscar estatísticas
-        const { count: customerCount } = await supabase
-          .from("customers")
-          .select("*", { count: 'exact', head: true })
-          .eq("tenant_id", user.tenantId)
-        
-        const { count: activeLoansCount } = await supabase
-          .from("loans")
-          .select("*", { count: 'exact', head: true })
-          .eq("tenant_id", user.tenantId)
-          .eq("status", "active")
+          
+          // Se o usuário tem tenant_id, buscar dados do tenant
+          const tenantId = userData.tenant_id || user.tenantId
+          
+          if (tenantId) {
+            // Buscar dados do tenant (empresa)
+            const { data: tenantData, error: tenantError } = await supabase
+              .from("tenants")
+              .select("name, plan")
+              .eq("id", tenantId)
+              .maybeSingle()
+            
+            console.log("[Settings] Tenant data:", tenantData, tenantError)
+            
+            if (tenantData) {
+              setTenantData(tenantData)
+            }
+            
+            // Buscar estatísticas
+            const { count: customerCount } = await supabase
+              .from("customers")
+              .select("*", { count: 'exact', head: true })
+              .eq("tenant_id", tenantId)
+            
+            const { count: activeLoansCount } = await supabase
+              .from("loans")
+              .select("*", { count: 'exact', head: true })
+              .eq("tenant_id", tenantId)
+              .eq("status", "active")
         
         const { count: totalLoansCount } = await supabase
-          .from("loans")
-          .select("*", { count: 'exact', head: true })
-          .eq("tenant_id", user.tenantId)
-        
-        setStatsData({
-          totalCustomers: customerCount || 0,
-          activeLoans: activeLoansCount || 0,
-          totalLoans: totalLoansCount || 0,
-        })
-        
+              .from("loans")
+              .select("*", { count: 'exact', head: true })
+              .eq("tenant_id", tenantId)
+            
+            setStatsData({
+              totalCustomers: customerCount || 0,
+              activeLoans: activeLoansCount || 0,
+              totalLoans: totalLoansCount || 0,
+            })
+          }
+        }
       } catch (err) {
         console.error("[Settings] Error fetching data:", err)
       } finally {
@@ -136,13 +140,13 @@ export default function SettingsPage() {
       }
     }
     
-    if (user?.id && user?.tenantId) {
+    if (user?.id) {
       fetchUserData()
     } else {
-      console.log("[Settings] No user or tenant - skipping fetch")
+      console.log("[Settings] No user - skipping fetch")
       setIsLoading(false)
     }
-  }, [user?.id, user?.tenantId])
+  }, [user?.id])
   
   // Função para formatar telefone
   const formatPhone = (value: string) => {

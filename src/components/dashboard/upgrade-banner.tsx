@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { plans } from "@/lib/plans"
@@ -11,9 +11,14 @@ export function UpgradeBanner() {
   const { user } = useAuth()
   const router = useRouter()
   const [dismissed, setDismissed] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   // Only show for free plan (and not for super_admin)
-  if (user?.plan !== 'free' || user?.role === 'super_admin' || dismissed) return null
+  if (!mounted || user?.plan !== 'free' || user?.role === 'super_admin' || dismissed) return null
   
   const nextPlan = plans.starter
   
@@ -57,4 +62,18 @@ export function UpgradeBanner() {
       </div>
     </div>
   )
+}
+
+// Hook to check if banner should be visible
+export function useBannerPadding() {
+  const { user } = useAuth()
+  const [showPadding, setShowPadding] = useState(false)
+  
+  useEffect(() => {
+    // Show padding only if user is on free plan and not super_admin
+    const shouldShow = user?.plan === 'free' && user?.role !== 'super_admin'
+    setShowPadding(shouldShow)
+  }, [user])
+  
+  return showPadding
 }
