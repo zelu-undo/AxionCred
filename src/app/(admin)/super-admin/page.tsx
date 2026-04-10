@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createBrowserClient } from "@supabase/ssr";
 import { useAuth } from "@/contexts/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ interface User {
 
 export default function SuperAdminPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,6 +49,14 @@ export default function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'companies' | 'users'>('dashboard')
   const [message, setMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // Read tab from URL params
+  useEffect(() => {
+    const tab = searchParams?.get('tab') as 'dashboard' | 'companies' | 'users' | null
+    if (tab && ['dashboard', 'companies', 'users'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
   
   // Dialog states
   const [isEditCompanyOpen, setIsEditCompanyOpen] = useState(false)
