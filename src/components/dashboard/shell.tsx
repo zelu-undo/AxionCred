@@ -167,6 +167,7 @@ function NavigationItems() {
         { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
         // Super Admin only
         { name: "Super Admin", href: "/super-admin", icon: Crown, permission: "super_admin", roles: ["super_admin"] },
+        { name: "Gerenciar Usuários", href: "/super-admin/users", icon: Users, permission: "super_admin", roles: ["super_admin"] },
       ],
     },
   ]

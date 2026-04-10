@@ -329,4 +329,194 @@ export const superAdminRouter = router({
       },
     ]
   }),
+
+  // ========== USER MANAGEMENT ==========
+
+  // List all users (super admin only)
+  listUsers: protectedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        tenant_id: z.string().optional(),
+        role: z.string().optional(),
+        is_active: z.boolean().optional(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      const { search, tenant_id, role, is_active, limit, offset } = input
+
+      let query = ctx.supabase
+        .from("users")
+        .select(`
+          *,
+          tenant:tenants(name, slug, plan)
+        `)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+      }
+
+      if (tenant_id) {
+        query = query.eq("tenant_id", tenant_id)
+      }
+
+      if (role) {
+        query = query.eq("role", role)
+      }
+
+      if (is_active !== undefined) {
+        query = query.eq("is_active", is_active)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      return { users: data || [], total: count || 0 }
+    }),
+
+  // Get user details
+  getUser: protectedProcedure
+    .input(z.object({ user_id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      const { data: user, error: userError } = await ctx.supabase
+        .from("users")
+        .select(`
+          *,
+          tenant:tenants(*)
+        `)
+        .eq("id", input.user_id)
+        .single()
+
+      if (userError || !user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado" })
+      }
+
+      // Get user stats
+      const [
+        { count: customerCount },
+        { count: loanCount },
+      ] = await Promise.all([
+        ctx.supabase.from("customers").select("*", { count: "exact", head: true }).eq("created_by", input.user_id),
+        ctx.supabase.from("loans").select("*", { count: "exact", head: true }).eq("created_by", input.user_id),
+      ])
+
+      return {
+        ...user,
+        stats: {
+          customers_created: customerCount || 0,
+          loans_created: loanCount || 0,
+        }
+      }
+    }),
+
+  // Update user (role, tenant, status)
+  updateUser: protectedProcedure
+    .input(
+      z.object({
+        user_id: z.string(),
+        role: z.string().optional(),
+        tenant_id: z.string().nullable().optional(),
+        is_active: z.boolean().optional(),
+        name: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      const { user_id, ...updates } = input
+
+      // Remove undefined values
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined)
+      )
+
+      if (Object.keys(cleanUpdates).length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma atualização fornecida" })
+      }
+
+      const { data, error } = await ctx.supabase
+        .from("users")
+        .update(cleanUpdates)
+        .eq("id", user_id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      return data
+    }),
+
+  // Delete user
+  deleteUser: protectedProcedure
+    .input(z.object({ user_id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      // Check if user has data
+      const [
+        { count: customerCount },
+        { count: loanCount },
+      ] = await Promise.all([
+        ctx.supabase.from("customers").select("*", { count: "exact", head: true }).eq("created_by", input.user_id),
+        ctx.supabase.from("loans").select("*", { count: "exact", head: true }).eq("created_by", input.user_id),
+      ])
+
+      if ((customerCount || 0) > 0 || (loanCount || 0) > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Este usuário possui ${customerCount || 0} clientes e ${loanCount || 0} empréstimos cadastrados. Mova ou exclua esses dados antes de excluir o usuário.`
+        })
+      }
+
+      const { error } = await ctx.supabase
+        .from("users")
+        .delete()
+        .eq("id", input.user_id)
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      return { success: true }
+    }),
+
+  // Get all tenants for assignment
+  listTenantsForAssignment: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      const { data, error } = await ctx.supabase
+        .from("tenants")
+        .select("id, name, slug, plan")
+        .order("name")
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      return data || []
+    }),
 })
