@@ -3,6 +3,46 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
 export const adminRouter = router({
+  // Get stats for super admin dashboard
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    // Only super_admin can see stats
+    if (ctx.userRole !== "super_admin") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Apenas super administradores podem ver estatísticas",
+      })
+    }
+
+    // Get total tenants
+    const { count: totalTenants } = await ctx.supabase
+      .from("tenants")
+      .select("*", { count: 'exact', head: true })
+
+    // Get total users
+    const { count: totalUsers } = await ctx.supabase
+      .from("users")
+      .select("*", { count: 'exact', head: true })
+
+    // Get all tenants and users to calculate orphans
+    const { data: allTenants } = await ctx.supabase
+      .from("tenants")
+      .select("id")
+
+    const { data: users } = await ctx.supabase
+      .from("users")
+      .select("tenant_id")
+      .not("tenant_id", "is", null)
+
+    const usedTenantIds = new Set(users?.map((u) => u.tenant_id).filter(Boolean) || [])
+    const orphanedTenants = (allTenants || []).filter((t) => !usedTenantIds.has(t.id)).length
+
+    return {
+      totalTenants: totalTenants || 0,
+      totalUsers: totalUsers || 0,
+      orphanedTenants,
+    }
+  }),
+
   // Cleanup orphaned tenants (no users)
   cleanupOrphanedTenants: protectedProcedure
     .input(
