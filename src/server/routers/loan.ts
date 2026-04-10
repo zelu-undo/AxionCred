@@ -649,6 +649,53 @@ export const loanRouter = router({
       await ctx.supabase.rpc("check_overdue_installments")
       await ctx.supabase.rpc("update_loan_status_from_late_installments")
 
+      // Calculate late fees for newly created installments that are already overdue
+      const today = new Date().toISOString().split('T')[0]
+      const { data: newlyLateInstallments } = await ctx.supabase
+        .from("loan_installments")
+        .select("id, due_date, amount")
+        .eq("loan_id", loan.id)
+        .eq("status", "pending")
+        .lt("due_date", today)
+      
+      if (newlyLateInstallments && newlyLateInstallments.length > 0) {
+        const { data: lateFeeConfig } = await ctx.supabase
+          .from("late_fee_config")
+          .select("*")
+          .limit(1)
+          .single()
+        
+        const fixedFee = lateFeeConfig?.fixed_fee || 0
+        const dailyInterest = lateFeeConfig?.daily_interest || 0.002
+        
+        for (const inst of newlyLateInstallments) {
+          const dueDate = new Date(inst.due_date)
+          const todayDate = new Date(today)
+          const daysOverdue = Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+          
+          if (daysOverdue > 0) {
+            const lateInterest = inst.amount * (Math.pow(1 + dailyInterest, daysOverdue) - 1)
+            const totalAmount = inst.amount + fixedFee + lateInterest
+            
+            await ctx.supabase
+              .from("loan_installments")
+              .update({
+                status: "late",
+                late_fee_applied: fixedFee,
+                late_interest_applied: lateInterest,
+                days_in_delay: daysOverdue,
+                amount: totalAmount
+              })
+              .eq("id", inst.id)
+          }
+        }
+        
+        await ctx.supabase
+          .from("loans")
+          .update({ status: "late" })
+          .eq("id", loan.id)
+      }
+
       // Direct update to ensure late status is set for this loan
       const { data: lateInstallments } = await ctx.supabase
         .from("loan_installments")
