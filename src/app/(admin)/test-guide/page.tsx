@@ -42,6 +42,7 @@ const testCategories = [
   { id: "dashboard", name: "Dashboard", icon: BarChart3, color: "text-blue-500" },
   { id: "customers", name: "Clientes", icon: Users, color: "text-green-500" },
   { id: "loans", name: "Empréstimos", icon: CreditCard, color: "text-orange-500" },
+  { id: "late_fees", name: "Juros Atraso", icon: AlertTriangle, color: "text-red-600" },
   { id: "cash", name: "Caixa", icon: Wallet, color: "text-emerald-500" },
   { id: "renegotiations", name: "Renegociações", icon: RefreshCw, color: "text-yellow-500" },
   { id: "reports", name: "Relatórios", icon: FileText, color: "text-indigo-500" },
@@ -66,10 +67,11 @@ const defaultTests: TestItem[] = [
   // Clientes
   { id: "cust-1", category: "customers", feature: "Listagem", description: "Lista de clientes carrega", status: "pending" },
   { id: "cust-2", category: "customers", feature: "Busca", description: "Buscar por nome funciona", status: "pending" },
-  { id: "cust-3", category: "customers", feature: "Criar", description: "Novo cliente é criado", status: "pending" },
-  { id: "cust-4", category: "customers", feature: "Editar", description: "Editar dados do cliente", status: "pending" },
+  { id: "cust-3", category: "customers", feature: "Criar", description: "Novo cliente é criado (CEP funciona)", status: "pending" },
+  { id: "cust-4", category: "customers", feature: "Editar", description: "Editar dados do cliente (CEP/zip_code)", status: "pending" },
   { id: "cust-5", category: "customers", feature: "Excluir", description: "Excluir cliente", status: "pending" },
   { id: "cust-6", category: "customers", feature: "PDF", description: "Gerar histórico em PDF", status: "pending" },
+  { id: "cust-7", category: "customers", feature: "Score", description: "Score de crédito é calculado", status: "pending" },
   
   // Empréstimos
   { id: "loan-1", category: "loans", feature: "Listagem", description: "Lista de empréstimos", status: "pending" },
@@ -79,12 +81,23 @@ const defaultTests: TestItem[] = [
   { id: "loan-5", category: "loans", feature: "PDF", description: "Baixar contrato PDF", status: "pending" },
   { id: "loan-6", category: "loans", feature: "Cancelar", description: "Cancelar empréstimo", status: "pending" },
   
+  // Juros de Atraso (CRÍTICO)
+  { id: "late-1", category: "late_fees", feature: "Configuração", description: "Verificar configuração de juros (Regras de Negócio > Juros mora)", status: "pending" },
+  { id: "late-2", category: "late_fees", feature: "Criação com data retroativa", description: "Criar empréstimo com 1ª parcela já vencida - calcula juros automaticamente", status: "pending" },
+  { id: "late-3", category: "late_fees", feature: "Criação 10 dias atrasado", description: "Criar empréstimo com 10 dias de atraso - valor correto com juros compostos", status: "pending" },
+  { id: "late-4", category: "late_fees", feature: "Lista loans atualiza", description: "Acessar lista de loans atualiza status de parcelas vencidas", status: "pending" },
+  { id: "late-5", category: "late_fees", feature: "Página pagamento", description: "Acessar página de pagamento mostra valores atualizados com juros", status: "pending" },
+  { id: "late-6", category: "late_fees", feature: "Dashboard stats", description: "Dashboard mostra valores corretos de empréstimos atrasados", status: "pending" },
+  { id: "late-7", category: "late_fees", feature: "Cálculo composto", description: "Verificar fórmula: amount * ((1+rate)^days - 1) está correta", status: "pending" },
+  { id: "late-8", category: "late_fees", feature: "Multa fixa", description: "Multa fixa (fixed_fee) é adicionada corretamente", status: "pending" },
+  
   // Caixa
   { id: "cash-1", category: "cash", feature: "Saldo", description: "Saldo atual exibido", status: "pending" },
-  { id: "cash-2", category: "cash", feature: "Aporte", description: "Registrar novo aporte", status: "pending" },
-  { id: "cash-3", category: "cash", feature: "Retirada", description: "Registrar retirada", status: "pending" },
-  { id: "cash-4", category: "cash", feature: "Filtros", description: "Filtros funcionam", status: "pending" },
-  { id: "cash-5", category: "cash", feature: "PDF", description: "Gerar PDF com filtros", status: "pending" },
+  { id: "cash-2", category: "cash", feature: "Aporte", description: "Registrar novo aporte - valor correto (R$ 100 = 100, não 10000)", status: "pending" },
+  { id: "cash-3", category: "cash", feature: "Retirada", description: "Registrar retirada - valor correto", status: "pending" },
+  { id: "cash-4", category: "cash", feature: "Ajuste", description: "Registrar ajuste positivo/negativo", status: "pending" },
+  { id: "cash-5", category: "cash", feature: "Filtros", description: "Filtros funcionam", status: "pending" },
+  { id: "cash-6", category: "cash", feature: "PDF", description: "Gerar PDF com filtros", status: "pending" },
   
   // Renegociações
   { id: "reneg-1", category: "renegotiations", feature: "Listagem", description: "Lista de renegociações", status: "pending" },
