@@ -131,6 +131,29 @@ export default function SuperAdminPage() {
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Load users when tab changes to users
+  useEffect(() => {
+    if (activeTab === 'users' && users.length === 0) {
+      const loadAllUsers = async () => {
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("id, name, email, role, status, tenant_id")
+        
+        if (usersData) {
+          setUsers(usersData.map(u => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role || 'operator',
+            status: u.status || 'active',
+            tenant_id: u.tenant_id
+          })))
+        }
+      }
+      loadAllUsers()
+    }
+  }, [activeTab])
+
   // Statistics
   const stats = {
     total: companies.length,
