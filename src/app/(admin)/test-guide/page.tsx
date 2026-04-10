@@ -22,7 +22,8 @@ import {
   BarChart3,
   Building,
   Download,
-  BookOpen
+  BookOpen,
+  Save
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
 import { useI18n } from "@/i18n/client"
@@ -210,10 +211,89 @@ export default function TestGuidePage() {
             <p className="text-gray-500">Sistema AXION Cred - v3.0</p>
           </div>
         </div>
-        <Button onClick={() => router.push("/super-admin")} variant="outline">
-          <Shield className="h-4 w-4 mr-2" />
-          Voltar ao Admin
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => {
+              // Export JSON
+              const report = {
+                generatedAt: new Date().toISOString(),
+                version: "3.0",
+                total: totalStats,
+                byCategory: testCategories.map(cat => ({
+                  name: cat.name,
+                  ...getCategoryStats(cat.id)
+                })),
+                results: tests.map(t => ({
+                  id: t.id,
+                  category: t.category,
+                  feature: t.feature,
+                  description: t.description,
+                  status: t.status
+                }))
+              }
+              const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement("a")
+              a.href = url
+              a.download = `test-report-${new Date().toISOString().split("T")[0]}.json`
+              a.click()
+              URL.revokeObjectURL(url)
+            }} 
+            variant="outline"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            JSON
+          </Button>
+          <Button 
+            onClick={() => {
+              // Export Markdown
+              const md = `# Relatório de Testes - AXION Cred
+
+**Data**: ${new Date().toLocaleDateString("pt-BR")}
+**Versão**: 3.0
+
+## Resumo
+
+| Status | Quantidade |
+|--------|------------|
+| ✅ Aprovados | ${totalStats.passed} |
+| ❌ Falhos | ${totalStats.failed} |
+| ⏳ Pendentes | ${totalStats.pending} |
+| **Total** | ${totalStats.total} |
+
+## Por Categoria
+
+${testCategories.map(cat => {
+  const stats = getCategoryStats(cat.id)
+  return `### ${cat.name}
+- ✅ ${stats.passed} | ❌ ${stats.failed} | ⏳ ${stats.pending} / ${stats.total}`
+}).join("\n")}
+
+## Detalhamento
+
+${tests.map(t => {
+  const statusIcon = t.status === "passed" ? "✅" : t.status === "failed" ? "❌" : "⏳"
+  return `- ${statusIcon} **${t.feature}** - ${t.description} (${t.category})`
+}).join("\n")}
+`
+              const blob = new Blob([md], { type: "text/markdown" })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement("a")
+              a.href = url
+              a.download = `test-report-${new Date().toISOString().split("T")[0]}.md`
+              a.click()
+              URL.revokeObjectURL(url)
+            }} 
+            variant="outline"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Markdown
+          </Button>
+          <Button onClick={() => router.push("/super-admin")} variant="outline">
+            <Shield className="h-4 w-4 mr-2" />
+            Voltar ao Admin
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}

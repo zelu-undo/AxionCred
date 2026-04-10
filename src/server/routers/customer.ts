@@ -359,6 +359,7 @@ export const customerRouter = router({
           notes: input.notes,
           credit_limit: input.credit_limit,
           status: "active",
+          zip_code: input.cep, // Map cep to zip_code
         })
         .select()
         .single()
@@ -406,7 +407,12 @@ export const customerRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...updates } = input
+      const { id, cep, ...updates } = input
+
+      // Map cep to zip_code
+      if (cep !== undefined) {
+        (updates as any).zip_code = cep || null
+      }
 
       // Normalizar nome se estiver sendo atualizado
       if (updates.name) {
