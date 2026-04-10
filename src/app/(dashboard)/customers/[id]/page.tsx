@@ -14,7 +14,10 @@ import type { Customer, CustomerEvent, CustomerStatus } from "@/types"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useI18n } from "@/i18n/client"
 import { motion } from "framer-motion"
-import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor, TrendingUp, AlertTriangle, CheckCircle, Clock, CreditCard, Calculator } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Phone, Mail, MapPin, Calendar, FileText, History, User, TextCursor, TrendingUp, AlertTriangle, CheckCircle, Clock, CreditCard, Calculator, Download } from "lucide-react"
+import { CustomerHistoryDocument } from "@/components/pdf"
+import { PDFDownloadLink } from "@react-pdf/renderer"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 // Calculate recommended credit limit based on payment history
 function calculateRecommendedLimit(): number {
@@ -139,6 +142,12 @@ export default function CustomerDetailPage() {
   // Fetch customer events for audit
   const { data: events } = trpc.customer.events.useQuery(
     { customerId },
+    { enabled: !!customerId }
+  )
+
+  // Fetch loans for PDF generation
+  const { data: loansData } = trpc.loan.list.useQuery(
+    { customerId, limit: 50 },
     { enabled: !!customerId }
   )
 
@@ -427,6 +436,43 @@ export default function CustomerDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{customer.name}</h1>
             <div className="flex items-center gap-2 mt-2">
+              <PDFDownloadLink
+                document={<CustomerHistoryDocument data={{
+                  customer: {
+                    name: customer?.name || '',
+                    document: customer?.document || '',
+                    email: customer?.email || '',
+                    phone: customer?.phone || '',
+                    address: [customer?.street, customer?.number, customer?.neighborhood, customer?.city].filter(Boolean).join(', '),
+                    createdAt: customer?.created_at ? formatDate(customer.created_at) : '',
+                  },
+                  summary: {
+                    totalLoans: loansData?.loans?.length || 0,
+                    activeLoans: loansData?.loans?.filter(l => l.status === 'active').length || 0,
+                    paidLoans: loansData?.loans?.filter(l => l.status === 'paid').length || 0,
+                    totalValue: loansData?.loans?.reduce((sum, l) => sum + l.principal_amount, 0) || 0,
+                    totalPaid: loansData?.loans?.reduce((sum, l) => sum + (l.paid_amount || 0), 0) || 0,
+                    totalPending: loansData?.loans?.reduce((sum, l) => sum + (l.total_amount - (l.paid_amount || 0)), 0) || 0,
+                  },
+                  loans: loansData?.loans?.map(loan => ({
+                    contractNumber: loan.id.slice(0, 8).toUpperCase(),
+                    createdAt: loan.created_at ? formatDate(loan.created_at) : '',
+                    status: loan.status || 'pending',
+                    amount: loan.principal_amount,
+                    installmentValue: loan.installment_value,
+                    installmentCount: loan.installments_count,
+                    installmentsPaid: loan.paid_installments,
+                  })) || [],
+                }} />}
+                fileName={`historico-${customer?.name?.toLowerCase().replace(/\s+/g, '-')}.pdf`}
+              >
+                {({ loading }) => (
+                  <Button variant="outline" size="sm" disabled={loading}>
+                    <Download className="h-4 w-4 mr-2" />
+                    {loading ? 'Gerando...' : 'PDF'}
+                  </Button>
+                )}
+              </PDFDownloadLink>
               {/* Payment Status Badge */}
               <span className={`
                 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 

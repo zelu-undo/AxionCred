@@ -52,6 +52,9 @@ import {
 import { trpc } from "@/trpc/client"
 import type { Renegotiation } from "@/types"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { showSuccessToast, showErrorToast } from "@/lib/toast"
+import { RefinancingDocument } from "@/components/pdf"
+import { PDFDownloadLink } from "@react-pdf/renderer"
 
 // Demo data for renegotiations
 const renegotiationsData = [
@@ -433,17 +436,55 @@ export default function RenegotiationsPage() {
                   </div>
 
                   {/* Footer Info */}
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Solicitado em: {new Date(renegotiation.created_at).toLocaleDateString("pt-BR")}
-                    </span>
-                    {renegotiation.notes && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        {renegotiation.notes}
+                        <Calendar className="h-3 w-3" />
+                        Solicitado em: {new Date(renegotiation.created_at).toLocaleDateString("pt-BR")}
                       </span>
-                    )}
+                      {renegotiation.notes && (
+                        <span className="flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {renegotiation.notes}
+                        </span>
+                      )}
+                    </div>
+                    <PDFDownloadLink
+                      document={<RefinancingDocument data={{
+                        renegotiationNumber: renegotiation.id?.slice(0, 8).toUpperCase() || 'N/A',
+                        createdAt: new Date(renegotiation.created_at).toLocaleDateString("pt-BR"),
+                        status: renegotiation.status || 'pending',
+                        originalLoan: {
+                          contractNumber: renegotiation.loan?.contract_number || renegotiation.loan?.id?.slice(0, 8) || 'N/A',
+                          amount: renegotiation.original_amount || 0,
+                          installmentValue: renegotiation.loan?.installment_value || 0,
+                          remainingValue: (renegotiation.original_amount || 0) - (renegotiation.loan?.paid_amount || 0),
+                          installmentsRemaining: (renegotiation.new_installments || 6) - (renegotiation.loan?.paid_installments || 0),
+                        },
+                        newLoan: {
+                          contractNumber: `RN-${renegotiation.id?.slice(0, 6).toUpperCase() || 'N/A'}`,
+                          amount: renegotiation.new_total_amount || 0,
+                          interestRate: renegotiation.new_interest_rate || 0,
+                          installmentValue: (renegotiation.new_total_amount || 0) / (renegotiation.new_installments || 1),
+                          totalInstallments: renegotiation.new_installments || 0,
+                          totalValue: renegotiation.new_total_amount || 0,
+                        },
+                        customer: {
+                          name: renegotiation.loan?.customer?.name || 'Cliente',
+                          document: renegotiation.loan?.customer?.document || '',
+                          email: renegotiation.loan?.customer?.email || '',
+                          phone: renegotiation.loan?.customer?.phone || '',
+                        },
+                      }} />}
+                      fileName={`refinanciamento-${renegotiation.id?.slice(0, 8)}.pdf`}
+                    >
+                      {({ loading }) => (
+                        <Button variant="ghost" size="sm" disabled={loading}>
+                          <Download className="h-4 w-4 mr-1" />
+                          PDF
+                        </Button>
+                      )}
+                    </PDFDownloadLink>
                   </div>
                 </motion.div>
               ))}

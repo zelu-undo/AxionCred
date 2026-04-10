@@ -20,9 +20,12 @@ import {
   RefreshCw,
   History,
   DollarSign,
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react"
 import { trpc } from "@/trpc/client"
+import { CashFlowDocument } from "@/components/pdf"
+import { PDFDownloadLink } from "@react-pdf/renderer"
 
 interface CashSummary {
   saldo_atual: number
@@ -274,9 +277,48 @@ export default function CashPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Controle de entradas e saídas</p>
         </div>
-        <Button variant="outline" size="icon" onClick={() => { refetchSummary(); refetchTransactions() }}>
-          <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <PDFDownloadLink
+            document={<CashFlowDocument data={{
+              generatedAt: new Date().toLocaleString('pt-BR'),
+              filters: {
+                tipo: filterTipo === 'all' ? undefined : filterTipo,
+                categoria: filterCategoria === 'all' ? undefined : filterCategoria,
+                dataInicio: filterDataInicio || undefined,
+                dataFim: filterDataFim || undefined,
+              },
+              summary: summary || {
+                saldo_atual: 0,
+                total_entradas: 0,
+                total_saidas: 0,
+                total_aportes: 0,
+                total_retiradas: 0,
+                total_emprestimos_liberados: 0,
+                total_pagamentos_recebidos: 0,
+                total_ajustes: 0,
+              },
+              transactions: transactions.map(tx => ({
+                tipo: tx.tipo,
+                categoria: categoryLabels[tx.categoria] || tx.categoria,
+                valor: tx.valor,
+                data_transacao: formatDate(tx.data_transacao),
+                descricao: tx.descricao,
+                usuario_responsavel: tx.usuario_responsavel,
+              })),
+            }} />}
+            fileName={`fluxo-caixa-${new Date().toISOString().split('T')[0]}.pdf`}
+          >
+            {({ loading }) => (
+              <Button variant="outline" disabled={loading}>
+                <Download className="h-4 w-4 mr-2" />
+                {loading ? 'Gerando...' : 'PDF'}
+              </Button>
+            )}
+          </PDFDownloadLink>
+          <Button variant="outline" size="icon" onClick={() => { refetchSummary(); refetchTransactions() }}>
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       {/* Saldo Atual */}
