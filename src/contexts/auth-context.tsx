@@ -239,12 +239,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // If no tenant, create one with FREE plan
           if (!tenantId) {
             console.log("[Auth] Criando novo tenant para o usuário")
+            const slug = data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa"
+            
             const { data: newTenant, error: tenantError } = await supabase
               .from("tenants")
               .insert({
                 name: data.user.email?.split("@")[0] || "Minha Empresa",
-                slug: data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
-                plan: "free"
+                slug: slug,
+                email: data.user.email,
+                plan: 'free'
               })
               .select()
               .maybeSingle()

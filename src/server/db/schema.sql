@@ -17,6 +17,7 @@ CREATE EXTENSION IF NOT EXISTS "unaccent";
 CREATE TABLE tenants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    slug VARCHAR(50) UNIQUE,
     document VARCHAR(20),
     phone VARCHAR(20),
     email VARCHAR(255),
@@ -25,6 +26,7 @@ CREATE TABLE tenants (
     state VARCHAR(2),
     zip_code VARCHAR(10),
     logo_url TEXT,
+    plan VARCHAR(20) DEFAULT 'free',
     settings JSONB DEFAULT '{}',
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
