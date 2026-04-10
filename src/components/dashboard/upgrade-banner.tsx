@@ -12,8 +12,8 @@ export function UpgradeBanner() {
   const router = useRouter()
   const [dismissed, setDismissed] = useState(false)
   
-  // Only show for free plan
-  if (user?.plan !== 'free' || dismissed) return null
+  // Only show for free plan (and not for super_admin)
+  if (user?.plan !== 'free' || user?.role === 'super_admin' || dismissed) return null
   
   const nextPlan = plans.starter
   

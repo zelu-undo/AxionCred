@@ -81,7 +81,7 @@ export default function SettingsPage() {
           .from("users")
           .select("name, email, phone")
           .eq("id", user.id)
-          .single()
+          .maybeSingle()
         
         console.log("[Settings] User data:", userData, userError)
         
@@ -98,7 +98,7 @@ export default function SettingsPage() {
           .from("tenants")
           .select("name, plan")
           .eq("id", user.tenantId)
-          .single()
+          .maybeSingle()
         
         console.log("[Settings] Tenant data:", tenantData, tenantError)
         

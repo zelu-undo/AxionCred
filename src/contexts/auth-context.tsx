@@ -198,7 +198,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let userRole = "owner"
         
         console.log("[Auth] Usuário logado:", data.user.email)
-        console.log("[Auth] User metadata:", data.user.user_metadata)
         
         try {
           // Fetch user with tenant info
@@ -206,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .from("users")
             .select("tenant_id, role")
             .eq("id", data.user.id)
-            .single()
+            .maybeSingle() // Use maybeSingle instead of single to handle no results
           
           console.log("[Auth] Dados do usuário no banco:", u, userError)
           
@@ -227,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .from("tenants")
                 .select("plan")
                 .eq("id", tenantId)
-                .single()
+                .maybeSingle()
               
               console.log("[Auth] Tenant:", tenant)
               
@@ -245,10 +244,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .insert({
                 name: data.user.email?.split("@")[0] || "Minha Empresa",
                 slug: data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa",
-                plan: "free" // Default to free - needs payment to upgrade
+                plan: "free"
               })
               .select()
-              .single()
+              .maybeSingle()
             
             if (!tenantError && newTenant) {
               await supabase
