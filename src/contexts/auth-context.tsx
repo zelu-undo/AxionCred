@@ -120,9 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .maybeSingle()
               
               if (tenantError) {
-                console.error("[Auth] Erro ao criar tenant:", tenantError)
+                // Silent fail
               } else if (newTenant) {
-                // Criar usuário na tabela users com tenant_id
+                // Create user
                 const { error: userError } = await supabase
                   .from("users")
                   .upsert({
@@ -134,18 +134,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     is_active: true
                   })
                 
-                if (userError) {
-                  console.error("[Auth] Erro ao criar usuário:", userError)
-                } else {
+                if (!userError) {
                   tenantId = newTenant.id
                 }
               }
             }
           } catch (err) {
-            console.error("[Auth] Erro ao buscar/criar usuário:", err)
+            // Silent fail
           }
 
-          // Se tenant existe, buscar o plano
+          // Get plan from tenant if exists
           if (tenantId && userPlan === 'free') {
             const { data: tenant } = await supabase.from("tenants").select("plan").eq("id", tenantId).maybeSingle()
             if (tenant?.plan) {
@@ -168,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem("axion_user")
         }
       } catch (err) {
-        console.error("[Auth] Session error:", err)
+        // Silent fail
       } finally {
         if (mounted) {
           setLoading(false)
@@ -214,27 +212,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let userPlan: Plan = "free"
         let userRole = "owner"
         
-        console.log("[Auth] Usuário logado:", data.user.email)
-        
         try {
           // Fetch user with tenant info
-          const { data: u, error: userError } = await supabase
+          const { data: u } = await supabase
             .from("users")
             .select("tenant_id, role")
             .eq("id", data.user.id)
-            .maybeSingle() // Use maybeSingle instead of single to handle no results
-          
-          console.log("[Auth] Dados do usuário no banco:", u, userError)
+            .maybeSingle()
           
           if (u) {
             tenantId = u.tenant_id || ""
             userRole = u.role || "owner"
             
-            console.log("[Auth] Role do usuário:", userRole)
-            
-            // Super admin sempre tem acesso total independente do plano
+            // Super admin always has full access
             if (userRole === 'super_admin') {
-              console.log("[Auth] Super Admin detectado - definindo plano enterprise")
               userPlan = 'enterprise'
             }
             // If user has a tenant, fetch the plan
@@ -245,17 +236,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .eq("id", tenantId)
                 .maybeSingle()
               
-              console.log("[Auth] Tenant:", tenant)
-              
               if (tenant?.plan) {
                 userPlan = tenant.plan as Plan
               }
             }
           }
           
-          // If no tenant, create one with FREE plan
+          // If no tenant, create one
           if (!tenantId) {
-            console.log("[Auth] Criando novo tenant para o usuário")
             const slug = data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa"
             
             const { data: newTenant, error: tenantError } = await supabase
@@ -280,11 +268,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         } catch (err) {
-          console.error("[Auth] Erro ao buscar/criar usuário:", err)
+          // Silent fail
         }
 
         // Calculate accessible modules based on plan
-        console.log("[Auth] Plano final:", userPlan, "Role:", userRole)
         const planConfig = plans[userPlan]
         const accessibleModules = planConfig.modules
           .filter(m => m.access !== 'none')
@@ -299,8 +286,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: userPlan,
           planAccess: accessibleModules
         }
-        
-        console.log("[Auth] AppUser criado:", appUser)
         
         // Clear old cached data and set new
         localStorage.removeItem("axion_user")
