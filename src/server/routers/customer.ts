@@ -80,7 +80,7 @@ export const customerRouter = router({
           .from("customers")
           .select(`
             *,
-            loans(id, status, amount, total_amount, installments, paid_installments, created_at)
+            loans(id, status, amount, total_amount, installments, created_at)
           `, { count: "exact" })
           .eq("tenant_id", ctx.tenantId!)
           .or(`name_normalized.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
@@ -116,7 +116,7 @@ export const customerRouter = router({
         .from("customers")
         .select(`
           *,
-          loans(id, status, amount, total_amount, installments, paid_installments, created_at)
+          loans(id, status, amount, total_amount, installments, created_at)
         `, { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
         .order("created_at", { ascending: false })
@@ -225,16 +225,26 @@ export const customerRouter = router({
       // Get loans filtered by tenant_id and customer_id
       const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
-        .select("id, amount, total_amount, paid_amount, installments, paid_installments, status, created_at, customer_id")
+        .select("id, amount, total_amount, paid_amount, installments, status, created_at, customer_id")
         .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", input.customerId)
         .in("status", ["active", "pending", "late", "partial", "overdue"])
         .order("created_at", { ascending: false })
 
-      // Calculate remaining amounts in memory
-      const loansWithRemaining = (loans || []).map(loan => ({
-        ...loan,
-        remaining_amount: Number(loan.total_amount || 0) - Number(loan.paid_amount || 0)
+      // Count paid installments from payment_transactions
+      const loansWithRemaining = await Promise.all((loans || []).map(async loan => {
+        // Count payments for this loan
+        const { count: paymentCount } = await ctx.supabase
+          .from("payment_transactions")
+          .select("*", { count: "exact", head: true })
+          .eq("loan_id", loan.id)
+          .eq("status", "completed")
+        
+        return {
+          ...loan,
+          remaining_amount: Number(loan.total_amount || 0) - Number(loan.paid_amount || 0),
+          paid_installments: paymentCount || 0
+        }
       }))
 
       if (loansError) {
