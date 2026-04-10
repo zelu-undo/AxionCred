@@ -304,7 +304,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null }
     } catch (error) {
-      console.error("[Auth] signIn exception:", error)
       return { error: { message: (error as Error).message || "Erro de conexão. Tente novamente.", code: "TIMEOUT" } }
     }
   }

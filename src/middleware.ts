@@ -10,6 +10,7 @@ const publicRoutes = [
   '/alerts',
   '/super-admin',
   '/demo',
+  '/test-user',
 ]
 
 // Routes that should bypass all middleware checks
