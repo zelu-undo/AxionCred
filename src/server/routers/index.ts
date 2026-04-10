@@ -19,6 +19,7 @@ import { auditLogsRouter } from "./auditLogs"
 import { rateLimitRouter } from "./rateLimit"
 import { cacheRouter } from "./cache"
 import { teamRouter } from "./team"
+import { invitesRouter } from "./invites"
 
 export const appRouter = router({
   customer: customerRouter,
@@ -42,6 +43,7 @@ export const appRouter = router({
   rateLimit: rateLimitRouter,
   cache: cacheRouter,
   team: teamRouter,
+  invites: invitesRouter,
 })
 
 export type AppRouter = typeof appRouter

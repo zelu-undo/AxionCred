@@ -249,7 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
           
-          // If no user found, create one
+          // If no user found, create one (without tenant by default)
           if (!u) {
             const { error: userError } = await supabase
               .from("users")
@@ -259,6 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 name: data.user.user_metadata?.name || data.user.email?.split("@")[0] || "Usuário",
                 role: "owner",
                 is_active: true
+                // NOT setting tenant_id - user will be without company until invited
               })
             
             if (!userError) {
@@ -266,30 +267,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
           
-          // If no tenant, create one
+          // NEW LOGIC: Check for pending invites before creating/associating tenant
+          // Only associate if there's a valid invite, otherwise leave user without company
           if (!tenantId) {
-            const slug = data.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "empresa"
-            
-            const { data: newTenant, error: tenantError } = await supabase
-              .from("tenants")
-              .insert({
-                name: data.user.email?.split("@")[0] || "Minha Empresa",
-                slug: slug,
-                email: data.user.email,
-                plan: 'free'
-              })
-              .select()
+            // Check for pending invite
+            const { data: invite } = await supabase
+              .from("invites")
+              .select("tenant_id, role")
+              .eq("email", data.user.email)
+              .eq("status", "pending")
+              .gte("expires_at", new Date().toISOString())
               .maybeSingle()
             
-            if (!tenantError && newTenant) {
+            if (invite) {
+              // Valid invite found - accept it
               await supabase
                 .from("users")
-                .update({ tenant_id: newTenant.id })
+                .update({ 
+                  tenant_id: invite.tenant_id,
+                  role: invite.role
+                })
                 .eq("id", data.user.id)
               
-              tenantId = newTenant.id
-              userPlan = "free"
+              // Update invite status
+              await supabase
+                .from("invites")
+                .update({ status: "accepted" })
+                .eq("email", data.user.email)
+                .eq("tenant_id", invite.tenant_id)
+              
+              tenantId = invite.tenant_id
+              userRole = invite.role || "owner"
+              
+              // Get tenant plan
+              const { data: tenant } = await supabase
+                .from("tenants")
+                .select("plan")
+                .eq("id", tenantId)
+                .maybeSingle()
+              
+              if (tenant?.plan) {
+                userPlan = tenant.plan as Plan
+              }
             }
+            // NO INVITE: Do NOT create or associate tenant - leave user without company
+            // User must be invited to join a company
           }
         } catch (err) {
           // Silent fail
