@@ -128,13 +128,13 @@ export const creditRouter = router({
       // Buscar dados do cliente
       const { data: loans } = await ctx.supabase
         .from("loans")
-        .select("status, installments_count, created_at")
+        .select("status, installments, created_at")
         .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", customer.id)
 
       // Calcular subscores
-      const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
-      const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+      const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments || 0), 0) || 0
+      const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments || 0), 0) || 0
       const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
       const mesesCadastro = customer ? Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)) : 0
       const inadimplencias = loans?.filter(l => l.status === "late").length || 0  // Inadimplente = loan com status "late"
@@ -261,13 +261,13 @@ export const creditRouter = router({
 
       const { data: loans } = customer ? await ctx.supabase
         .from("loans")
-        .select("principal_amount")
+        .select("amount")
         .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", customer.id)
         .in("status", ["active", "overdue"])
       : { data: null }
 
-      const currentUsed = loans?.reduce((sum, l) => sum + (l.principal_amount || 0), 0) || 0
+      const currentUsed = loans?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0
 
       // Calcular limite
       const incomePercentage = 30 // 30% da renda
@@ -329,7 +329,7 @@ export const creditRouter = router({
       const { data: loansWithCustomer } = await ctx.supabase
         .from("loans")
         .select(`
-          principal_amount,
+          amount,
           status,
           customer:customers!inner(document)
         `)
@@ -341,7 +341,7 @@ export const creditRouter = router({
         const loanDoc = loan.customer?.document || ""
         const normalizedLoanDoc = loanDoc.replace ? loanDoc.replace(/\D/g, "") : ""
         if (normalizedLoanDoc === document) {
-          return sum + (loan.principal_amount || 0)
+          return sum + (loan.amount || 0)
         }
         return sum
       }, 0) || 0
@@ -585,12 +585,12 @@ export const creditRouter = router({
       if (customer) {
         const { data: customerLoans } = await ctx.supabase
           .from("loans")
-          .select("principal_amount, status")
+          .select("amount, status")
           .eq("tenant_id", ctx.tenantId)
           .eq("customer_id", customer.id)
           .in("status", ["active", "late", "overdue"])
 
-        clientUsed = customerLoans?.reduce((sum, loan) => sum + (loan.principal_amount || 0), 0) || 0
+        clientUsed = customerLoans?.reduce((sum, loan) => sum + (loan.amount || 0), 0) || 0
         activeLoansCount = customerLoans?.length || 0
       }
 
@@ -601,13 +601,13 @@ export const creditRouter = router({
       if (customer) {
         const { data: loans } = await ctx.supabase
           .from("loans")
-          .select("status, installments_count, created_at")
+          .select("status, installments, created_at")
           .eq("tenant_id", ctx.tenantId)
           .eq("customer_id", customer.id)
 
         // Calcular subscores
-        const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
-        const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments_count || 0), 0) || 0
+        const totalParcelas = loans?.reduce((sum, l) => sum + (l.installments || 0), 0) || 0
+        const parcelasPagas = loans?.filter(l => l.status === "paid").reduce((sum, l) => sum + (l.installments || 0), 0) || 0
         const parcelasAtrasadas = loans?.filter(l => l.status === "late").length || 0
         const mesesCadastro = Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
         const inadimplencias = parcelasAtrasadas

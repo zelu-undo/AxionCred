@@ -150,9 +150,9 @@ export const renegotiationsRouter = router({
           loan_id: input.loan_id,
           renegotiation_date: new Date().toISOString().split('T')[0],
           original_total_amount: loan.total_amount,
-          original_installments_count: loan.installments_count,
+          original_installments: loan.installments,
           new_total_amount: input.new_total_amount,
-          new_installments_count: input.new_installments,
+          new_installments: input.new_installments,
           new_installment_amount: installmentAmount,
           interest_rate: input.new_interest_rate,
           status: "pending",
@@ -223,7 +223,7 @@ export const renegotiationsRouter = router({
       const { error: loanError } = await ctx.supabase
         .from("loans")
         .update({
-          installments_count: renegotiation.new_installments,
+          installments: renegotiation.new_installments,
           interest_rate: renegotiation.new_interest_rate,
           total_amount: renegotiation.new_total_amount,
           remaining_amount: renegotiation.new_total_amount,

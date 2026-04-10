@@ -110,9 +110,9 @@ export const dashboardRouter = router({
         .from("loans")
         .select(`
           id,
-          principal_amount,
+          amount,
           total_amount,
-          installments_count,
+          installments,
           paid_installments,
           status,
           created_at,
@@ -197,9 +197,9 @@ export const dashboardRouter = router({
         recentLoans: (recentLoans as any[])?.map((loan: any) => ({
           id: loan.id,
           name: loan.customer?.name || "Cliente",
-          amount: loan.principal_amount,
+          amount: loan.amount,
           totalAmount: loan.total_amount,
-          installments: loan.installments_count,
+          installments: loan.installments,
           paidInstallments: loan.paid_installments,
           status: loan.status,
           createdAt: loan.created_at,

@@ -74,7 +74,7 @@ export const globalSearchRouter = router({
         const { data: loans, error: loanError } = await ctx.supabase
           .from("loans")
           .select(
-            "id, principal_amount, total_amount, status, customer_id, customers(name, document)"
+            "id, amount, total_amount, status, customer_id, customers(name, document)"
           )
           .eq("tenant_id", tenantId)
           .limit(limit * 2)
@@ -309,10 +309,10 @@ export const globalSearchRouter = router({
           loanQuery = loanQuery.eq("status", status)
         }
         if (minAmount) {
-          loanQuery = loanQuery.gte("principal_amount", minAmount)
+          loanQuery = loanQuery.gte("amount", minAmount)
         }
         if (maxAmount) {
-          loanQuery = loanQuery.lte("principal_amount", maxAmount)
+          loanQuery = loanQuery.lte("amount", maxAmount)
         }
         if (dateFrom) {
           loanQuery = loanQuery.gte("created_at", dateFrom)

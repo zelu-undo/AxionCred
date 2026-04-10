@@ -93,13 +93,11 @@ export const loanRouter = router({
           id,
           tenant_id,
           customer_id,
-          principal_amount,
+          amount,
           interest_rate,
           total_amount,
-          paid_amount,
-          remaining_amount,
-          installments_count,
-          paid_installments,
+          interest_type,
+          installments,
           status,
           notes,
           parent_loan_id,
@@ -152,12 +150,10 @@ export const loanRouter = router({
         .from("loans")
         .select(`
           id,
-          principal_amount,
+          amount,
           total_amount,
-          paid_amount,
-          remaining_amount,
-          installments_count,
-          paid_installments,
+          interest_type,
+          installments,
           status,
           created_at,
           customer:customers(id, name, document, phone)
@@ -580,20 +576,20 @@ export const loanRouter = router({
       // Arredondar valores para 2 casas decimais para evitar problemas de precisão
       total_amount = Math.round(total_amount * 100) / 100
       total_interest = Math.round((total_amount - principal_amount) * 100) / 100
-      const installment_amount = Math.round((total_amount / installments_count) * 100) / 100
-
-      // Create loan
+      const installmentAmount = Math.round((total_amount / installments_count) * 100) / 100
+      
       const loanData = {
         tenant_id: ctx.tenantId,
         customer_id,
-        principal_amount,
+        amount: principal_amount,
         interest_rate,
+        interest_type: "simple",
+        installments: installments_count,
         total_amount,
-        paid_amount: 0,
-        remaining_amount: total_amount,
-        installments_count,
-        paid_installments: 0,
-        status: "pending" as const,
+        total_interest,
+        installment_amount: installmentAmount,
+        first_due_date,
+        status: "pending",
         notes,
       }
       
@@ -618,7 +614,7 @@ export const loanRouter = router({
         installments.push({
           loan_id: loan.id,
           installment_number: i,
-          amount: installment_amount,
+          amount: installmentAmount,
           due_date: dueDate.toISOString().split("T")[0],
           status: "pending",
         })
@@ -715,7 +711,7 @@ export const loanRouter = router({
       await ctx.supabase.from("customer_events").insert({
         customer_id,
         type: "loan_created",
-        description: `Empréstimo de R$ ${total_amount.toFixed(2)} criado com ${installments_count}x de R$ ${installment_amount.toFixed(2)}`,
+        description: `Empréstimo de R$ ${total_amount.toFixed(2)} criado com ${installments_count}x de R$ ${installmentAmount.toFixed(2)}`,
         metadata: { loan_id: loan.id, amount: total_amount, interest_rate, interest_type },
       })
 

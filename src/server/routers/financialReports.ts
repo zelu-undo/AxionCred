@@ -48,7 +48,7 @@ export const financialReportsRouter = router({
       // Buscar despesas (empréstimos liberados = capital emprestado)
       const { data: loansDisbursed, error: loansError } = await ctx.supabase
         .from("loans")
-        .select("principal_amount, created_at")
+        .select("amount, created_at")
         .eq("tenant_id", tenantId)
         .eq("status", "active")
         .gte("created_at", startDate)
@@ -62,7 +62,7 @@ export const financialReportsRouter = router({
       }
 
       const totalDisbursed = (loansDisbursed || []).reduce(
-        (sum, l) => sum + parseFloat(l.principal_amount || 0),
+        (sum, l) => sum + parseFloat(l.amount || 0),
         0
       )
 
@@ -415,7 +415,7 @@ export const financialReportsRouter = router({
         // Novas receitas do mês
         const { data: newLoans } = await ctx.supabase
           .from("loans")
-          .select("principal_amount")
+          .select("amount")
           .eq("tenant_id", tenantId)
           .eq("status", "active")
           .gte("created_at", monthStart)
@@ -426,7 +426,7 @@ export const financialReportsRouter = router({
           0
         )
         const disbursed = (newLoans || []).reduce(
-          (sum, l) => sum + parseFloat(l.principal_amount),
+          (sum, l) => sum + parseFloat(l.amount),
           0
         )
 

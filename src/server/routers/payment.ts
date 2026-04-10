@@ -61,11 +61,11 @@ export const paymentRouter = router({
           loan:loans(
             id,
             customer_id,
-            principal_amount,
+            amount,
             total_amount,
             paid_amount,
             remaining_amount,
-            installments_count,
+            installments,
             paid_installments,
             status,
             customer:customers(
@@ -174,7 +174,7 @@ export const paymentRouter = router({
           customer_email: inst.loan?.customer?.email || "-",
           loan_id: inst.loan?.id,
           installment_number: inst.installment_number,
-          installment_total: inst.loan?.installments_count || 0,
+          installment_total: inst.loan?.installments || 0,
           amount_due: inst.amount,
           amount_paid: inst.paid_amount || 0,
           due_date: inst.due_date,
@@ -211,7 +211,7 @@ export const paymentRouter = router({
         .from("loan_installments")
         .select(`
           *,
-          loan:loans(id, customer_id, tenant_id, principal_amount, total_amount, paid_amount, remaining_amount, installments_count, paid_installments, status)
+          loan:loans(id, customer_id, tenant_id, amount, total_amount, paid_amount, remaining_amount, installments, paid_installments, status)
         `)
         .eq("id", installment_id)
         .single()
@@ -473,8 +473,8 @@ export const paymentRouter = router({
 
       // Determina status do loan
       let newLoanStatus = loan.status
-      const wasLoanPaidOff = newLoanStatus !== "paid" && newPaidInstallments >= loan.installments_count
-      if (newPaidInstallments >= loan.installments_count) {
+      const wasLoanPaidOff = newLoanStatus !== "paid" && newPaidInstallments >= loan.installments
+      if (newPaidInstallments >= loan.installments) {
         newLoanStatus = "paid"
       } else if (newPaidInstallments > 0) {
         newLoanStatus = "active"
@@ -519,7 +519,7 @@ export const paymentRouter = router({
         await ctx.supabase.from("customer_events").insert({
           customer_id: loan.customer_id,
           type: "payment_received",
-          description: `Pagamento de R$ ${amount.toFixed(2)} ${isFullPayment ? '(quitação)' : ''} - Parcela ${installment.installment_number}/${loan.installments_count}`,
+          description: `Pagamento de R$ ${amount.toFixed(2)} ${isFullPayment ? '(quitação)' : ''} - Parcela ${installment.installment_number}/${loan.installments}`,
           metadata: { 
             loan_id: loan.id, 
             installment_id, 
@@ -590,7 +590,7 @@ export const paymentRouter = router({
         .from("loan_installments")
         .select(`
           *,
-          loan:loans(id, customer_id, tenant_id, paid_amount, remaining_amount, paid_installments, installments_count, total_amount, status)
+          loan:loans(id, customer_id, tenant_id, paid_amount, remaining_amount, paid_installments, installments, total_amount, status)
         `)
         .eq("id", installment_id)
         .single()
@@ -724,7 +724,7 @@ export const paymentRouter = router({
         .from("payment_transactions")
         .select(`
           *,
-          loan:loans(id, customer_id, tenant_id, paid_amount, remaining_amount, paid_installments, installments_count, status),
+          loan:loans(id, customer_id, tenant_id, paid_amount, remaining_amount, paid_installments, installments, status),
           installment:loan_installments(id, installment_number, amount, paid_amount, status)
         `)
         .eq("id", transaction_id)

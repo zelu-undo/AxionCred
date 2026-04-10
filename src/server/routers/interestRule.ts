@@ -295,13 +295,13 @@ export const interestRuleRouter = router({
   simulate: protectedProcedure
     .input(
       z.object({
-        principal_amount: z.number().positive(),
+        amount: z.number().positive(),
         installments: z.number().int().positive().max(48),
         customer_id: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { principal_amount, installments, customer_id } = input
+      const { amount, installments, customer_id } = input
 
       // Buscar regra aplicável
       const { data: rule, error: ruleError } = await ctx.supabase
@@ -328,11 +328,11 @@ export const interestRuleRouter = router({
         // Sem juros ou juros fixos
         if (appliedRule.interest_type === "fixed") {
           // Juros fixos: taxa aplicada uma única vez sobre o principal
-          totalInterest = principal_amount * (appliedRule.interest_rate / 100)
-          totalAmount = principal_amount + totalInterest
+          totalInterest = amount * (appliedRule.interest_rate / 100)
+          totalAmount = amount + totalInterest
         } else {
           // Sem juros
-          totalAmount = principal_amount
+          totalAmount = amount
           totalInterest = 0
         }
         installmentAmount = totalAmount / installments
@@ -341,20 +341,20 @@ export const interestRuleRouter = router({
         const weeklyRate = appliedRule.interest_rate / 100 / 4.33 // ~52 semanas/ano
         const totalWeeks = installments * 4
         const factor = Math.pow(1 + weeklyRate, totalWeeks)
-        totalAmount = (principal_amount * weeklyRate * factor) / (factor - 1)
+        totalAmount = (amount * weeklyRate * factor) / (factor - 1)
         installmentAmount = totalAmount / installments
-        totalInterest = totalAmount - principal_amount
+        totalInterest = totalAmount - amount
       } else {
         // monthly: sistema Price com taxa mensal
         const monthlyRate = appliedRule.interest_rate / 100
         const factor = Math.pow(1 + monthlyRate, installments)
-        totalAmount = (principal_amount * monthlyRate * factor) / (factor - 1)
+        totalAmount = (amount * monthlyRate * factor) / (factor - 1)
         installmentAmount = totalAmount / installments
-        totalInterest = totalAmount - principal_amount
+        totalInterest = totalAmount - amount
       }
 
       return {
-        principal_amount,
+        amount,
         installments,
         interest_rate: appliedRule.interest_rate,
         interest_type: appliedRule.interest_type,
