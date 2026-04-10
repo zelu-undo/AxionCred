@@ -3,6 +3,7 @@
 import { useAuth } from "@/contexts/auth-context"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Shell } from "@/components/dashboard/shell"
 
 export default function AdminLayout({
   children,
@@ -44,8 +45,8 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Shell>
       {children}
-    </div>
+    </Shell>
   )
 }

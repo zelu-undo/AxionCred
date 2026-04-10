@@ -158,6 +158,15 @@ function NavigationItems() {
       ],
     },
     {
+      title: "Administrador",
+      onlyAdmin: true,
+      items: [
+        // Super Admin only
+        { name: "Super Admin", href: "/super-admin", icon: Crown, permission: "super_admin", roles: ["super_admin"] },
+        { name: "Gerenciar Usuários", href: "/super-admin/users", icon: Users, permission: "super_admin", roles: ["super_admin"] },
+      ],
+    },
+    {
       title: "Configurações",
       items: [
         { name: t("navigation.settings"), href: "/settings", icon: Settings, permission: "settings" },
@@ -165,9 +174,6 @@ function NavigationItems() {
         { name: "Crédito", href: "/settings/credit", icon: CreditCard, permission: "settings" },
         { name: "Gestão de Equipe", href: "/settings/staff", icon: Users, permission: "settings" },
         { name: "Funções e Permissões", href: "/settings/roles", icon: Shield, permission: "settings" },
-        // Super Admin only
-        { name: "Super Admin", href: "/super-admin", icon: Crown, permission: "super_admin", roles: ["super_admin"] },
-        { name: "Gerenciar Usuários", href: "/super-admin/users", icon: Users, permission: "super_admin", roles: ["super_admin"] },
       ],
     },
   ]
@@ -188,7 +194,12 @@ function NavigationItems() {
 
   // Filtrar itens por permissão
   const filterItems = (items: NavCategory["items"]) => {
-    return items.filter(item => hasPermission(item.permission, item.roles))
+    // If user is not super_admin, don't show admin category items
+    if (user?.role !== 'super_admin') {
+      return items.filter(item => hasPermission(item.permission, item.roles))
+    }
+    // Super admin sees all
+    return items
   }
 
   return (

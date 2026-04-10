@@ -220,14 +220,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let userRole = "owner"
         
         try {
-          // Fetch user with tenant info
+          // Fetch user with tenant info - ALWAYS from database, ignore cache
           const { data: u } = await supabase
             .from("users")
-            .select("tenant_id, role")
+            .select("tenant_id, role, is_active")
             .eq("id", data.user.id)
             .maybeSingle()
           
+          // If user exists in database, verify they are active
           if (u) {
+            // Check if user is active - if not, block login
+            if (u.is_active === false) {
+              // Sign out and show error
+              await supabase.auth.signOut()
+              throw new Error("Usuário desativado. Entre em contato com o administrador.")
+            }
+            
             tenantId = u.tenant_id || ""
             userRole = u.role || "owner"
             
@@ -239,9 +247,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             else if (tenantId) {
               const { data: tenant } = await supabase
                 .from("tenants")
-                .select("plan")
+                .select("plan, is_active")
                 .eq("id", tenantId)
                 .maybeSingle()
+              
+              // Check if tenant is active
+              if (tenant && tenant.is_active === false) {
+                throw new Error("Empresa desativada. Entre em contato com o administrador.")
+              }
               
               if (tenant?.plan) {
                 userPlan = tenant.plan as Plan
