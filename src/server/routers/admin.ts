@@ -19,15 +19,36 @@ export const adminRouter = router({
         })
       }
 
-      // Find tenants without users
-      const { data: orphans } = await ctx.supabase
+      // Get all tenants
+      const { data: allTenants, error: tenantsError } = await ctx.supabase
         .from("tenants")
         .select("id, name, slug, plan, created_at")
-        .not(
-          "id",
-          "in",
-          ctx.supabase.from("users").select("tenant_id").not("tenant_id", "is", null)
-        )
+
+      if (tenantsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: tenantsError.message,
+        })
+      }
+
+      // Get all users with tenant_id
+      const { data: users, error: usersError } = await ctx.supabase
+        .from("users")
+        .select("tenant_id")
+        .not("tenant_id", "is", null)
+
+      if (usersError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: usersError.message,
+        })
+      }
+
+      // Find tenant IDs that have users
+      const usedTenantIds = new Set(users?.map((u) => u.tenant_id).filter(Boolean) || [])
+
+      // Find orphaned tenants
+      const orphans = (allTenants || []).filter((t) => !usedTenantIds.has(t.id))
 
       if (!orphans || orphans.length === 0) {
         return { deleted: 0, tenants: [], message: "Nenhuma empresa órfã encontrada" }

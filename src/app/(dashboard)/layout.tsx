@@ -50,7 +50,7 @@ export default function DashboardLayout({
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <UpgradeBanner />
-      <div className="flex flex-1 overflow-hidden pt-12">
+      <div className="flex flex-1 overflow-hidden">
         <div className="hidden lg:block">
           <Sidebar />
         </div>
