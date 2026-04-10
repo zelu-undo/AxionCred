@@ -80,7 +80,7 @@ export const customerRouter = router({
           .from("customers")
           .select(`
             *,
-            loans(id, status, principal_amount, remaining_amount, installments_count, paid_installments, created_at)
+            loans(id, status, amount, total_amount, installments, paid_installments, created_at)
           `, { count: "exact" })
           .eq("tenant_id", ctx.tenantId!)
           .or(`name_normalized.ilike.*${searchTerm}*,document.ilike.*${searchTerm}*`)
@@ -116,7 +116,7 @@ export const customerRouter = router({
         .from("customers")
         .select(`
           *,
-          loans(id, status, principal_amount, remaining_amount, installments_count, paid_installments, created_at)
+          loans(id, status, amount, total_amount, installments, paid_installments, created_at)
         `, { count: "exact" })
         .eq("tenant_id", ctx.tenantId!)
         .order("created_at", { ascending: false })
@@ -225,22 +225,17 @@ export const customerRouter = router({
       // Get loans filtered by tenant_id and customer_id
       const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
-        .select(`
-          id,
-          principal_amount,
-          total_amount,
-          paid_amount,
-          remaining_amount,
-          installments_count,
-          paid_installments,
-          status,
-          created_at,
-          customer_id
-        `)
+        .select("id, amount, total_amount, paid_amount, installments, paid_installments, status, created_at, customer_id")
         .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", input.customerId)
         .in("status", ["active", "pending", "late", "partial", "overdue"])
         .order("created_at", { ascending: false })
+
+      // Calculate remaining amounts in memory
+      const loansWithRemaining = (loans || []).map(loan => ({
+        ...loan,
+        remaining_amount: Number(loan.total_amount || 0) - Number(loan.paid_amount || 0)
+      }))
 
       if (loansError) {
         console.error("Error fetching loans:", loansError)
@@ -250,8 +245,8 @@ export const customerRouter = router({
         })
       }
 
-      console.error("Loans found with tenant filter:", loans?.length, loans)
-      return loans || []
+      console.error("Loans found with tenant filter:", loansWithRemaining.length, loansWithRemaining)
+      return loansWithRemaining
     }),
 
   byId: protectedProcedure
@@ -541,7 +536,7 @@ export const customerRouter = router({
       // Get loan data for all customers
       const { data: loans, error: loansError } = await ctx.supabase
         .from("loans")
-        .select("customer_id, status, remaining_amount, principal_amount")
+        .select("customer_id, status, total_amount, paid_amount, amount")
         .eq("tenant_id", ctx.tenantId!)
         .in("status", ["active", "overdue", "paid", "defaulted"])
 
@@ -586,7 +581,7 @@ export const customerRouter = router({
         // Calculate total debt (remaining amount from active/overdue loans)
         const totalDebt = customerLoans
           .filter(l => ["active", "overdue"].includes(l.status))
-          .reduce((sum, l) => sum + Number(l.remaining_amount || 0), 0)
+          .reduce((sum, l) => sum + Number((l.total_amount || 0) - (l.paid_amount || 0)), 0)
 
         return {
           id: customer.id,

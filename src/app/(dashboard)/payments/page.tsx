@@ -71,11 +71,11 @@ interface Installment {
 interface LoanDetails {
   id: string
   contract_number: string
-  principal_amount: number
+  amount: number
   total_amount: number
   paid_amount: number
   remaining_amount: number
-  installments_count: number
+  installments: number
   paid_installments: number
   customer: {
     id: string
@@ -84,7 +84,7 @@ interface LoanDetails {
     phone: string
     email: string
   }
-  installments: Installment[]
+  installments_list: Installment[]
 }
 
 // Animation variants
@@ -147,11 +147,11 @@ export default function PaymentsPage() {
   // Type for loans from customer query (no customer nested)
 interface LoanForPayment {
   id: string
-  principal_amount: number
+  amount: number
   total_amount: number
   paid_amount: number
   remaining_amount: number
-  installments_count: number
+  installments: number
   paid_installments: number
   status: string
   created_at: string
@@ -160,7 +160,7 @@ interface LoanForPayment {
 
 
 // Fetch loans when customer is selected
-  const { data: loansData, isLoading: loadingLoans, error: loansError, refetch: refetchLoans } = trpc.customer.loansForPayment.useQuery<LoanForPayment[]>({
+  const { data: loansData, isLoading: loadingLoans, error: loansError, refetch: refetchLoans } = trpc.customer.loansForPayment.useQuery({
     customerId: selectedCustomerId,
   }, {
     enabled: !!selectedCustomerId,
@@ -932,7 +932,7 @@ interface LoanForPayment {
                           )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments_count} parcelas | Status: {loan.status}
+                          R$ {loan.remaining_amount?.toLocaleString('pt-BR')} | {loan.paid_installments}/{loan.installments} parcelas | Status: {loan.status}
                         </div>
                       </button>
                     ))}
