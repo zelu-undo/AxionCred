@@ -1,16 +1,49 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { plans } from "@/lib/plans"
 import { Button } from "@/components/ui/button"
 import { X, Crown, ChevronUp } from "lucide-react"
 
+// Banner context for state sharing between banner and layout
+const BannerContext = createContext<{
+  dismissed: boolean
+  dismissBanner: () => void
+}>({
+  dismissed: false,
+  dismissBanner: () => {}
+})
+
+export function useBanner() {
+  return useContext(BannerContext)
+}
+
+export function BannerProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  const [dismissed, setDismissed] = useState(false)
+  
+  // Reset dismissed state when user changes
+  useEffect(() => {
+    setDismissed(false)
+  }, [user?.id])
+  
+  const dismissBanner = useCallback(() => {
+    setDismissed(true)
+  }, [])
+  
+  return (
+    <BannerContext.Provider value={{ dismissed, dismissBanner }}>
+      {children}
+    </BannerContext.Provider>
+  )
+}
+
 export function UpgradeBanner() {
   const { user } = useAuth()
+  const { dismissed, dismissBanner } = useBanner()
   const router = useRouter()
-  const [dismissed, setDismissed] = useState(false)
   const [mounted, setMounted] = useState(false)
   
   useEffect(() => {
@@ -57,7 +90,7 @@ export function UpgradeBanner() {
               variant="ghost"
               size="icon"
               className="h-7 w-7 sm:h-8 sm:w-8 text-amber-600 hover:text-amber-800"
-              onClick={() => setDismissed(true)}
+              onClick={() => dismissBanner()}
             >
               <X className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>

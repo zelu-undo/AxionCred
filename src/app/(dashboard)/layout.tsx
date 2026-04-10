@@ -5,14 +5,11 @@ import { useAuth } from "@/contexts/auth-context"
 import { useEffect, useState } from "react"
 import { PageTransition } from "@/components/ui/page-transition"
 import { Toaster } from "@/components/ui/toaster"
-import { UpgradeBanner } from "@/components/dashboard/upgrade-banner"
+import { UpgradeBanner, BannerProvider, useBanner } from "@/components/dashboard/upgrade-banner"
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const { dismissed } = useBanner()
   const [mounted, setMounted] = useState(false)
   
   // Avoid hydration mismatch - only render after client-side mount
@@ -47,10 +44,12 @@ export default function DashboardLayout({
     )
   }
 
+  const showBanner = user?.plan === 'free' && user?.role !== 'super_admin' && !dismissed
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <UpgradeBanner />
-      <div className="flex flex-1 overflow-hidden pt-12 sm:pt-14">
+      <div className={`flex flex-1 overflow-hidden ${showBanner ? 'pt-12 sm:pt-14' : ''}`}>
         <div className="hidden lg:block">
           <Sidebar />
         </div>
@@ -65,5 +64,13 @@ export default function DashboardLayout({
       </div>
       <Toaster />
     </div>
+  )
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <BannerProvider>
+      <LayoutContent>{children}</LayoutContent>
+    </BannerProvider>
   )
 }
