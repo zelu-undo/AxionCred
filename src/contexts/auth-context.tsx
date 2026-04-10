@@ -317,6 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("axion_user", JSON.stringify(appUser))
         
         // Redirect based on plan and role
+        console.log("[Auth] Login success, userRole:", userRole, "userPlan:", userPlan)
         if (userRole === 'super_admin') {
           router.push("/dashboard")
         } else if (userPlan === 'free') {
