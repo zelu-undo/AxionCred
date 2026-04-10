@@ -3,7 +3,7 @@
 import { useAuth } from "@/contexts/auth-context"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Shell } from "@/components/dashboard/shell"
+import { Sidebar } from "@/components/dashboard/shell"
 
 export default function AdminLayout({
   children,
@@ -45,8 +45,11 @@ export default function AdminLayout({
   }
 
   return (
-    <Shell>
-      {children}
-    </Shell>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1">
+        {children}
+      </main>
+    </div>
   )
 }
