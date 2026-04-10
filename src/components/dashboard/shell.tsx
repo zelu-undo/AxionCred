@@ -297,9 +297,32 @@ export function Sidebar({ className, ...props }: SidebarProps) {
         <span className="text-2xl font-bold text-[#22C55E] tracking-tight">ON</span>
       </div>
       
+      {/* User Info - Only show for super_admin */}
+      {mounted && user && user.role === 'super_admin' && (
+        <div className="mx-3 mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-medium text-amber-300">Super Admin</span>
+          </div>
+          <p className="text-xs text-blue-200 mt-1 truncate">{user.email}</p>
+        </div>
+      )}
+      
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         <NavigationItems />
       </nav>
+      
+      {/* Logout button */}
+      <div className="border-t border-white/10 p-3">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-blue-200 hover:text-white hover:bg-white/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          {t("navigation.logout")}
+        </Button>
+      </div>
     </div>
   )
 }
