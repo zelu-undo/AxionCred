@@ -315,8 +315,8 @@ export default function UsersPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto z-[100]">
+          <DialogHeader className="sticky top-0 bg-white pb-2 border-b">
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
               Altere os dados do usuário. Tenant vazio significa "sem empresa".
@@ -391,7 +391,7 @@ export default function UsersPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="sticky bottom-0 bg-white pt-2 border-t mt-4">
             <Button variant="outline" onClick={() => setEditUser(null)}>
               Cancelar
             </Button>
