@@ -1,19 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { baseStyles, colors } from './styles';
 
 // Register fonts
-Font.register({
-  family: 'Poppins',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLGT9Z1xlFQ.woff2', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCj7Z1xlFQ.woff2', fontWeight: 500 },
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLEj6Z1xlFQ.woff2', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCj5Z1xlFQ.woff2', fontWeight: 700 },
-  ],
-});
 
 // Styles
 const styles = StyleSheet.create({

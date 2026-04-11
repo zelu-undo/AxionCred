@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { pdf, Document } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { showErrorToast, showSuccessToast } from '@/lib/toast';
 
 // Helper to download PDF
@@ -15,18 +15,19 @@ export function usePDF() {
   ) => {
     setIsGenerating(true);
     try {
-      // Verify document is a valid react-pdf document
+      // Verify document exists
       if (!document) {
         throw new Error('Documento não fornecido');
       }
+
+      console.log('Generating PDF with document:', document?.type?.name || document?.constructor?.name);
+
+      // Try to create PDF using react-pdf
+      // For react-pdf v4, we need to pass the document directly to pdf()
+      const pdfDoc = await pdf(document);
+      const blob = await pdfDoc.toBlob();
       
-      console.log('Generating PDF with document type:', typeof document);
-      console.log('Document:', document);
-      
-      // Use pdf() function from react-pdf
-      const pdfDoc = await pdf(document).toBlob();
-      
-      const url = URL.createObjectURL(pdfDoc);
+      const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
@@ -39,15 +40,11 @@ export function usePDF() {
       showSuccessToast('PDF baixado com sucesso!');
     } catch (error) {
       console.error('PDF Error:', error);
-      let errorMessage = 'Erro desconhecido';
+      let errorMessage = 'Erro ao gerar PDF. Verifique se o documento está correto.';
       if (error instanceof Error) {
-        errorMessage = error.message;
-        // Check for specific errors
-        if (error.message.includes('createElement')) {
-          errorMessage = 'Componente inválido para PDF';
-        }
+        errorMessage = `Erro: ${error.message}`;
       }
-      showErrorToast(`Erro ao gerar PDF: ${errorMessage}`);
+      showErrorToast(errorMessage);
       throw error;
     } finally {
       setIsGenerating(false);
