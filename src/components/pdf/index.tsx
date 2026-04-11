@@ -25,11 +25,11 @@ export function usePDF() {
       console.log('Generating PDF with document:', DocumentComponent.name);
       console.log('PDF data:', data);
 
-      // In react-pdf v4, we create a document element with the component as children
-      // The data should be passed to the child component directly
+      // In react-pdf v4, pass data to Document props and use a render function
+      // This is the correct pattern for react-pdf v4
       const pdfDocument = (
-        <rpdf.Document>
-          <DocumentComponent {...data} />
+        <rpdf.Document data={data}>
+          <DocumentComponent />
         </rpdf.Document>
       );
 
