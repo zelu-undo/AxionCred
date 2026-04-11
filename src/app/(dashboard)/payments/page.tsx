@@ -1104,9 +1104,19 @@ interface LoanForPayment {
                   {calculateData && (
                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
                       <p className="text-sm font-medium text-amber-800">Cálculo de Juros de Mora</p>
+                      {calculateData.amount_paid > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Já pago:</span>
+                          <span className="font-medium text-blue-600">{formatCurrency(calculateData.amount_paid)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Valor da parcela:</span>
+                        <span className="text-gray-600">Valor parcela:</span>
                         <span className="font-medium">{formatCurrency(calculateData.installment_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Restante:</span>
+                        <span className="font-medium">{formatCurrency(calculateData.remaining_amount)}</span>
                       </div>
                       {calculateData.late_fee > 0 && (
                         <div className="flex justify-between text-sm">

@@ -55,10 +55,16 @@ export const paymentRouter = router({
       // Consider overdue if due date has passed OR status is already 'late'/'overdue'
       const isOverdue = (dueDate < today || installment.status === 'late' || installment.status === 'overdue') && installment.status !== "paid"
       
+      // Calculate remaining amount (considering partial payments)
+      const installmentAmount = installment.amount
+      const paidAmount = installment.paid_amount || 0
+      const remainingAmount = installmentAmount - paidAmount
+      
       let lateFee = 0
       let lateInterest = 0
       
       if (isOverdue) {
+        // Buscar configuração
         const { data: lateFeeConfig } = await ctx.supabase
           .from("late_fee_config")
           .select("*")
@@ -68,17 +74,17 @@ export const paymentRouter = router({
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
         
         if (lateFeeConfig) {
-          // Calcular taxa fixa de multa
-          const lateFeePercent = lateFeeConfig.percentage ?? null
-          const lateFeeFixed = lateFeeConfig.fixed_fee ?? 0
+          // Calcular multa baseada no valor restante
+          const lateFeePercent = lateFeeConfig.percentage ?? lateFeeConfig.fixed_fee ?? 0
           const lateFeeType = lateFeeConfig.late_fee_type ?? 'percentage'
           
-          if (lateFeeType === 'fixed') {
-            lateFee = lateFeeFixed
-          } else if (lateFeePercent !== null) {
-            lateFee = installment.amount * (lateFeePercent / 100)
+          // Se <= 100 é percentual
+          const isPercentFee = lateFeePercent <= 100
+          
+          if (!isPercentFee && lateFeeType === 'fixed') {
+            lateFee = lateFeePercent
           } else {
-            lateFee = installment.amount * (lateFeeFixed / 100)
+            lateFee = remainingAmount * (lateFeePercent / 100)
           }
           
           // Calcular juros de mora
@@ -90,17 +96,19 @@ export const paymentRouter = router({
             if (dailyInterestType === 'fixed') {
               lateInterest = dailyInterest * effectiveDaysOverdue
             } else {
-              lateInterest = installment.amount * dailyInterest * effectiveDaysOverdue
+              lateInterest = remainingAmount * dailyInterest * effectiveDaysOverdue
             }
           }
         }
       }
 
       return {
-        installment_amount: installment.amount,
+        installment_amount: installmentAmount,
+        amount_paid: paidAmount,
+        remaining_amount: remainingAmount,
         late_fee: lateFee,
         late_interest: lateInterest,
-        total_amount: installment.amount + lateFee + lateInterest,
+        total_amount: remainingAmount + lateFee + lateInterest,
         is_overdue: isOverdue,
       }
     }),
