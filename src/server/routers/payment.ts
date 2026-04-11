@@ -374,18 +374,11 @@ export const paymentRouter = router({
           }
         }
         
-        // Não aplicar mínimos para pagamento de juros apenas
-        // mas validar que não excede muito o esperado
+        // Don't require minimum amount - allow any payment amount
+        // Users might want to do partial payments
       } else {
-        // Valida valor mínimo (80% da parcela + juros)
-        const minAmount = totalWithLateFees * 0.8
-        if (amount < minAmount) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Valor mínimo para pagamento é R$ ${minAmount.toFixed(2)}` +
-              (isOverdue ? ` (inclui R$ ${(lateFee + lateInterest).toFixed(2)} de juros de mora)` : ""),
-          })
-        }
+        // Allow any payment amount - no minimum validation
+        // This allows partial payments and corrections
       }
 
       // Determina status do pagamento (considerando juros de mora)
