@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { pdf, Document } from '@react-pdf/renderer';
+import { useCallback, useState, React } from 'react';
+import * as rpdf from '@react-pdf/renderer';
 import { showErrorToast, showSuccessToast } from '@/lib/toast';
 
 // Helper to download PDF
@@ -23,14 +23,15 @@ export function usePDF() {
 
       console.log('Generating PDF with document:', DocumentComponent.name);
 
-      // Create the document using React.createElement internally
-      // For react-pdf, we need to pass the component class (not instance) to pdf()
+      // Create the document using React.createElement
       const DocumentClass = DocumentComponent as any;
-      const doc = <DocumentClass {...data} />;
+      const doc = React.createElement(DocumentClass, data);
       
-      const pdfDoc = await pdf(doc).toBlob();
+      // Use the pdf() function from react-pdf
+      const pdfDoc = rpdf.pdf(doc);
+      const blob = await pdfDoc.toBlob();
       
-      const url = URL.createObjectURL(pdfDoc);
+      const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
@@ -59,7 +60,7 @@ export function usePDF() {
 
 // Export helpers for each document type
 export * from './LoanContract';
-export { pdf } from '@react-pdf/renderer';
+export { rpdf as pdf } from '@react-pdf/renderer';
 export * from './CustomerHistory';
 export * from './Refinancing';
 export * from './CashFlow';
