@@ -54,7 +54,13 @@ export const renegotiationsRouter = router({
         })
       }
 
-      return { renegotiations: data || [], total: count || 0 }
+      // Map to include new_total_amount alias
+      const renegotiations = (data || []).map((r: any) => ({
+        ...r,
+        new_total_amount: r.new_amount,
+      }))
+
+      return { renegotiations, total: count || 0 }
     }),
 
   // Get single renegotiation
@@ -83,7 +89,11 @@ export const renegotiationsRouter = router({
         })
       }
 
-      return data
+      // Map to include new_total_amount alias
+      return {
+        ...data,
+        new_total_amount: data.new_amount,
+      }
     }),
 
   // Create renegotiation
@@ -92,7 +102,7 @@ export const renegotiationsRouter = router({
       loan_id: z.string(),
       new_installments: z.number().min(1),
       new_interest_rate: z.number().min(0),
-      new_total_amount: z.number().min(0),
+      new_total_amount: z.number().min(0), // Use new_amount in DB
       reason: z.string().optional(),
       notes: z.string().optional(),
     }))
@@ -149,9 +159,7 @@ export const renegotiationsRouter = router({
           tenant_id: tenantId,
           loan_id: input.loan_id,
           renegotiation_date: new Date().toISOString().split('T')[0],
-          original_total_amount: loan.total_amount,
-          original_installments: loan.installments,
-          new_total_amount: input.new_total_amount,
+          new_amount: input.new_total_amount,
           new_installments: input.new_installments,
           new_installment_amount: installmentAmount,
           interest_rate: input.new_interest_rate,
@@ -225,8 +233,8 @@ export const renegotiationsRouter = router({
         .update({
           installments: renegotiation.new_installments,
           interest_rate: renegotiation.new_interest_rate,
-          total_amount: renegotiation.new_total_amount,
-          remaining_amount: renegotiation.new_total_amount,
+          total_amount: renegotiation.new_amount,
+          remaining_amount: renegotiation.new_amount,
         })
         .eq("id", renegotiation.loan_id)
         .eq("tenant_id", tenantId)
@@ -279,7 +287,7 @@ export const renegotiationsRouter = router({
             ctx.supabase,
             tenantId,
             customer?.name || "Cliente",
-            renegotiation.new_total_amount
+            renegotiation.new_amount
           )
         }
       }
