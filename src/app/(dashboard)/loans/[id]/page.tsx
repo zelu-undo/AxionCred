@@ -10,8 +10,8 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import type { LoanInstallment } from "@/types"
-import { usePDF, LoanContractDocument, pdf } from "@/components/pdf"
-import { PDFViewer } from "@react-pdf/renderer"
+import { usePDF, LoanContractDocument } from "@/components/pdf"
+import { pdf, PDFViewer } from "@react-pdf/renderer"
 
 export default function LoanDetailPage() {
   const { t } = useI18n()
@@ -112,12 +112,16 @@ export default function LoanDetailPage() {
                 installments: (installmentsData || []).map((inst) => ({
                   number: inst.installment_number,
                   dueDate: formatDate(inst.due_date),
-                  value: inst.amount,
+                  value: Number(inst.amount),
                   status: inst.status as 'paid' | 'pending' | 'overdue',
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
                 })),
               }} />
-              const blob = await pdf(doc).toBlob()
+              // Use the imported pdf function properly
+              const blob = await new Promise<Blob>((resolve, reject) => {
+                const pdfDoc = pdf(doc)
+                pdfDoc.toBlob().then(resolve).catch(reject)
+              })
               const url = URL.createObjectURL(blob)
               const link = document.createElement('a')
               link.href = url
