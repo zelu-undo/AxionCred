@@ -33,6 +33,8 @@ import {
   XCircle,
   UserPlus,
   Crown,
+  FileSpreadsheet,
+  Upload,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -82,10 +84,10 @@ function NavigationItems() {
 
   // Define permissions for each role
   const permissions = {
-    owner: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "reports", "settings"],
-    admin: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "settings"],
-    manager: ["dashboard", "customers", "loans", "collections"],
-    operator: ["dashboard", "customers", "loans"],
+    owner: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "reports", "settings", "import-export"],
+    admin: ["dashboard", "customers", "loans", "collections", "quick-sale", "alerts", "settings", "import-export"],
+    manager: ["dashboard", "customers", "loans", "collections", "import-export"],
+    operator: ["dashboard", "customers", "loans", "import-export"],
   }
   
   // Get user plan
@@ -147,6 +149,7 @@ function NavigationItems() {
       title: "Operações",
       items: [
         { name: t("navigation.quickSale"), href: "/quick-sale", icon: TrendingUp, permission: "quick-sale" },
+        { name: "Import/Export", href: "/import-export", icon: FileSpreadsheet, permission: "import-export" },
       ],
     },
     {
