@@ -143,6 +143,31 @@ export default function PaymentsPage() {
   }, {
     enabled: isRegisterOpen,
   })
+
+  // Calculate payment amount with late fees when installment is selected
+  const { data: calculateData, refetch: refetchCalculate } = trpc.payment.calculate.useQuery({
+    installment_id: selectedInstallmentId,
+    payment_date: paymentForm.payment_date,
+  }, {
+    enabled: !!selectedInstallmentId,
+  })
+
+  // Refetch calculate when payment date changes
+  useEffect(() => {
+    if (selectedInstallmentId && paymentForm.payment_date) {
+      refetchCalculate()
+    }
+  }, [selectedInstallmentId, paymentForm.payment_date, refetchCalculate])
+
+  // Auto-fill payment amount when calculateData is available
+  useEffect(() => {
+    if (calculateData && !paymentForm.amount) {
+      setPaymentForm(prev => ({
+        ...prev,
+        amount: (calculateData.total_amount * 100).toString()
+      }))
+    }
+  }, [calculateData])
   
   // Type for loans from customer query (no customer nested)
 interface LoanForPayment {
@@ -1058,11 +1083,36 @@ interface LoanForPayment {
                       className="pl-10"
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Valor remaining: R$ {installmentsData?.find(i => i.id === selectedInstallmentId) ? 
-                      ((installmentsData.find(i => i.id === selectedInstallmentId)?.amount || 0) - (installmentsData.find(i => i.id === selectedInstallmentId)?.paid_amount || 0)).toLocaleString('pt-BR') 
-                      : '0'}
-                  </p>
+                  
+                  {/* Show calculated values with late fees */}
+                  {calculateData && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                      <p className="text-sm font-medium text-amber-800">Cálculo de Juros de Mora</p>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Valor da parcela:</span>
+                        <span className="font-medium">{formatCurrency(calculateData.installment_amount)}</span>
+                      </div>
+                      {calculateData.late_fee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Multa fixa:</span>
+                          <span className="font-medium text-red-600">+ {formatCurrency(calculateData.late_fee)}</span>
+                        </div>
+                      )}
+                      {calculateData.late_interest > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Juros mora:</span>
+                          <span className="font-medium text-red-600">+ {formatCurrency(calculateData.late_interest)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-base font-bold border-t border-amber-300 pt-2">
+                        <span className="text-gray-900">Total a pagar:</span>
+                        <span className="text-green-600">{formatCurrency(calculateData.total_amount)}</span>
+                      </div>
+                      {calculateData.is_overdue && (
+                        <p className="text-xs text-red-600">⚠️ Parcela atrasada - valores incluem juros</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Payment Date */}
