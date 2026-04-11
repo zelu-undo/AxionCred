@@ -121,7 +121,6 @@ export interface LoanInstallment {
   // Late fee fields
   late_fee_applied?: number
   late_interest_applied?: number
-  late_fees?: number
   days_in_delay?: number
   created_at: string
   updated_at: string
