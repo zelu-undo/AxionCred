@@ -228,7 +228,7 @@ export const customerRouter = router({
         .select("id, amount, total_amount, paid_amount, installments, status, created_at, customer_id")
         .eq("tenant_id", ctx.tenantId)
         .eq("customer_id", input.customerId)
-        .in("status", ["active", "pending", "late", "partial", "overdue"])
+        .in("status", ["active", "pending", "late", "partial", "overdue", "paid"])
         .order("created_at", { ascending: false })
 
       // Count paid installments from payment_transactions

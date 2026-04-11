@@ -89,6 +89,9 @@ export const paymentRouter = router({
         query = query.eq("loan_id", loanId)
       }
 
+      // Exclude installments from fully paid loans - show only pending/active installments
+      query = query.in("loan.status", ["pending", "active", "late", "overdue", "partial"])
+
       if (dateFrom) {
         query = query.gte("due_date", dateFrom)
       }
