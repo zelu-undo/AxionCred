@@ -876,6 +876,9 @@ export default function SuperAdminPage() {
               </Select>
             </div>
             <p className="text-sm text-gray-500">
+              Para migrar o usuário para outra empresa, primeiro realize uma pesquisa na lista acima para encontrar o usuário que deseja migrar e clique no botão de migrar (ícone azul).
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
               O usuário será movido para a nova empresa. Esta ação não pode ser desfeita.
             </p>
           </div>
