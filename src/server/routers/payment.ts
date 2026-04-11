@@ -52,7 +52,8 @@ export const paymentRouter = router({
       // Calcula juros de mora
       const today = new Date()
       const dueDate = new Date(installment.due_date)
-      const isOverdue = dueDate < today && installment.status !== "paid"
+      // Consider overdue if due date has passed OR status is already 'late'/'overdue'
+      const isOverdue = (dueDate < today || installment.status === 'late' || installment.status === 'overdue') && installment.status !== "paid"
       
       let lateFee = 0
       let lateInterest = 0
@@ -263,7 +264,8 @@ export const paymentRouter = router({
         // Calculate total with late fees for display
         const dueDate = new Date(inst.due_date)
         const today = new Date()
-        const isOverdue = dueDate < today && inst.status !== 'paid'
+        // Consider overdue if due date has passed OR status is already 'late'/'overdue'
+        const isOverdue = (dueDate < today || inst.status === 'late' || inst.status === 'overdue') && inst.status !== 'paid'
         let lateFee = 0
         let lateInterest = 0
         let totalWithLateFees = inst.amount
@@ -386,7 +388,8 @@ export const paymentRouter = router({
       // Calcular juros de mora se parcelas atrasadas
       const today = new Date()
       const dueDate = new Date(installment.due_date)
-      const isOverdue = dueDate < today && installment.status !== "paid"
+      // Consider overdue if due date has passed OR status is already 'late'/'overdue'
+      const isOverdue = (dueDate < today || installment.status === 'late' || installment.status === 'overdue') && installment.status !== "paid"
       
       let lateFee = 0
       let lateInterest = 0
