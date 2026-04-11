@@ -68,7 +68,12 @@ export const paymentRouter = router({
         
         if (lateFeeConfig) {
           // Calcular taxa fixa de multa (pode ser percentual ou valor fixo)
-          if (lateFeeConfig.late_fee_type === 'percent') {
+          // Assume percentual se fixed_fee <= 100 ou se late_fee_type for 'percent'
+          const isPercentFee = lateFeeConfig.late_fee_type === 'percent' || 
+            lateFeeConfig.late_fee_type === undefined || 
+            (lateFeeConfig.fixed_fee || 0) <= 100
+          
+          if (isPercentFee) {
             lateFee = installment.amount * ((lateFeeConfig.fixed_fee || 0) / 100)
           } else {
             lateFee = lateFeeConfig.fixed_fee || 0
@@ -365,8 +370,13 @@ export const paymentRouter = router({
         
         if (lateFeeConfig) {
           // Calcular taxa fixa de multa (pode ser percentual ou valor fixo)
-          // Se late_fee_type for 'percent', usa percentual; senão usa valor fixo
-          if (lateFeeConfig.late_fee_type === 'percent') {
+          // Assume percentual se fixed_fee <= 100 ou se late_fee_type for 'percent'
+          // Assume valor fixo apenas se late_fee_type explicitamente 'fixed'
+          const isPercentFee = lateFeeConfig.late_fee_type === 'percent' || 
+            lateFeeConfig.late_fee_type === undefined || 
+            (lateFeeConfig.fixed_fee || 0) <= 100
+          
+          if (isPercentFee) {
             lateFee = installment.amount * ((lateFeeConfig.fixed_fee || 0) / 100)
           } else {
             lateFee = lateFeeConfig.fixed_fee || 0
@@ -377,8 +387,6 @@ export const paymentRouter = router({
           const dailyInterest = lateFeeConfig.daily_interest || 0
           
           if (effectiveDaysOverdue > 0) {
-            // Se daily_interest > 1, considera como valor fixo (R$ por dia)
-            // Se daily_interest <= 1, considera como percentual
             if (dailyInterest > 1) {
               // Valor fixo por dia (ex: R$15/dia)
               lateInterest = dailyInterest * effectiveDaysOverdue
