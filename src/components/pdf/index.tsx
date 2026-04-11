@@ -24,8 +24,12 @@ export function usePDF() {
       console.log('Generating PDF with document:', DocumentComponent.name);
       console.log('PDF data:', data);
 
-      // Create the document - try using pdf() directly with the component
-      const pdfInstance = await pdf(<DocumentComponent {...data} />).toBlob();
+      // Create the document - the component expects { data: LoanPDFData }
+      console.log('Creating PDF with data prop:', { data });
+      const pdfElement = <DocumentComponent data={data} />;
+      console.log('PDF element created');
+      const pdfInstance = await pdf(pdfElement).toBlob();
+      console.log('PDF generated');
       
       const url = URL.createObjectURL(pdfInstance);
       
