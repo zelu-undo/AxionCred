@@ -223,6 +223,7 @@ export const loanRouter = router({
           days_in_delay
         `)
         .eq("loan_id", input.loanId)
+        .eq("tenant_id", ctx.tenantId!)
         .order("installment_number", { ascending: true })
 
       if (allError) {
