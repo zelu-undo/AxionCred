@@ -216,25 +216,29 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
         
         {/* Header */}
         <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderText, { width: '10%' }]}>Nº</Text>
-          <Text style={[styles.tableHeaderText, { width: '25%' }]}>VENCIMENTO</Text>
-          <Text style={[styles.tableHeaderText, { width: '20%' }]}>VALOR</Text>
-          <Text style={[styles.tableHeaderText, { width: '20%' }]}>JUROS</Text>
-          <Text style={[styles.tableHeaderText, { width: '25%' }]}>STATUS</Text>
+          <Text style={[styles.tableHeaderText, { width: '8%' }]}>Nº</Text>
+          <Text style={[styles.tableHeaderText, { width: '20%' }]}>VENCIMENTO</Text>
+          <Text style={[styles.tableHeaderText, { width: '18%' }]}>VALOR</Text>
+          <Text style={[styles.tableHeaderText, { width: '14%' }]}>JUROS</Text>
+          <Text style={[styles.tableHeaderText, { width: '18%' }]}>TOTAL</Text>
+          <Text style={[styles.tableHeaderText, { width: '22%' }]}>STATUS</Text>
         </View>
 
         {/* Installments */}
         {data.installments.map((inst) => (
           <View key={inst.number} style={styles.tableRow}>
-            <Text style={[styles.tableCell, { width: '10%' }]}>{inst.number}</Text>
-            <Text style={[styles.tableCell, { width: '25%' }]}>{inst.dueDate}</Text>
-            <Text style={[styles.tableCell, { width: '20%' }]}>
+            <Text style={[styles.tableCell, { width: '8%' }]}>{inst.number}</Text>
+            <Text style={[styles.tableCell, { width: '20%' }]}>{inst.dueDate}</Text>
+            <Text style={[styles.tableCell, { width: '18%' }]}>
               R$ {inst.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </Text>
-            <Text style={[styles.tableCell, { width: '20%', color: inst.lateFees && inst.lateFees > 0 ? '#DC2626' : '#111827' }]}>
+            <Text style={[styles.tableCell, { width: '14%', color: inst.lateFees && inst.lateFees > 0 ? '#DC2626' : '#111827' }]}>
               {inst.lateFees && inst.lateFees > 0 ? `R$ ${inst.lateFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
             </Text>
-            <Text style={[styles.tableCell, { width: '25%' }]}>
+            <Text style={[styles.tableCell, { width: '18%', fontWeight: 600 }]}>
+              R$ {(inst.value + (inst.lateFees || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </Text>
+            <Text style={[styles.tableCell, { width: '22%' }]}>
               <Text style={{
                 fontSize: 9,
                 fontWeight: 600,
@@ -245,6 +249,21 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
             </Text>
           </View>
         ))}
+
+        {/* Grand Total */}
+        <View style={[styles.tableRow, { backgroundColor: '#F3F4F6', marginTop: 8 }]}>
+          <Text style={[styles.tableCell, { width: '28%', fontWeight: 700 }]}>TOTAL</Text>
+          <Text style={[styles.tableCell, { width: '18%', fontWeight: 700 }]}>
+            R$ {data.installments.reduce((sum, inst) => sum + inst.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </Text>
+          <Text style={[styles.tableCell, { width: '14%', fontWeight: 700, color: '#DC2626' }]}>
+            R$ {data.installments.reduce((sum, inst) => sum + (inst.lateFees || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </Text>
+          <Text style={[styles.tableCell, { width: '18%', fontWeight: 700 }]}>
+            R$ {data.installments.reduce((sum, inst) => sum + inst.value + (inst.lateFees || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </Text>
+          <Text style={[styles.tableCell, { width: '22%' }]}></Text>
+        </View>
       </View>
 
       {/* Footer with page numbers - fixed on all pages */}
