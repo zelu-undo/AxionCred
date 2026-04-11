@@ -73,8 +73,8 @@ export default function LoanDetailPage() {
     )
   }
 
-  const paidPercent = loan.installments_count > 0 
-    ? (loan.paid_installments / loan.installments_count) * 100 
+  const paidPercent = loan.installments > 0 
+    ? (loan.paid_installments / loan.installments) * 100 
     : 0
 
   return (
@@ -95,9 +95,9 @@ export default function LoanDetailPage() {
             amount: loan.principal_amount,
             interestRate: loan.interest_rate || 0,
             installmentValue: loan.installment_value,
-            totalInstallments: loan.installments_count,
+            totalInstallments: loan.installments,
             paidInstallments: loan.paid_installments,
-            remainingInstallments: loan.installments_count - loan.paid_installments,
+            remainingInstallments: loan.installments - loan.paid_installments,
             totalValue: loan.total_amount,
             customer: {
               name: loan.customer?.name || 'Cliente',
@@ -221,11 +221,11 @@ export default function LoanDetailPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Número de Parcelas</p>
-              <p className="font-medium">{loan.installments_count}x</p>
+              <p className="font-medium">{loan.installments}x</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Parcelas Pagas</p>
-              <p className="font-medium">{loan.paid_installments}/{loan.installments_count}</p>
+              <p className="font-medium">{loan.paid_installments}/{loan.installments}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Data de Criação</p>
@@ -260,7 +260,7 @@ export default function LoanDetailPage() {
             <div className="text-center">
               <p className="text-sm text-gray-500">Valor por Parcela</p>
               <p className="text-2xl font-bold text-[#22C55E]600">
-                {formatCurrency(loan.total_amount / loan.installments_count)}
+                {formatCurrency(loan.total_amount / loan.installments)}
               </p>
             </div>
           </CardContent>
@@ -275,7 +275,7 @@ export default function LoanDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <table className="w-full">
+            <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº</th>
@@ -328,7 +328,7 @@ export default function LoanDetailPage() {
                     )
                   })}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </CardContent>
       </Card>

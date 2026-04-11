@@ -250,28 +250,22 @@ export default function LoansPage() {
                           </td>
                           <td className="px-4 py-4">
                             <span className="font-semibold text-gray-900">
-                              {formatCurrency(loan.principal_amount)}
+                              {formatCurrency(loan.amount)}
                             </span>
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900">
-                                {loan.paid_installments}/{loan.installments_count}
+                                {loan.installments}
                               </span>
-                              <div className="w-16 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500"
-                                  style={{ width: `${(loan.paid_installments / loan.installments_count) * 100}%` }}
-                                />
-                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-4">
-                            <span className="text-emerald-600 font-semibold">{formatCurrency(loan.paid_amount)}</span>
+                            <span className="text-emerald-600 font-semibold">{formatCurrency(loan.paid_amount || 0)}</span>
                           </td>
                           <td className="px-4 py-4">
                             <span className={Number(loan.remaining_amount) > 0 ? "text-amber-600 font-medium" : "text-gray-400"}>
-                              {formatCurrency(loan.remaining_amount)}
+                              {formatCurrency(loan.remaining_amount || 0)}
                             </span>
                           </td>
                           <td className="px-4 py-4">

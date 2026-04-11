@@ -85,16 +85,16 @@ export interface Loan {
   id: string
   tenant_id: string
   customer_id: string
-  principal_amount: number
+  amount: number
   interest_rate: number
+  interest_type: string
   total_amount: number
+  installments: number
+  installment_amount: number
   paid_amount: number
   remaining_amount: number
-  installments_count: number
-  paid_installments: number
   status: LoanStatus
   notes?: string
-  parent_loan_id?: string
   created_at: string
   updated_at: string
   // For tRPC joined queries
