@@ -317,7 +317,7 @@ export const loanRouter = router({
         paid_installments: paidInstallments,
         paid_amount: paidAmount,
         remaining_amount: Number(loan.total_amount || 0) - paidAmount,
-        installments: installments || []
+        installments_list: installments || []
       }
     }),
 

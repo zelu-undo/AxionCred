@@ -288,7 +288,7 @@ export default function LoanDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(loan.installments || []).map((inst: LoanInstallment) => {
+                {(loan.installments_list || []).map((inst: LoanInstallment) => {
                     const lateFees = inst.late_fee_applied || 0
                     const lateInterest = inst.late_interest_applied || 0
                     const totalLate = lateFees + lateInterest
