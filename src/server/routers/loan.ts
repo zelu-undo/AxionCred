@@ -217,7 +217,8 @@ export const loanRouter = router({
           paid_amount,
           due_date,
           paid_date,
-          status
+          status,
+          late_fees
         `)
         .eq("loan_id", input.loanId)
         .eq("tenant_id", ctx.tenantId!)
