@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, React } from 'react';
+import { useCallback, useState } from 'react';
 import * as rpdf from '@react-pdf/renderer';
 import { showErrorToast, showSuccessToast } from '@/lib/toast';
 
@@ -23,9 +23,12 @@ export function usePDF() {
 
       console.log('Generating PDF with document:', DocumentComponent.name);
 
-      // Create the document using React.createElement
-      const DocumentClass = DocumentComponent as any;
-      const doc = React.createElement(DocumentClass, data);
+      // Create the document using react-pdf's Document
+      const doc = (
+        <rpdf.Document>
+          <DocumentComponent {...data} />
+        </rpdf.Document>
+      );
       
       // Use the pdf() function from react-pdf
       const pdfDoc = rpdf.pdf(doc);
