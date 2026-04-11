@@ -218,9 +218,9 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
         <View style={styles.tableHeader}>
           <Text style={[styles.tableHeaderText, { width: '8%' }]}>Nº</Text>
           <Text style={[styles.tableHeaderText, { width: '20%' }]}>VENCIMENTO</Text>
-          <Text style={[styles.tableHeaderText, { width: '18%' }]}>VALOR</Text>
+          <Text style={[styles.tableHeaderText, { width: '18%' }]}>VALOR PARCELA</Text>
           <Text style={[styles.tableHeaderText, { width: '14%' }]}>JUROS</Text>
-          <Text style={[styles.tableHeaderText, { width: '18%' }]}>TOTAL</Text>
+          <Text style={[styles.tableHeaderText, { width: '18%' }]}>TOTAL PARCELA</Text>
           <Text style={[styles.tableHeaderText, { width: '22%' }]}>STATUS</Text>
         </View>
 
