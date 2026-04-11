@@ -118,14 +118,16 @@ export default function LoanDetailPage() {
                   number: inst.installment_number,
                   dueDate: formatDate(inst.due_date),
                   value: Number(inst.amount),
-                  status: inst.status as 'paid' | 'pending' | 'overdue',
+                  // Check paid_date to determine status
+                  status: inst.paid_date ? 'paid' : (inst.status === 'overdue' ? 'overdue' : 'pending') as 'paid' | 'pending' | 'overdue',
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
                 })),
                 generatedAt: formatDate(new Date().toISOString()),
                 generatedBy: user?.email || user?.name || 'Usuário',
               };
-              // Create PDF document directly without React.createElement
-              generatePDF(LoanContractDocument, docData, `contrato-${loan.id.slice(0, 8)}.pdf`)
+              // Create PDF document - use contract title for filename
+              const filenameTitle = docData.contractTitle.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+              generatePDF(LoanContractDocument, docData, `contrato-${filenameTitle}.pdf`)
             } catch (err) {
               console.error('PDF error:', err)
               const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'

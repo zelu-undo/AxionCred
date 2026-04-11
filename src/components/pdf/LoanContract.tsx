@@ -217,8 +217,8 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
 
       <View style={styles.divider} />
 
-      {/* Installments - At the end */}
-      <View style={styles.section}>
+      {/* Installments - At the end - with break-before to avoid cutting */}
+      <View style={{ ...styles.section, marginBottom: 40 }}>
         <Text style={styles.sectionTitle}>Parcelas ({data.paidInstallments}/{data.totalInstallments})</Text>
         
         {/* Header */}
@@ -229,9 +229,9 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
           <Text style={[styles.tableHeaderText, { width: '30%' }]}>STATUS</Text>
         </View>
 
-        {/* Installments */}
+        {/* Installments - wrap each row to prevent page break in middle */}
         {data.installments.map((inst) => (
-          <View key={inst.number} style={styles.tableRow}>
+          <View key={inst.number} style={{ ...styles.tableRow, breakInsideAvoid: 'avoid' }}>
             <Text style={[styles.tableCell, { width: '15%' }]}>{inst.number}</Text>
             <Text style={[styles.tableCell, { width: '30%' }]}>{inst.dueDate}</Text>
             <Text style={[styles.tableCell, { width: '25%' }]}>
