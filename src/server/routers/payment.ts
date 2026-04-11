@@ -67,10 +67,25 @@ export const paymentRouter = router({
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
         
         if (lateFeeConfig) {
-          lateFee = lateFeeConfig.fixed_fee || 0
+          // Calcular taxa fixa de multa (pode ser percentual ou valor fixo)
+          if (lateFeeConfig.late_fee_type === 'percent') {
+            lateFee = installment.amount * ((lateFeeConfig.fixed_fee || 0) / 100)
+          } else {
+            lateFee = lateFeeConfig.fixed_fee || 0
+          }
+          
+          // Calcular juros de mora (pode ser percentual ou valor fixo diário)
           const effectiveDaysOverdue = Math.min(daysOverdue, 30)
-          if (lateFeeConfig.daily_interest && effectiveDaysOverdue > 0) {
-            lateInterest = installment.amount * lateFeeConfig.daily_interest * effectiveDaysOverdue
+          const dailyInterest = lateFeeConfig.daily_interest || 0
+          
+          if (effectiveDaysOverdue > 0) {
+            if (dailyInterest > 1) {
+              // Valor fixo por dia (ex: R$15/dia)
+              lateInterest = dailyInterest * effectiveDaysOverdue
+            } else if (dailyInterest > 0) {
+              // Percentual ao dia
+              lateInterest = installment.amount * dailyInterest * effectiveDaysOverdue
+            }
           }
         }
       }
@@ -349,13 +364,28 @@ export const paymentRouter = router({
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
         
         if (lateFeeConfig) {
-          // Calcular taxa fixa de multa
-          lateFee = lateFeeConfig.fixed_fee || 0
+          // Calcular taxa fixa de multa (pode ser percentual ou valor fixo)
+          // Se late_fee_type for 'percent', usa percentual; senão usa valor fixo
+          if (lateFeeConfig.late_fee_type === 'percent') {
+            lateFee = installment.amount * ((lateFeeConfig.fixed_fee || 0) / 100)
+          } else {
+            lateFee = lateFeeConfig.fixed_fee || 0
+          }
           
-          // Calcular juros de mora diários (limitado a 30 dias para evitar valores absurdos)
+          // Calcular juros de mora (pode ser percentual ou valor fixo diário)
           const effectiveDaysOverdue = Math.min(daysOverdue, 30)
-          if (lateFeeConfig.daily_interest && effectiveDaysOverdue > 0) {
-            lateInterest = installment.amount * lateFeeConfig.daily_interest * effectiveDaysOverdue
+          const dailyInterest = lateFeeConfig.daily_interest || 0
+          
+          if (effectiveDaysOverdue > 0) {
+            // Se daily_interest > 1, considera como valor fixo (R$ por dia)
+            // Se daily_interest <= 1, considera como percentual
+            if (dailyInterest > 1) {
+              // Valor fixo por dia (ex: R$15/dia)
+              lateInterest = dailyInterest * effectiveDaysOverdue
+            } else if (dailyInterest > 0) {
+              // Percentual ao dia (ex: 0.5% = 0.005)
+              lateInterest = installment.amount * dailyInterest * effectiveDaysOverdue
+            }
           }
         }
       }
@@ -400,19 +430,15 @@ export const paymentRouter = router({
           // - Valor fixo (ex: 10 = R$10 por dia)
           // - Percentual (ex: 0.01 = 0.01% ao dia)
           const dailyRate = lateFeeConfig.daily_interest || 0
-          const monthlyRate = lateFeeConfig.monthly_interest || 0
           
           // Se daily_interest > 1, considera como valor fixo (R$ por dia)
           // Se daily_interest <= 1, considera como percentual
           if (dailyRate > 1) {
-            // Valor fixo por dia (ex: R$ 10/dia)
+            // Valor fixo por dia (ex: R$ 15/dia)
             interestOnlyAmount = dailyRate * effectiveDays
           } else if (dailyRate > 0) {
-            // Percentual diário (ex: 0.1% ao dia)
-            interestOnlyAmount = installment.amount * (dailyRate / 100) * effectiveDays
-          } else if (monthlyRate > 0) {
-            // Juros mensais (ex: 5% ao mês)
-            interestOnlyAmount = installment.amount * (monthlyRate / 100) * (effectiveDays / 30)
+            // Percentual diário (ex: 0.5% ao dia = 0.005)
+            interestOnlyAmount = installment.amount * dailyRate * effectiveDays
           }
         }
         
