@@ -126,6 +126,7 @@ interface LoanPDFData {
     number: number;
     dueDate: string;
     value: number;
+    lateFees?: number;
     status: 'paid' | 'pending' | 'overdue';
     paidAt?: string;
   }[];
@@ -215,21 +216,25 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
         
         {/* Header */}
         <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderText, { width: '15%' }]}>Nº</Text>
-          <Text style={[styles.tableHeaderText, { width: '30%' }]}>VENCIMENTO</Text>
-          <Text style={[styles.tableHeaderText, { width: '25%' }]}>VALOR</Text>
-          <Text style={[styles.tableHeaderText, { width: '30%' }]}>STATUS</Text>
+          <Text style={[styles.tableHeaderText, { width: '10%' }]}>Nº</Text>
+          <Text style={[styles.tableHeaderText, { width: '25%' }]}>VENCIMENTO</Text>
+          <Text style={[styles.tableHeaderText, { width: '20%' }]}>VALOR</Text>
+          <Text style={[styles.tableHeaderText, { width: '20%' }]}>JUROS</Text>
+          <Text style={[styles.tableHeaderText, { width: '25%' }]}>STATUS</Text>
         </View>
 
         {/* Installments */}
         {data.installments.map((inst) => (
           <View key={inst.number} style={styles.tableRow}>
-            <Text style={[styles.tableCell, { width: '15%' }]}>{inst.number}</Text>
-            <Text style={[styles.tableCell, { width: '30%' }]}>{inst.dueDate}</Text>
-            <Text style={[styles.tableCell, { width: '25%' }]}>
+            <Text style={[styles.tableCell, { width: '10%' }]}>{inst.number}</Text>
+            <Text style={[styles.tableCell, { width: '25%' }]}>{inst.dueDate}</Text>
+            <Text style={[styles.tableCell, { width: '20%' }]}>
               R$ {inst.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </Text>
-            <Text style={[styles.tableCell, { width: '30%' }]}>
+            <Text style={[styles.tableCell, { width: '20%', color: inst.lateFees && inst.lateFees > 0 ? '#DC2626' : '#111827' }]}>
+              {inst.lateFees && inst.lateFees > 0 ? `R$ ${inst.lateFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+            </Text>
+            <Text style={[styles.tableCell, { width: '25%' }]}>
               <Text style={{
                 fontSize: 9,
                 fontWeight: 600,
