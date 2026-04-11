@@ -27,14 +27,14 @@ export function usePDF() {
 
       // In react-pdf v4, we create a document element with the component as children
       // The data should be passed to the child component directly
-      const document = (
+      const pdfDocument = (
         <rpdf.Document>
           <DocumentComponent {...data} />
         </rpdf.Document>
       );
 
       // Use pdf() to create the PDF
-      const pdfInstance = await pdf(document).toBlob();
+      const pdfInstance = await pdf(pdfDocument).toBlob();
       
       const url = URL.createObjectURL(pdfInstance);
       
