@@ -25,11 +25,12 @@ export function usePDF() {
       console.log('Generating PDF with document:', DocumentComponent.name);
       console.log('PDF data:', data);
 
-      // In react-pdf v4, pass data to Document props and use a render function
-      // This is the correct pattern for react-pdf v4
+      // Create the document - pass data directly to the component as props
+      // The component expects { data: LoanPDFData }
       const pdfDocument = (
-        <rpdf.Document data={data}>
-          <DocumentComponent />
+        <rpdf.Document>
+          {/* @ts-expect-error - Dynamic component with data prop */}
+          <DocumentComponent data={data} />
         </rpdf.Document>
       );
 
