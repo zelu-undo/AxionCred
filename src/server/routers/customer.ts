@@ -231,19 +231,19 @@ export const customerRouter = router({
         .in("status", ["active", "pending", "late", "partial", "overdue", "paid"])
         .order("created_at", { ascending: false })
 
-      // Count paid installments from payment_transactions
+      // Count paid installments from loan_installments
       const loansWithRemaining = await Promise.all((loans || []).map(async loan => {
-        // Count payments for this loan
-        const { count: paymentCount } = await ctx.supabase
-          .from("payment_transactions")
+        // Count paid for this loan
+        const { count: paidCount } = await ctx.supabase
+          .from("loan_installments")
           .select("*", { count: "exact", head: true })
           .eq("loan_id", loan.id)
-          .eq("status", "completed")
+          .eq("status", "paid")
         
         return {
           ...loan,
           remaining_amount: Number(loan.total_amount || 0) - Number(loan.paid_amount || 0),
-          paid_installments: paymentCount || 0
+          paid_installments: paidCount || 0
         }
       }))
 
