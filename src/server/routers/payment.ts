@@ -432,6 +432,7 @@ export const paymentRouter = router({
           installment_id,
           payment_method: method,
           amount,
+          payment_date: new Date(payment_date).toISOString().split('T')[0],
           status: "completed",
           notes,
         })

@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactElement } from 'react';
 import { useCallback, useState } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { showErrorToast, showSuccessToast } from '@/lib/toast';
@@ -16,16 +15,16 @@ export function usePDF() {
   ) => {
     setIsGenerating(true);
     try {
-      // Create PDF document
+      // Verify document is a valid react-pdf document
+      if (!document || typeof document !== 'object') {
+        throw new Error('Documento inválido');
+      }
+      
+      // Create PDF document - use pdf() function directly from react-pdf
       const pdfDoc = pdf(document);
       
-      // Generate blob with timeout
-      const blob = await Promise.race([
-        pdfDoc.toBlob(),
-        new Promise<Blob>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout ao gerar PDF')), 30000)
-        )
-      ]);
+      // Generate blob
+      const blob = await pdfDoc.toBlob();
       
       const url = URL.createObjectURL(blob);
       
@@ -40,7 +39,14 @@ export function usePDF() {
       showSuccessToast('PDF baixado com sucesso!');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      let errorMessage = 'Erro desconhecido';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Check for specific errors
+        if (error.message.includes('createElement')) {
+          errorMessage = 'Erro ao criar documento PDF. Verifique os dados.';
+        }
+      }
       showErrorToast(`Erro ao gerar PDF: ${errorMessage}`);
       throw error;
     } finally {

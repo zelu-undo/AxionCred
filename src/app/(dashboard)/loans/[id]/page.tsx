@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -94,7 +95,7 @@ export default function LoanDetailPage() {
           disabled={isGenerating || !installmentsData}
           onClick={() => {
             try {
-              const doc = <LoanContractDocument data={{
+              const docData = {
                 contractNumber: loan.id.slice(0, 8).toUpperCase(),
                 createdAt: formatDate(loan.created_at),
                 status: loan.status,
@@ -118,7 +119,8 @@ export default function LoanDetailPage() {
                   status: inst.status as 'paid' | 'pending' | 'overdue',
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
                 })),
-              }} />
+              };
+              const doc = React.createElement(LoanContractDocument, { data: docData });
               generatePDF(doc, `contrato-${loan.id.slice(0, 8)}.pdf`)
             } catch (err) {
               console.error('PDF error:', err)
