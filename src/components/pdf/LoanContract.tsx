@@ -217,8 +217,8 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
 
       <View style={styles.divider} />
 
-      {/* Installments - start on new page to avoid cutting */}
-      <View style={{ ...styles.section, marginBottom: 40, breakBefore: 'always' }}>
+      {/* Installments - at the end */}
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Parcelas ({data.paidInstallments}/{data.totalInstallments})</Text>
         
         {/* Header */}
