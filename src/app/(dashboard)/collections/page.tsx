@@ -54,7 +54,8 @@ export default function CollectionsPage() {
     dueDate: p.due_date,
     daysOverdue: p.days_in_delay || Math.floor((new Date().getTime() - new Date(p.due_date).getTime()) / (1000 * 60 * 60 * 24)),
     lateFee: p.late_fee_applied || 0,
-    lateInterest: p.late_interest_applied || 0,
+    // Calculate late interest if overdue
+    lateInterest: p.amount_with_late_fees > p.amount_due ? p.amount_with_late_fees - p.amount_due - (p.late_fee_applied || 0) : 0,
     loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
   }))
   
@@ -65,7 +66,8 @@ export default function CollectionsPage() {
     amount: p.amount_due - (p.amount_paid || 0),
     dueDate: p.due_date,
     lateFee: p.late_fee_applied || 0,
-    lateInterest: p.late_interest_applied || 0,
+    // Calculate late interest if overdue
+    lateInterest: p.amount_with_late_fees > p.amount_due ? p.amount_with_late_fees - p.amount_due - (p.late_fee_applied || 0) : 0,
     loan: `Empréstimo #${p.loan_id?.slice(0, 8) || "-"}`
   }))
   
