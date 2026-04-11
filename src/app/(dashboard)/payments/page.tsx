@@ -262,7 +262,7 @@ interface LoanForPayment {
     if (calculateData && !paymentForm.amount) {
       setPaymentForm(prev => ({
         ...prev,
-        amount: (calculateData.total_amount * 100).toString()
+        amount: calculateData.total_amount.toString()
       }))
     }
   }, [calculateData])
@@ -301,7 +301,7 @@ interface LoanForPayment {
   useEffect(() => {
     if (editingPayment) {
       setEditForm({
-        amount: (editingPayment.amount_paid / 100).toString(), // CurrencyInput expects decimal format
+        amount: editingPayment.amount_paid.toString(), // CurrencyInput expects cents directly
         payment_date: editingPayment.paid_date ? editingPayment.paid_date.split('T')[0] : "",
         payment_method: editingPayment.payment_method as PaymentMethod || "cash",
         notes: editingPayment.notes || "",
@@ -405,8 +405,8 @@ interface LoanForPayment {
       return
     }
     
-    // CurrencyInput already returns value in cents
-    const amount = parseInt(paymentForm.amount || "0", 10) / 100
+    // CurrencyInput returns value in cents directly (no division needed)
+    const amount = parseInt(paymentForm.amount || "0", 10)
     
     // Format payment date with time to avoid timezone issues
     const paymentDateWithTime = paymentForm.payment_date + "T12:00:00"
@@ -1007,11 +1007,11 @@ interface LoanForPayment {
                       setSelectedInstallmentId(e.target.value)
                       const inst = installmentsData.find(i => i.id === e.target.value)
                       if (inst) {
-                        // CurrencyInput expects value in cents, so multiply by 100
-                        const remainingAmount = ((inst.amount || 0) - (inst.paid_amount || 0))
+                        // CurrencyInput expects value in cents directly
+                        const remainingAmount = (inst.amount || 0) - (inst.paid_amount || 0)
                         setPaymentForm({ 
                           ...paymentForm, 
-                          amount: (remainingAmount * 100).toString() 
+                          amount: remainingAmount.toString() 
                         })
                       }
                     }}
@@ -1042,7 +1042,7 @@ interface LoanForPayment {
                       onClick={() => {
                         // Calcular valor integral (parcela - já pago)
                         const inst = installmentsData?.find(i => i.id === selectedInstallmentId)
-                        const remaining = inst ? ((inst.amount || 0) - (inst.paid_amount || 0)) * 100 : 0
+                        const remaining = inst ? (inst.amount || 0) - (inst.paid_amount || 0) : 0
                         setPaymentForm({ 
                           ...paymentForm, 
                           payment_type: "full",
@@ -1064,7 +1064,7 @@ interface LoanForPayment {
                         const inst = installmentsData?.find(i => i.id === selectedInstallmentId)
                         if (inst) {
                           // Mostrar valor base (5% da parcela) - será recalculado no backend
-                          const baseInterest = (inst.amount * 0.05 * 100)
+                          const baseInterest = inst.amount * 0.05
                           setPaymentForm({ 
                             ...paymentForm, 
                             payment_type: "interest_only",
@@ -1493,8 +1493,8 @@ interface LoanForPayment {
                       showErrorToast("Preencha o valor e a data")
                       return
                     }
-                    // CurrencyInput returns decimal value, convert to cents for backend
-                    const amountInCents = Math.round(parseFloat(editForm.amount) * 100)
+                    // CurrencyInput returns value in cents directly
+                    const amountInCents = parseInt(editForm.amount, 10)
                     updatePaymentMutation.mutate({
                       installment_id: editingPayment!.id,
                       amount: amountInCents,

@@ -15,16 +15,16 @@ export interface CurrencyInputRef {
 
 // Format raw digits to Brazilian currency (last 2 digits are cents)
 const formatToCurrency = (digits: string): string => {
-  if (!digits) return ""
+  if (!digits || digits === "0") return ""
   
   // Pad with zeros if less than 3 digits (less than 1 cent)
   const padded = digits.padStart(3, "0")
   
-  // Split into integer and decimal parts
-  const integerPart = padded.slice(0, -2)
+  // Split into integer and decimal parts (last 2 = cents)
   const decimalPart = padded.slice(-2)
+  const integerPart = padded.slice(0, -2)
   
-  // Format integer part with dots for thousands
+  // Format integer part with dots for thousands using Brazilian format
   const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
   
   return `${formattedInteger},${decimalPart}`

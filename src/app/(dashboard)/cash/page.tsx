@@ -195,8 +195,8 @@ export default function CashPage() {
   }
 
   const handleAporte = () => {
-    // CurrencyInput returns cents, convert to numeric (divide by 100)
-    const valor = parseFloat(aporteForm.valor) / 100
+    // CurrencyInput returns cents directly
+    const valor = parseInt(aporteForm.valor, 10)
     if (!valor || valor <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
@@ -209,8 +209,8 @@ export default function CashPage() {
   }
 
   const handleRetirada = () => {
-    // CurrencyInput returns cents, convert to numeric (divide by 100)
-    const valor = parseFloat(retiradaForm.valor) / 100
+    // CurrencyInput returns cents directly
+    const valor = parseInt(retiradaForm.valor, 10)
     if (!valor || valor <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
@@ -227,8 +227,8 @@ export default function CashPage() {
   }
 
   const handleAjuste = () => {
-    // CurrencyInput returns cents, convert to numeric (divide by 100)
-    const valor = parseFloat(ajusteForm.valor) / 100
+    // CurrencyInput returns cents directly
+    const valor = parseInt(ajusteForm.valor, 10)
     if (!valor || valor <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
