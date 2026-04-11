@@ -656,7 +656,11 @@ export default function RenegotiationsPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Total a Pagar</span>
-                  <span className="font-semibold text-gray-900">{formatCurrency(Number(newTotalAmount))}</span>
+                  <span className="font-semibold text-gray-900">
+                    {installmentValue > 0 && newInstallments 
+                      ? formatCurrency(installmentValue * Number(newInstallments))
+                      : formatCurrency(Number(newTotalAmount))}
+                  </span>
                 </div>
                 {newInterestRate && Number(newInterestRate) > 0 && (
                   <div className="mt-2 pt-2 border-t border-green-200 text-xs text-gray-600">
