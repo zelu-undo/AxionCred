@@ -140,7 +140,6 @@ export const paymentRouter = router({
           paid_date,
           status,
           late_fee_applied,
-          late_interest_applied,
           days_in_delay,
           loan:loans(
             id,
@@ -272,13 +271,12 @@ export const paymentRouter = router({
         
         // Use values from database if already calculated by job, otherwise calculate dynamically
         const storedLateFee = inst.late_fee_applied || 0
-        const storedLateInterest = inst.late_interest_applied || 0
         let lateFee = storedLateFee
-        let lateInterest = storedLateInterest
-        let totalWithLateFees = inst.amount + storedLateFee + storedLateInterest
+        let lateInterest = 0
+        let totalWithLateFees = inst.amount + storedLateFee
         
         // If no stored values but overdue, calculate dynamically
-        if (isOverdue && inst.status !== 'paid' && lateFeeConfig && storedLateFee === 0 && storedLateInterest === 0) {
+        if (isOverdue && inst.status !== 'paid' && lateFeeConfig && storedLateFee === 0) {
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
           const effectiveDays = Math.min(daysOverdue, 30)
           
@@ -326,7 +324,6 @@ export const paymentRouter = router({
           paid_date: inst.paid_date,
           status: inst.status,
           late_fee_applied: inst.late_fee_applied || 0,
-          late_interest_applied: inst.late_interest_applied || 0,
           days_in_delay: inst.days_in_delay || 0,
           payment_method: transaction?.payment_method || null,
           notes: transaction?.notes || null,
