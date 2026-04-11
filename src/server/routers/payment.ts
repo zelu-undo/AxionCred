@@ -21,6 +21,69 @@ async function logCustomerEvent(supabase: SupabaseClient<any>, customerId: strin
 
 // Payment router - gerencia registros de pagamento e listagem
 export const paymentRouter = router({
+  // Calcula valor do pagamento com juros de mora
+  calculate: protectedProcedure
+    .input(
+      z.object({
+        installment_id: z.string(),
+        payment_date: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { installment_id, payment_date } = input;
+
+      // Busca a parcela
+      const { data: installment, error: instError } = await ctx.supabase
+        .from("loan_installments")
+        .select(`
+          *,
+          loan:loans(id, customer_id, tenant_id, amount, total_amount, paid_amount, remaining_amount, installments, paid_installments, status)
+        `)
+        .eq("id", installment_id)
+        .single()
+
+      if (instError || !installment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Parcela não encontrada",
+        })
+      }
+
+      // Calcula juros de mora
+      const today = new Date()
+      const dueDate = new Date(installment.due_date)
+      const isOverdue = dueDate < today && installment.status !== "paid"
+      
+      let lateFee = 0
+      let lateInterest = 0
+      
+      if (isOverdue) {
+        const { data: lateFeeConfig } = await ctx.supabase
+          .from("late_fee_config")
+          .select("*")
+          .eq("tenant_id", ctx.tenantId)
+          .single()
+        
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        
+        if (lateFeeConfig) {
+          lateFee = lateFeeConfig.fixed_fee || 0
+          const effectiveDaysOverdue = Math.min(daysOverdue, 30)
+          if (lateFeeConfig.daily_interest && effectiveDaysOverdue > 0) {
+            lateInterest = installment.amount * lateFeeConfig.daily_interest * effectiveDaysOverdue
+          }
+        }
+      }
+
+      return {
+        installment_amount: installment.amount,
+        late_fee: lateFee,
+        late_interest: lateInterest,
+        total_amount: installment.amount + lateFee + lateInterest,
+        is_overdue: isOverdue,
+      }
+    }),
+
   // Lista pagamentos com filtros
   list: protectedProcedure
     .input(
