@@ -119,7 +119,7 @@ export default function LoanDetailPage() {
                   number: inst.installment_number,
                   dueDate: formatDate(inst.due_date),
                   value: Number(inst.amount),
-                  lateFees: inst.late_fees ? Number(inst.late_fees) : undefined,
+                  lateFees: inst.late_fees !== undefined && inst.late_fees !== null ? Number(inst.late_fees) : undefined,
                   // Check paid_date to determine status
                   status: inst.paid_date ? 'paid' : (inst.status === 'overdue' ? 'overdue' : 'pending') as 'paid' | 'pending' | 'overdue',
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
@@ -127,6 +127,7 @@ export default function LoanDetailPage() {
                 generatedAt: formatDate(new Date().toISOString()),
                 generatedBy: user?.email || user?.name || 'Usuário',
               };
+              console.log('PDF data - installments:', installmentsData);
               // Create PDF document - use contract title for filename
               const filenameTitle = docData.contractTitle.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
               generatePDF(LoanContractDocument, docData, `contrato-${filenameTitle}.pdf`)
