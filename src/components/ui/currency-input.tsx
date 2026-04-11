@@ -17,8 +17,12 @@ export interface CurrencyInputRef {
 const formatToCurrency = (digits: string): string => {
   if (!digits || digits === "0") return ""
   
+  // Remove leading zeros
+  const cleanDigits = digits.replace(/^0+/, "")
+  if (!cleanDigits || cleanDigits === "0") return ""
+  
   // Pad with zeros if less than 3 digits (less than 1 cent)
-  const padded = digits.padStart(3, "0")
+  const padded = cleanDigits.padStart(3, "0")
   
   // Split into integer and decimal parts (last 2 = cents)
   const decimalPart = padded.slice(-2)

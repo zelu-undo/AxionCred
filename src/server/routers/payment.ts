@@ -282,22 +282,22 @@ export const paymentRouter = router({
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
           const effectiveDays = Math.min(daysOverdue, 30)
           
-          // Multa
-          const lateFeePercent = lateFeeConfig.percentage ?? null
-          const lateFeeFixed = lateFeeConfig.fixed_fee ?? 0
-          const lateFeeType = lateFeeConfig.late_fee_type ?? 'percentage'
+          // Multa - use existing columns
+          const lateFeePercent = lateFeeConfig.percentage ?? lateFeeConfig.fixed_fee ?? 0
+          const lateFeeType = lateFeeConfig.late_fee_type ?? lateFeeConfig.late_fee_charge_type ?? 'percentage'
           
-          if (lateFeeType === 'fixed') {
-            lateFee = lateFeeFixed
-          } else if (lateFeePercent !== null) {
-            lateFee = inst.amount * (lateFeePercent / 100)
+          // Use fixed_fee as percent if value is <= 100 (percentage), otherwise use as fixed value
+          const isPercentFee = lateFeePercent <= 100
+          
+          if (!isPercentFee && lateFeeType === 'fixed') {
+            lateFee = lateFeePercent
           } else {
-            lateFee = inst.amount * (lateFeeFixed / 100)
+            lateFee = inst.amount * (lateFeePercent / 100)
           }
           
           // Juros
           const dailyInterest = lateFeeConfig.daily_interest || 0
-          const dailyInterestType = lateFeeConfig.daily_interest_type ?? 'fixed'
+          const dailyInterestType = lateFeeConfig.daily_interest_type ?? lateFeeConfig.late_interest_type ?? 'fixed'
           
           if (effectiveDays > 0) {
             if (dailyInterestType === 'fixed') {
