@@ -12,12 +12,14 @@ import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import type { LoanInstallment } from "@/types"
 import { usePDF, LoanContractDocument } from "@/components/pdf"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function LoanDetailPage() {
   const { t } = useI18n()
   const router = useRouter()
   const params = useParams()
   const loanId = params.id as string
+  const { user } = useAuth()
 
   const { data: loanData, isLoading } = trpc.loan.byId.useQuery({ id: loanId })
   const loan = loanData
@@ -96,7 +98,7 @@ export default function LoanDetailPage() {
           onClick={() => {
             try {
               const docData = {
-                contractNumber: loan.id.slice(0, 8).toUpperCase(),
+                contractTitle: `${loan.customer?.name || 'Cliente'} - ${loan.id.slice(0, 8).toUpperCase()}`,
                 createdAt: formatDate(loan.created_at),
                 status: loan.status,
                 amount: loan.amount,
@@ -119,6 +121,8 @@ export default function LoanDetailPage() {
                   status: inst.status as 'paid' | 'pending' | 'overdue',
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
                 })),
+                generatedAt: formatDate(new Date().toISOString()),
+                generatedBy: user?.email || user?.name || 'Usuário',
               };
               // Create PDF document directly without React.createElement
               generatePDF(LoanContractDocument, docData, `contrato-${loan.id.slice(0, 8)}.pdf`)

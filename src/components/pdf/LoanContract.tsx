@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
 
 // Types
 interface LoanPDFData {
-  contractNumber: string;
+  contractTitle: string;
   createdAt: string;
   status: string;
   amount: number;
@@ -129,6 +129,8 @@ interface LoanPDFData {
     status: 'paid' | 'pending' | 'overdue';
     paidAt?: string;
   }[];
+  generatedAt: string;
+  generatedBy: string;
 }
 
 // Main Document Component
@@ -144,40 +146,20 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
           <Text style={styles.subtitle}>Sistema de Gestão de Crédito</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.label}>CONTRATO Nº</Text>
-          <Text style={styles.contractNumber}>{data.contractNumber}</Text>
+          <Text style={styles.label}>CONTRATO</Text>
+          <Text style={styles.contractNumber}>{data.contractTitle}</Text>
         </View>
       </View>
 
-      {/* Contract Info */}
+      {/* Contract Info - Only total value */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dados do Contrato</Text>
         <View style={styles.infoGrid}>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>DATA DE CRIAÇÃO</Text>
-            <Text style={styles.value}>{data.createdAt}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>STATUS</Text>
-            <View style={{
-              backgroundColor: data.status === 'active' ? '#ECFDF5' : '#F3F4F6',
-              color: data.status === 'active' ? '#059669' : '#6B7280',
-              paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, alignSelf: 'flex-start', marginTop: 4
-            }}>
-              <Text style={{ fontSize: 10, fontWeight: 600 }}>
-                {data.status === 'active' ? 'ATIVO' : 'INATIVO'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>VALOR EMPRESTADO</Text>
+          <View style={styles.infoBoxFull}>
+            <Text style={styles.label}>VALOR TOTAL</Text>
             <Text style={styles.valueLarge}>
-              R$ {data.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>TAXA DE JUROS</Text>
-            <Text style={styles.valueLarge}>{data.interestRate}%</Text>
           </View>
         </View>
       </View>
@@ -209,7 +191,33 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
 
       <View style={styles.divider} />
 
-      {/* Installments */}
+      {/* Summary - Before installments */}
+      <View style={styles.section}>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBox}>
+            <Text style={styles.label}>VALOR DA PARCELA</Text>
+            <Text style={styles.valueLarge}>
+              R$ {data.installmentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Text style={styles.label}>TOTAL DE PARCELAS</Text>
+            <Text style={styles.valueLarge}>{data.totalInstallments}x</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Text style={styles.label}>PARCELAS PAGAS</Text>
+            <Text style={styles.valueLarge}>{data.paidInstallments}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Text style={styles.label}>PARCELAS RESTANTES</Text>
+            <Text style={styles.valueLarge}>{data.remainingInstallments}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Installments - At the end */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Parcelas ({data.paidInstallments}/{data.totalInstallments})</Text>
         
@@ -242,33 +250,14 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
         ))}
       </View>
 
-      {/* Summary */}
-      <View style={{ ...styles.section, marginTop: 20 }}>
-        <View style={styles.infoGrid}>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>VALOR DA PARCELA</Text>
-            <Text style={styles.valueLarge}>
-              R$ {data.installmentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>TOTAL A PAGAR</Text>
-            <Text style={styles.valueLarge}>
-              R$ {data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>PARCELAS PAGAS</Text>
-            <Text style={styles.valueLarge}>{data.paidInstallments}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>PARCELAS RESTANTES</Text>
-            <Text style={styles.valueLarge}>{data.remainingInstallments}</Text>
-          </View>
-        </View>
+      {/* Footer with creation date and generated by */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Documento gerado em {data.generatedAt} por {data.generatedBy}
+        </Text>
       </View>
 
-      {/* Footer */}
+      {/* Footer with page numbers */}
       <View style={styles.footer} fixed>
         <Text style={styles.footerText}>Documento gerado pelo sistema AXION Cred</Text>
         <Text style={styles.footerText} render={({ pageNumber, totalPages }) => (

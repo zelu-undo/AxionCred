@@ -116,6 +116,10 @@ const baseStyles = StyleSheet.create({
     color: '#22C55E',
     marginTop: 4,
   },
+  infoBoxFull: {
+    width: '100%',
+    marginBottom: 12,
+  },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: colors.primary,
