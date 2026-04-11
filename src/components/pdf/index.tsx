@@ -26,10 +26,8 @@ export function usePDF() {
       console.log('PDF data:', data);
 
       // Create the document - pass data directly to the component as props
-      // The component expects { data: LoanPDFData }
       const pdfDocument = (
         <rpdf.Document>
-          {/* @ts-expect-error - Dynamic component with data prop */}
           <DocumentComponent data={data} />
         </rpdf.Document>
       );
