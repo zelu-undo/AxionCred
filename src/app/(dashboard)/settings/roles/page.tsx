@@ -201,15 +201,41 @@ export default function RolesManagementPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  // Handle permission change
+  // Handle permission change - with gradual validation
   const handlePermissionChange = (module: string, permission: keyof RolePermission, value: boolean) => {
+    // If enabling create/edit/delete, automatically enable view first
+    if (value && permission !== 'view') {
+      const currentPerm = formData.permissions.find(p => p.module === module)
+      if (currentPerm && !currentPerm.view) {
+        setFormData(prev => ({
+          ...prev,
+          permissions: prev.permissions.map(p => 
+            p.module === module ? { ...p, view: true, [permission]: value } : p
+          ),
+        }))
+        return
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       permissions: prev.permissions.map(p => 
         p.module === module ? { ...p, [permission]: value } : p
       ),
-    }));
-  };
+    }))
+  }
+
+  // Handle view change - auto-disable others when view is disabled
+  const handleViewChange = (module: string, value: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.map(p => 
+        p.module === module 
+          ? { ...p, view: value, create: value ? p.create : false, edit: value ? p.edit : false, delete: value ? p.delete : false } 
+          : p
+      ),
+    }))
+  }
 
   // Handle select all for a module
   const handleSelectAllModule = (module: string, value: boolean) => {
@@ -556,7 +582,7 @@ export default function RolesManagementPage() {
                           <td className="px-2 py-3 text-center">
                             <Checkbox
                               checked={perm.view}
-                              onCheckedChange={(checked) => handlePermissionChange(module.key, 'view', checked as boolean)}
+                              onCheckedChange={(checked) => handleViewChange(module.key, checked as boolean)}
                               className="mx-auto"
                             />
                           </td>
