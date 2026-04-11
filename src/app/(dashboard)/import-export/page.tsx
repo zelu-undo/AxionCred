@@ -184,7 +184,9 @@ export default function ImportExportPage() {
 
   // Export data
   const handleExport = async () => {
-    if (!user?.tenant_id) return
+    const tenantId = user?.tenantId
+    
+    if (!tenantId) return
     
     setIsProcessing(true)
     setMessage(null)
@@ -198,7 +200,7 @@ export default function ImportExportPage() {
           const { data: customers } = await supabase
             .from('customers')
             .select('*')
-            .eq('tenant_id', user.tenant_id)
+            .eq('tenant_id', tenantId)
           
           if (exportStatus !== 'all') {
             const filtered = customers?.filter(c => c.status === exportStatus)
@@ -214,7 +216,7 @@ export default function ImportExportPage() {
           const { data: loans } = await supabase
             .from('loans')
             .select('*, customer:customers(name, document)')
-            .eq('tenant_id', user.tenant_id)
+            .eq('tenant_id', tenantId)
           
           data = (loans || []).map(l => ({
             customer_document: l.customer?.document || '',
@@ -234,7 +236,7 @@ export default function ImportExportPage() {
           const { data: renegotiations } = await supabase
             .from('loan_renegotiations')
             .select('*, loan:loans(customer:customers(name, document))')
-            .eq('tenant_id', user.tenant_id)
+            .eq('tenant_id', tenantId)
           
           data = (renegotiations || []).map(r => ({
             customer_document: r.loan?.customer?.document || '',
@@ -253,7 +255,7 @@ export default function ImportExportPage() {
           const { data: payments } = await supabase
             .from('loan_installments')
             .select('*, loan:loans(customer:customers(name, document))')
-            .eq('tenant_id', user.tenant_id)
+            .eq('tenant_id', tenantId)
           
           data = (payments || []).map(p => ({
             customer_document: p.loan?.customer?.document || '',
