@@ -1020,7 +1020,7 @@ interface LoanForPayment {
                     <option value="">Selecione a parcela...</option>
                     {installmentsData.map((inst) => (
                       <option key={inst.id} value={inst.id}>
-                        Parcela {inst.installment_number} - R$ {((inst.amount || 0) - (inst.paid_amount || 0)).toLocaleString('pt-BR')} - Venc: {new Date(inst.due_date).toLocaleDateString('pt-BR')} [{inst.status}]
+                        Parcela {inst.installment_number} - Venc: {new Date(inst.due_date).toLocaleDateString('pt-BR')} [{inst.status}]
                       </option>
                     ))}
                   </select>

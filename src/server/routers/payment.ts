@@ -227,11 +227,21 @@ export const paymentRouter = router({
         )
       }
 
-      // Formata os dados para o frontend
       // Primeiro, buscar as transações de pagamento para obter método e observações
       const installmentIds = (data || []).map((inst: any) => inst.id)
       
       let transactionsMap: Record<string, { payment_method: string; notes: string }> = {}
+      let lateFeeConfig: any = null
+      
+      // Buscar config uma vez
+      if (ctx.tenantId) {
+        const { data: config } = await ctx.supabase
+          .from("late_fee_config")
+          .select("*")
+          .eq("tenant_id", ctx.tenantId)
+          .single()
+        lateFeeConfig = config
+      }
       
       if (installmentIds.length > 0) {
         const { data: transactions } = await ctx.supabase
@@ -254,15 +264,39 @@ export const paymentRouter = router({
         const dueDate = new Date(inst.due_date)
         const today = new Date()
         const isOverdue = dueDate < today && inst.status !== 'paid'
-        let totalWithLateFees = inst.amount // Default to base amount
+        let lateFee = 0
+        let lateInterest = 0
+        let totalWithLateFees = inst.amount
         
-        if (isOverdue && inst.status !== 'paid') {
-          // Get late config and calculate
+        if (isOverdue && inst.status !== 'paid' && lateFeeConfig) {
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+          const effectiveDays = Math.min(daysOverdue, 30)
           
-          // This would need late_fee_config - we'll calculate based on what's stored
-          const lateFee = inst.late_fee_applied || 0
-          const lateInterest = inst.late_interest_applied || 0
+          // Multa
+          const lateFeePercent = lateFeeConfig.percentage ?? null
+          const lateFeeFixed = lateFeeConfig.fixed_fee ?? 0
+          const lateFeeType = lateFeeConfig.late_fee_type ?? 'percentage'
+          
+          if (lateFeeType === 'fixed') {
+            lateFee = lateFeeFixed
+          } else if (lateFeePercent !== null) {
+            lateFee = inst.amount * (lateFeePercent / 100)
+          } else {
+            lateFee = inst.amount * (lateFeeFixed / 100)
+          }
+          
+          // Juros
+          const dailyInterest = lateFeeConfig.daily_interest || 0
+          const dailyInterestType = lateFeeConfig.daily_interest_type ?? 'fixed'
+          
+          if (effectiveDays > 0) {
+            if (dailyInterestType === 'fixed') {
+              lateInterest = dailyInterest * effectiveDays
+            } else {
+              lateInterest = inst.amount * dailyInterest * effectiveDays
+            }
+          }
+          
           totalWithLateFees = inst.amount + lateFee + lateInterest
         }
         
