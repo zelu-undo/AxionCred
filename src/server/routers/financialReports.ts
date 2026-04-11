@@ -26,7 +26,7 @@ export const financialReportsRouter = router({
       // Buscar receitas (pagamentos recebidos)
       const { data: payments, error: paymentsError } = await ctx.supabase
         .from("payment_transactions")
-        .select("amount, payment_date, method, loan_id")
+        .select("amount, payment_date, payment_method, loan_id")
         .eq("tenant_id", tenantId)
         .eq("status", "completed")
         .gte("payment_date", startDate)

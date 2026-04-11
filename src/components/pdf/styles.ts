@@ -2,15 +2,27 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
 
 // Register fonts with AXION branding
-Font.register({
-  family: 'Poppins',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLGT9Z1xlFQ.woff2', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCj7Z1xlFQ.woff2', fontWeight: 500 },
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLEj6Z1xlFQ.woff2', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCj5Z1xlFQ.woff2', fontWeight: 700 },
-  ],
-});
+// Using a more reliable font loading method
+const fontUrls = {
+  PoppinsRegular: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLGT9Z1xlFQ.woff2',
+  PoppinsMedium: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCj7Z1xlFQ.woff2',
+  PoppinsSemiBold: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLEj6Z1xlFQ.woff2',
+  PoppinsBold: 'https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCj5Z1xlFQ.woff2',
+};
+
+try {
+  Font.register({
+    family: 'Poppins',
+    fonts: [
+      { src: fontUrls.PoppinsRegular, fontWeight: 400 },
+      { src: fontUrls.PoppinsMedium, fontWeight: 500 },
+      { src: fontUrls.PoppinsSemiBold, fontWeight: 600 },
+      { src: fontUrls.PoppinsBold, fontWeight: 700 },
+    ],
+  });
+} catch (error) {
+  console.warn('Font registration warning:', error);
+}
 
 // AXION Color Palette
 const colors = {

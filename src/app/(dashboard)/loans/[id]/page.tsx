@@ -11,7 +11,6 @@ import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import type { LoanInstallment } from "@/types"
 import { usePDF, LoanContractDocument } from "@/components/pdf"
-import { pdf, PDFViewer } from "@react-pdf/renderer"
 
 export default function LoanDetailPage() {
   const { t } = useI18n()
@@ -21,6 +20,9 @@ export default function LoanDetailPage() {
 
   const { data: loanData, isLoading } = trpc.loan.byId.useQuery({ id: loanId })
   const loan = loanData
+  
+  // Use the usePDF hook
+  const { generatePDF, isGenerating } = usePDF()
 
   // Fetch installments for PDF
   const { data: installmentsData } = trpc.loan.installmentsForPayment.useQuery(
@@ -87,10 +89,10 @@ export default function LoanDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">Empréstimo #{loan.id.slice(0, 8)}</h1>
           <p className="text-gray-500">Detalhes do empréstimo</p>
         </div>
-        <PDFViewer width={0} height={0} showToolbar={false} />
         <Button
           variant="outline"
-          onClick={async () => {
+          disabled={isGenerating || !installmentsData}
+          onClick={() => {
             try {
               const doc = <LoanContractDocument data={{
                 contractNumber: loan.id.slice(0, 8).toUpperCase(),
@@ -117,27 +119,16 @@ export default function LoanDetailPage() {
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
                 })),
               }} />
-              // Use the imported pdf function properly
-              const blob = await new Promise<Blob>((resolve, reject) => {
-                const pdfDoc = pdf(doc)
-                pdfDoc.toBlob().then(resolve).catch(reject)
-              })
-              const url = URL.createObjectURL(blob)
-              const link = document.createElement('a')
-              link.href = url
-              link.download = `contrato-${loan.id.slice(0, 8)}.pdf`
-              document.body.appendChild(link)
-              link.click()
-              document.body.removeChild(link)
-              URL.revokeObjectURL(url)
+              generatePDF(doc, `contrato-${loan.id.slice(0, 8)}.pdf`)
             } catch (err) {
               console.error('PDF error:', err)
-              alert('Erro ao gerar PDF')
+              const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
+              alert(`Erro ao gerar PDF: ${errorMessage}`)
             }
           }}
         >
           <Download className="h-4 w-4 mr-2" />
-          Baixar PDF
+          {isGenerating ? 'Gerando...' : 'Baixar PDF'}
         </Button>
         {getStatusBadge(loan.status)}
       </div>

@@ -30,6 +30,28 @@ const nextConfig: NextConfig = {
   
   // React optimization
   reactStrictMode: true,
+  
+  // Webpack configuration for react-pdf
+  webpack: (config: any, { isServer }: { isServer: boolean }) => {
+    // Disable eslint-plugin for PDF generation to avoid issues
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@react-pdf/renderer': '@react-pdf/renderer',
+    };
+    
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        path: false,
+        zlib: false,
+      };
+    }
+    
+    return config;
+  },
 }
 
 export default withNextIntl(nextConfig)

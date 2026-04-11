@@ -148,18 +148,18 @@ export const paymentRouter = router({
       // Primeiro, buscar as transações de pagamento para obter método e observações
       const installmentIds = (data || []).map((inst: any) => inst.id)
       
-      let transactionsMap: Record<string, { method: string; notes: string }> = {}
+      let transactionsMap: Record<string, { payment_method: string; notes: string }> = {}
       
       if (installmentIds.length > 0) {
         const { data: transactions } = await ctx.supabase
           .from("payment_transactions")
-          .select("id, installment_id, method, notes")
+          .select("id, installment_id, payment_method, notes")
           .in("installment_id", installmentIds)
           .eq("status", "completed")
         
         if (transactions) {
           transactions.forEach((t: any) => {
-            transactionsMap[t.installment_id] = { method: t.method, notes: t.notes }
+            transactionsMap[t.installment_id] = { payment_method: t.payment_method, notes: t.notes }
           })
         }
       }
@@ -183,7 +183,7 @@ export const paymentRouter = router({
           late_fee_applied: inst.late_fee_applied || 0,
           late_interest_applied: inst.late_interest_applied || 0,
           days_in_delay: inst.days_in_delay || 0,
-          payment_method: transaction?.method || null,
+          payment_method: transaction?.payment_method || null,
           notes: transaction?.notes || null,
         }
       })
@@ -430,7 +430,7 @@ export const paymentRouter = router({
           tenant_id: ctx.tenantId,
           loan_id: installment.loan_id,
           installment_id,
-          method,
+          payment_method: method,
           amount,
           status: "completed",
           notes,
@@ -517,7 +517,7 @@ export const paymentRouter = router({
             loan_id: loan.id, 
             installment_id, 
             amount,
-            method,
+            payment_method: method,
             is_full_payment: isFullPayment,
           },
         })
@@ -636,7 +636,7 @@ export const paymentRouter = router({
         .from("payment_transactions")
         .update({
           amount,
-          method,
+          payment_method: method,
           notes,
         })
         .eq("id", existingTransaction.id)

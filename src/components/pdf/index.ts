@@ -16,7 +16,17 @@ export function usePDF() {
   ) => {
     setIsGenerating(true);
     try {
-      const blob = await pdf(document).toBlob();
+      // Create PDF document
+      const pdfDoc = pdf(document);
+      
+      // Generate blob with timeout
+      const blob = await Promise.race([
+        pdfDoc.toBlob(),
+        new Promise<Blob>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout ao gerar PDF')), 30000)
+        )
+      ]);
+      
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
@@ -30,7 +40,9 @@ export function usePDF() {
       showSuccessToast('PDF baixado com sucesso!');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      showErrorToast('Erro ao gerar PDF');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      showErrorToast(`Erro ao gerar PDF: ${errorMessage}`);
+      throw error;
     } finally {
       setIsGenerating(false);
     }

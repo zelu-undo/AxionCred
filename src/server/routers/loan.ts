@@ -850,7 +850,7 @@ export const loanRouter = router({
         tenant_id: ctx.tenantId,
         loan_id: installment.loan_id,
         installment_id,
-        method,
+        payment_method: method,
         amount,
         status: "completed",
       })
