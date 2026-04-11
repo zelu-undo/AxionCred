@@ -62,8 +62,10 @@ export default function SuperAdminPage() {
   const [isEditCompanyOpen, setIsEditCompanyOpen] = useState(false)
   const [isDeleteCompanyOpen, setIsDeleteCompanyOpen] = useState(false)
   const [isViewUsersOpen, setIsViewUsersOpen] = useState(false)
+  const [isMigrateUserOpen, setIsMigrateUserOpen] = useState(false)
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', document: '', plan: '' })
+  const [migrateUserForm, setMigrateUserForm] = useState({ userId: '', newTenantId: '' })
 
   // Redirect if not super admin
   useEffect(() => {
@@ -690,15 +692,29 @@ export default function SuperAdminPage() {
                       </td>
                       <td className="px-4 py-3">
                         {user.role !== 'owner' && user.status === 'active' && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDeactivateUser(user.id)}
-                            title="Desativar"
-                            className="text-red-600"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => {
+                                setMigrateUserForm({ userId: user.id, newTenantId: '' })
+                                setIsMigrateUserOpen(true)
+                              }}
+                              title="Migrar para outra empresa"
+                              className="text-blue-600"
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDeactivateUser(user.id)}
+                              title="Desativar"
+                              className="text-red-600"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -832,6 +848,58 @@ export default function SuperAdminPage() {
           </div>
           <DialogFooter>
             <Button onClick={() => setIsViewUsersOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Migrate User Dialog */}
+      <Dialog open={isMigrateUserOpen} onOpenChange={setIsMigrateUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Migrar Usuário para Outro Empresa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Selecione a nova empresa</Label>
+              <Select 
+                value={migrateUserForm.newTenantId} 
+                onValueChange={(v) => setMigrateUserForm({ ...migrateUserForm, newTenantId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-sm text-gray-500">
+              O usuário será movido para a nova empresa. Esta ação não pode ser desfeita.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMigrateUserOpen(false)}>Cancelar</Button>
+            <Button 
+              className="bg-[#22C55E]"
+              disabled={!migrateUserForm.newTenantId}
+              onClick={async () => {
+                if (!migrateUserForm.newTenantId || !migrateUserForm.userId) return
+                await supabase
+                  .from("users")
+                  .update({ tenant_id: migrateUserForm.newTenantId })
+                  .eq("id", migrateUserForm.userId)
+                setUsers(users.map(u => 
+                  u.id === migrateUserForm.userId ? { ...u, tenant_id: migrateUserForm.newTenantId } : u
+                ))
+                setIsMigrateUserOpen(false)
+                setMessage('Usuário migrado com sucesso!')
+                setTimeout(() => setMessage(''), 3000)
+              }}
+            >
+              Migrar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
