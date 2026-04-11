@@ -144,31 +144,6 @@ export default function PaymentsPage() {
   }, {
     enabled: isRegisterOpen,
   })
-
-  // Calculate payment amount with late fees when installment is selected
-  const { data: calculateData, refetch: refetchCalculate } = trpc.payment.calculate.useQuery({
-    installment_id: selectedInstallmentId,
-    payment_date: paymentForm?.payment_date || new Date().toISOString().split('T')[0],
-  }, {
-    enabled: !!selectedInstallmentId,
-  })
-
-  // Refetch calculate when payment date changes
-  useEffect(() => {
-    if (selectedInstallmentId && paymentForm?.payment_date) {
-      refetchCalculate()
-    }
-  }, [selectedInstallmentId, paymentForm?.payment_date, refetchCalculate])
-
-  // Auto-fill payment amount when calculateData is available
-  useEffect(() => {
-    if (calculateData && !paymentForm.amount) {
-      setPaymentForm(prev => ({
-        ...prev,
-        amount: (calculateData.total_amount * 100).toString()
-      }))
-    }
-  }, [calculateData])
   
   // Type for loans from customer query (no customer nested)
 interface LoanForPayment {
@@ -266,6 +241,31 @@ interface LoanForPayment {
       showErrorToast(error.message || "Erro ao registrar pagamento")
     },
   })
+
+  // Calculate payment amount with late fees when installment is selected
+  const { data: calculateData, refetch: refetchCalculate } = trpc.payment.calculate.useQuery({
+    installment_id: selectedInstallmentId,
+    payment_date: paymentForm.payment_date,
+  }, {
+    enabled: !!selectedInstallmentId,
+  })
+
+  // Refetch calculate when payment date changes
+  useEffect(() => {
+    if (selectedInstallmentId && paymentForm.payment_date) {
+      refetchCalculate()
+    }
+  }, [selectedInstallmentId, paymentForm.payment_date, refetchCalculate])
+
+  // Auto-fill payment amount when calculateData is available
+  useEffect(() => {
+    if (calculateData && !paymentForm.amount) {
+      setPaymentForm(prev => ({
+        ...prev,
+        amount: (calculateData.total_amount * 100).toString()
+      }))
+    }
+  }, [calculateData])
   
   // Reverse payment mutation
   const reversePaymentMutation = trpc.payment.reverse.useMutation({
