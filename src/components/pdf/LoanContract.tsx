@@ -151,22 +151,7 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
         </View>
       </View>
 
-      {/* Contract Info - Only total value */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Dados do Contrato</Text>
-        <View style={styles.infoGrid}>
-          <View style={styles.infoBoxFull}>
-            <Text style={styles.label}>VALOR TOTAL</Text>
-            <Text style={styles.valueLarge}>
-              R$ {data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Customer Info */}
+      {/* Customer Info - FIRST */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dados do Cliente</Text>
         <View style={styles.infoGrid}>
@@ -185,6 +170,21 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
           <View style={styles.infoBox}>
             <Text style={styles.label}>TELEFONE</Text>
             <Text style={styles.value}>{data.customer.phone}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Contract Info - Only total value - AFTER customer */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Dados do Contrato</Text>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBoxFull}>
+            <Text style={styles.label}>VALOR TOTAL</Text>
+            <Text style={styles.valueLarge}>
+              R$ {data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </Text>
           </View>
         </View>
       </View>
