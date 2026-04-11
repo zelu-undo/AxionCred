@@ -48,6 +48,7 @@ interface PaymentRecord {
   installment_number: number
   installment_total: number
   amount_due: number
+  amount_with_late_fees: number
   amount_paid: number
   due_date: string
   paid_date: string | null
@@ -318,6 +319,7 @@ interface LoanForPayment {
     installment_number: p.installment_number,
     installment_total: p.installment_total,
     amount_due: p.amount_due,
+    amount_with_late_fees: p.amount_with_late_fees,
     amount_paid: p.amount_paid,
     due_date: p.due_date,
     paid_date: p.paid_date,
@@ -672,9 +674,23 @@ interface LoanForPayment {
                           </td>
                           <td className="px-4 py-4">
                             <div>
-                              <p className="font-semibold text-gray-900">{formatCurrency(payment.amount_due)}</p>
-                              {payment.amount_paid > 0 && payment.amount_paid < payment.amount_due && (
-                                <p className="text-xs text-gray-500">pago: {formatCurrency(payment.amount_paid)}</p>
+                              {/* Show total with late fees for overdue, otherwise show base amount */}
+                              {payment.amount_with_late_fees > payment.amount_due ? (
+                                <div>
+                                  <p className="font-semibold text-red-600">
+                                    {formatCurrency(payment.amount_with_late_fees)}
+                                  </p>
+                                  <p className="text-xs text-gray-400 line-through">
+                                    {formatCurrency(payment.amount_due)}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="font-semibold text-gray-900">{formatCurrency(payment.amount_due)}</p>
+                              )}
+                              {payment.amount_paid > 0 && (
+                                <p className="text-xs text-gray-500">
+                                  pago: {formatCurrency(payment.amount_paid)}
+                                </p>
                               )}
                             </div>
                           </td>
@@ -1381,14 +1397,32 @@ interface LoanForPayment {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
-                      <p className="font-bold text-gray-900">{formatCurrency(editingPayment.amount_due)}</p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <p className="text-sm text-gray-500 mb-1">Valor Pago</p>
-                      <p className="font-bold text-green-600">{formatCurrency(editingPayment.amount_paid)}</p>
-                    </div>
+                    {/* Show total with late fees if applicable */}
+                    {editingPayment.amount_with_late_fees > editingPayment.amount_due ? (
+                      <>
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                          <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
+                          <p className="font-bold text-gray-900 line-through">
+                            {formatCurrency(editingPayment.amount_due)}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-sm text-red-600 mb-1">Total com Juros</p>
+                          <p className="font-bold text-red-600">{formatCurrency(editingPayment.amount_with_late_fees)}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-4 bg-gray-50 rounded-xl">
+                          <p className="text-sm text-gray-500 mb-1">Valor da Parcela</p>
+                          <p className="font-bold text-gray-900">{formatCurrency(editingPayment.amount_due)}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-xl">
+                          <p className="text-sm text-gray-500 mb-1">Valor Pago</p>
+                          <p className="font-bold text-green-600">{formatCurrency(editingPayment.amount_paid)}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                   
                   {/* Edit Form */}

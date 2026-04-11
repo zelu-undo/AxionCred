@@ -229,6 +229,23 @@ export const paymentRouter = router({
 
       const payments = installments.map((inst: any) => {
         const transaction = transactionsMap[inst.id]
+        
+        // Calculate total with late fees for display
+        const dueDate = new Date(inst.due_date)
+        const today = new Date()
+        const isOverdue = dueDate < today && inst.status !== 'paid'
+        let totalWithLateFees = inst.amount // Default to base amount
+        
+        if (isOverdue && inst.status !== 'paid') {
+          // Get late config and calculate
+          const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+          
+          // This would need late_fee_config - we'll calculate based on what's stored
+          const lateFee = inst.late_fee_applied || 0
+          const lateInterest = inst.late_interest_applied || 0
+          totalWithLateFees = inst.amount + lateFee + lateInterest
+        }
+        
         return {
           id: inst.id,
           customer_name: inst.loan?.customer?.name || "-",
@@ -239,6 +256,7 @@ export const paymentRouter = router({
           installment_number: inst.installment_number,
           installment_total: inst.loan?.installments || 0,
           amount_due: inst.amount,
+          amount_with_late_fees: totalWithLateFees,
           amount_paid: inst.paid_amount || 0,
           due_date: inst.due_date,
           paid_date: inst.paid_date,
