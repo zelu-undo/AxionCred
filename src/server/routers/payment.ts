@@ -67,28 +67,28 @@ export const paymentRouter = router({
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
         
         if (lateFeeConfig) {
-          // Calcular taxa fixa de multa (pode ser percentual ou valor fixo)
-          // Assume percentual se fixed_fee <= 100 ou se late_fee_type for 'percent'
-          const isPercentFee = lateFeeConfig.late_fee_type === 'percent' || 
-            lateFeeConfig.late_fee_type === undefined || 
-            (lateFeeConfig.fixed_fee || 0) <= 100
+          // Calcular taxa fixa de multa
+          const lateFeePercent = lateFeeConfig.percentage ?? null
+          const lateFeeFixed = lateFeeConfig.fixed_fee ?? 0
+          const lateFeeType = lateFeeConfig.late_fee_type ?? 'percentage'
           
-          if (isPercentFee) {
-            lateFee = installment.amount * ((lateFeeConfig.fixed_fee || 0) / 100)
+          if (lateFeeType === 'fixed') {
+            lateFee = lateFeeFixed
+          } else if (lateFeePercent !== null) {
+            lateFee = installment.amount * (lateFeePercent / 100)
           } else {
-            lateFee = lateFeeConfig.fixed_fee || 0
+            lateFee = installment.amount * (lateFeeFixed / 100)
           }
           
-          // Calcular juros de mora (pode ser percentual ou valor fixo diário)
+          // Calcular juros de mora
           const effectiveDaysOverdue = Math.min(daysOverdue, 30)
           const dailyInterest = lateFeeConfig.daily_interest || 0
+          const dailyInterestType = lateFeeConfig.daily_interest_type ?? 'fixed'
           
           if (effectiveDaysOverdue > 0) {
-            if (dailyInterest > 1) {
-              // Valor fixo por dia (ex: R$15/dia)
+            if (dailyInterestType === 'fixed') {
               lateInterest = dailyInterest * effectiveDaysOverdue
-            } else if (dailyInterest > 0) {
-              // Percentual ao dia
+            } else {
               lateInterest = installment.amount * dailyInterest * effectiveDaysOverdue
             }
           }
@@ -369,29 +369,32 @@ export const paymentRouter = router({
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
         
         if (lateFeeConfig) {
-          // Calcular taxa fixa de multa (pode ser percentual ou valor fixo)
-          // Assume percentual se fixed_fee <= 100 ou se late_fee_type for 'percent'
-          // Assume valor fixo apenas se late_fee_type explicitamente 'fixed'
-          const isPercentFee = lateFeeConfig.late_fee_type === 'percent' || 
-            lateFeeConfig.late_fee_type === undefined || 
-            (lateFeeConfig.fixed_fee || 0) <= 100
+          // Calcular taxa fixa de multa
+          // Usar 'percentage' se existir, senão usar 'fixed_fee' (só se late_fee_type for 'fixed')
+          const lateFeePercent = lateFeeConfig.percentage ?? null
+          const lateFeeFixed = lateFeeConfig.fixed_fee ?? 0
+          const lateFeeType = lateFeeConfig.late_fee_type ?? 'percentage' // default to percentage
           
-          if (isPercentFee) {
-            lateFee = installment.amount * ((lateFeeConfig.fixed_fee || 0) / 100)
+          if (lateFeeType === 'fixed') {
+            lateFee = lateFeeFixed
+          } else if (lateFeePercent !== null) {
+            lateFee = installment.amount * (lateFeePercent / 100)
           } else {
-            lateFee = lateFeeConfig.fixed_fee || 0
+            // fallback: assume fixed_fee é percentual (legacy)
+            lateFee = installment.amount * (lateFeeFixed / 100)
           }
           
-          // Calcular juros de mora (pode ser percentual ou valor fixo diário)
+          // Calcular juros de mora
           const effectiveDaysOverdue = Math.min(daysOverdue, 30)
           const dailyInterest = lateFeeConfig.daily_interest || 0
+          const dailyInterestType = lateFeeConfig.daily_interest_type ?? 'fixed' // default to fixed
           
           if (effectiveDaysOverdue > 0) {
-            if (dailyInterest > 1) {
+            if (dailyInterestType === 'fixed') {
               // Valor fixo por dia (ex: R$15/dia)
               lateInterest = dailyInterest * effectiveDaysOverdue
-            } else if (dailyInterest > 0) {
-              // Percentual ao dia (ex: 0.5% = 0.005)
+            } else {
+              // Percentual ao dia
               lateInterest = installment.amount * dailyInterest * effectiveDaysOverdue
             }
           }
@@ -434,19 +437,15 @@ export const paymentRouter = router({
         
         // Calcular juros baseado na configuração
         if (lateFeeConfig) {
-          // daily_interest pode ser:
-          // - Valor fixo (ex: 10 = R$10 por dia)
-          // - Percentual (ex: 0.01 = 0.01% ao dia)
-          const dailyRate = lateFeeConfig.daily_interest || 0
+          const dailyInterest = lateFeeConfig.daily_interest || 0
+          const dailyInterestType = lateFeeConfig.daily_interest_type ?? 'fixed'
           
-          // Se daily_interest > 1, considera como valor fixo (R$ por dia)
-          // Se daily_interest <= 1, considera como percentual
-          if (dailyRate > 1) {
-            // Valor fixo por dia (ex: R$ 15/dia)
-            interestOnlyAmount = dailyRate * effectiveDays
-          } else if (dailyRate > 0) {
-            // Percentual diário (ex: 0.5% ao dia = 0.005)
-            interestOnlyAmount = installment.amount * dailyRate * effectiveDays
+          if (dailyInterestType === 'fixed') {
+            // Valor fixo por dia (ex: R$15/dia)
+            interestOnlyAmount = dailyInterest * effectiveDays
+          } else {
+            // Percentual ao dia
+            interestOnlyAmount = installment.amount * dailyInterest * effectiveDays
           }
         }
         
