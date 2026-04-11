@@ -20,10 +20,12 @@ import {
 
 // Templates for download
 const CUSTOMER_TEMPLATE = [
-  ['name', 'document', 'email', 'phone', 'address', 'city', 'state', 'notes'],
-  ['João Silva', '12345678900', 'joao@email.com', '11999999999', 'Rua ABC 123', 'São Paulo', 'SP', 'ClienteVIP'],
-  ['Maria Santos', '98765432100', 'maria@email.com', '11888888888', 'Av. XYZ 456', 'Rio de Janeiro', 'RJ', '']
+  ['name', 'document', 'email', 'phone', 'cep', 'notes'],
+  ['João Silva', '12345678900', 'joao@email.com', '11999999999', '01001000', 'ClienteVIP'],
+  ['Maria Santos', '98765432100', 'maria@email.com', '11888888888', '20010001', '']
 ]
+
+// CEP lookup will be done during import to get address, city, state
 
 const LOAN_TEMPLATE = [
   ['customer_document', 'amount', 'installments', 'interest_rate', 'status'],
@@ -121,6 +123,28 @@ export default function ImportExportPage() {
     })
   }
 
+  // Fetch address data from CEP (Brazilian API)
+  const fetchCEPData = async (cep: string): Promise<{ address: string, city: string, state: string } | null> => {
+    try {
+      const cleanCEP = cep.replace(/\D/g, '')
+      if (cleanCEP.length !== 8) return null
+      
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`)
+      const data = await response.json()
+      
+      if (data.erro) return null
+      
+      return {
+        address: data.logradouro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
+      }
+    } catch (err) {
+      console.error('CEP lookup error:', err)
+      return null
+    }
+  }
+
   // Handle file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -141,7 +165,7 @@ export default function ImportExportPage() {
       }
 
       const headers = rows[0]
-      const data = rows.slice(1).map(row => {
+      let data = rows.slice(1).map(row => {
         const obj: any = {}
         headers.forEach((h, i) => {
           obj[h] = row[i] || ''
@@ -149,11 +173,37 @@ export default function ImportExportPage() {
         return obj
       })
 
+      // If importing customers, fetch CEP data for each row
+      if (entityType === 'customers') {
+        const cepDataCache: Record<string, { address: string, city: string, state: string }> = {}
+        
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i]
+          const cep = row.cep
+          
+          if (cep && !cepDataCache[cep]) {
+            const cepInfo = await fetchCEPData(cep)
+            if (cepInfo) {
+              cepDataCache[cep] = cepInfo
+            }
+          }
+          
+          if (cep && cepDataCache[cep]) {
+            row.address = cepDataCache[cep].address
+            row.city = cepDataCache[cep].city
+            row.state = cepDataCache[cep].state
+          }
+        }
+        
+        setMessage({ type: 'success', text: `${data.length} registros carregados! CEP consultado automaticamente.` })
+      } else {
+        setMessage({ type: 'success', text: `${data.length} registros carregados!` })
+      }
+
       setImportData(data)
       setPreviewData(data.slice(0, 10))
       setEditedRows(data)
       setStep('preview')
-      setMessage({ type: 'success', text: `${data.length} registros carregados!` })
     } catch (err) {
       console.error('Error parsing CSV:', err)
       setMessage({ type: 'error', text: 'Erro ao ler arquivo. Verifique o formato!' })
