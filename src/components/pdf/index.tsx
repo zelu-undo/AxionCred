@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import * as rpdf from '@react-pdf/renderer';
 import { pdf } from '@react-pdf/renderer';
 import { showErrorToast, showSuccessToast } from '@/lib/toast';
 
@@ -25,15 +24,8 @@ export function usePDF() {
       console.log('Generating PDF with document:', DocumentComponent.name);
       console.log('PDF data:', data);
 
-      // Create the document - pass data directly to the component as props
-      const pdfDocument = (
-        <rpdf.Document>
-          <DocumentComponent data={data} />
-        </rpdf.Document>
-      );
-
-      // Use pdf() to create the PDF
-      const pdfInstance = await pdf(pdfDocument).toBlob();
+      // Create the document - try using pdf() directly with the component
+      const pdfInstance = await pdf(<DocumentComponent {...data} />).toBlob();
       
       const url = URL.createObjectURL(pdfInstance);
       
