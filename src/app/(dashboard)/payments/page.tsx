@@ -148,17 +148,17 @@ export default function PaymentsPage() {
   // Calculate payment amount with late fees when installment is selected
   const { data: calculateData, refetch: refetchCalculate } = trpc.payment.calculate.useQuery({
     installment_id: selectedInstallmentId,
-    payment_date: paymentForm.payment_date,
+    payment_date: paymentForm?.payment_date || new Date().toISOString().split('T')[0],
   }, {
     enabled: !!selectedInstallmentId,
   })
 
   // Refetch calculate when payment date changes
   useEffect(() => {
-    if (selectedInstallmentId && paymentForm.payment_date) {
+    if (selectedInstallmentId && paymentForm?.payment_date) {
       refetchCalculate()
     }
-  }, [selectedInstallmentId, paymentForm.payment_date, refetchCalculate])
+  }, [selectedInstallmentId, paymentForm?.payment_date, refetchCalculate])
 
   // Auto-fill payment amount when calculateData is available
   useEffect(() => {
