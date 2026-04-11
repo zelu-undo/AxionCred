@@ -186,14 +186,6 @@ const LoanContractDocument: React.FC<{ data: LoanPDFData }> = ({ data }) => (
               R$ {data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </Text>
           </View>
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Summary - Before installments */}
-      <View style={styles.section}>
-        <View style={styles.infoGrid}>
           <View style={styles.infoBox}>
             <Text style={styles.label}>VALOR DA PARCELA</Text>
             <Text style={styles.valueLarge}>

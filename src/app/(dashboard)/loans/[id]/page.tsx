@@ -105,8 +105,9 @@ export default function LoanDetailPage() {
                 interestRate: loan.interest_rate || 0,
                 installmentValue: loan.installment_amount,
                 totalInstallments: loan.installments,
-                paidInstallments: loan.paid_installments,
-                remainingInstallments: loan.installments - loan.paid_installments,
+                // Calculate paid installments from the installments array
+                paidInstallments: (installmentsData || []).filter(inst => inst.paid_date).length,
+                remainingInstallments: loan.installments - ((installmentsData || []).filter(inst => inst.paid_date).length),
                 totalValue: loan.total_amount,
                 customer: {
                   name: loan.customer?.name || 'Cliente',
