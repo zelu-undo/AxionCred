@@ -125,6 +125,44 @@ const createDefaultPermissions = (): RolePermission[] => {
   }));
 };
 
+// Parse permissions from database format (string array) to RolePermission[]
+const parsePermissions = (permissions: string[] | undefined): RolePermission[] => {
+  if (!permissions || permissions.length === 0) return createDefaultPermissions()
+  
+  // Create a map of module -> permissions
+  const permMap: Record<string, RolePermission> = {}
+  
+  // Initialize with defaults
+  availableModules.forEach(mod => {
+    permMap[mod.key] = {
+      module: mod.key,
+      view: false,
+      create: false,
+      edit: false,
+      delete: false,
+    }
+  })
+  
+  // Parse each permission string (e.g., "dashboard:view,create,edit")
+  permissions.forEach(p => {
+    const [module, actions] = p.split(':')
+    if (module && actions) {
+      const actionList = actions.split(',').map(a => a.trim())
+      if (permMap[module]) {
+        permMap[module] = {
+          ...permMap[module],
+          view: actionList.includes('view'),
+          create: actionList.includes('create'),
+          edit: actionList.includes('edit'),
+          delete: actionList.includes('delete'),
+        }
+      }
+    }
+  })
+  
+  return Object.values(permMap)
+}
+
 export default function RolesManagementPage() {
   // Fetch roles from API
   const { data: rolesData, refetch: refetchRoles } = trpc.users.listRoles.useQuery()
@@ -147,8 +185,13 @@ export default function RolesManagementPage() {
     onError: (error: any) => alert('Erro: ' + error.message)
   })
   
-  // Use API data or demo
-  const roles: CustomRole[] = rolesData?.roles || demoRoles
+  // Use API data or demo - parse permissions from database format
+  const roles: CustomRole[] = (rolesData?.roles || demoRoles).map(role => ({
+    ...role,
+    permissions: Array.isArray(role.permissions) && typeof role.permissions[0] === 'string'
+      ? parsePermissions(role.permissions as unknown as string[])
+      : role.permissions
+  }))
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
@@ -185,10 +228,15 @@ export default function RolesManagementPage() {
 
   // Open dialog for editing
   const handleOpenEdit = (role: CustomRole) => {
+    // Parse permissions from database format if needed
+    const parsedPermissions = Array.isArray(role.permissions) && typeof role.permissions[0] === 'string'
+      ? parsePermissions(role.permissions as unknown as string[])
+      : [...role.permissions]
+    
     setFormData({
       name: role.name,
       description: role.description || '',
-      permissions: [...role.permissions],
+      permissions: parsedPermissions,
     });
     setIsEditing(true);
     setSelectedRole(role);
