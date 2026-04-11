@@ -41,6 +41,7 @@ export function usePDF() {
 
 // Export helpers for each document type
 export * from './LoanContract';
+export { pdf } from '@react-pdf/renderer';
 export * from './CustomerHistory';
 export * from './Refinancing';
 export * from './CashFlow';

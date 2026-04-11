@@ -10,8 +10,8 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { trpc } from "@/trpc/client"
 import type { LoanInstallment } from "@/types"
-import { usePDF, LoanContractDocument } from "@/components/pdf"
-import { PDFDownloadLink } from "@react-pdf/renderer"
+import { usePDF, LoanContractDocument, pdf } from "@/components/pdf"
+import { PDFViewer } from "@react-pdf/renderer"
 
 export default function LoanDetailPage() {
   const { t } = useI18n()
@@ -87,41 +87,54 @@ export default function LoanDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">Empréstimo #{loan.id.slice(0, 8)}</h1>
           <p className="text-gray-500">Detalhes do empréstimo</p>
         </div>
-        <PDFDownloadLink
-          document={<LoanContractDocument data={{
-            contractNumber: loan.id.slice(0, 8).toUpperCase(),
-            createdAt: formatDate(loan.created_at),
-            status: loan.status,
-            amount: loan.amount,
-            interestRate: loan.interest_rate || 0,
-            installmentValue: loan.installment_amount,
-            totalInstallments: loan.installments,
-            paidInstallments: loan.paid_installments,
-            remainingInstallments: loan.installments - loan.paid_installments,
-            totalValue: loan.total_amount,
-            customer: {
-              name: loan.customer?.name || 'Cliente',
-              document: loan.customer?.document || '',
-              email: loan.customer?.email || '',
-              phone: loan.customer?.phone || '',
-            },
-            installments: (installmentsData || []).map((inst) => ({
-              number: inst.installment_number,
-              dueDate: formatDate(inst.due_date),
-              value: inst.amount,
-              status: inst.status as 'paid' | 'pending' | 'overdue',
-              paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
-            })),
-          }} />}
-          fileName={`contrato-${loan.id.slice(0, 8)}.pdf`}
+        <PDFViewer width={0} height={0} showToolbar={false} />
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const doc = <LoanContractDocument data={{
+                contractNumber: loan.id.slice(0, 8).toUpperCase(),
+                createdAt: formatDate(loan.created_at),
+                status: loan.status,
+                amount: loan.amount,
+                interestRate: loan.interest_rate || 0,
+                installmentValue: loan.installment_amount,
+                totalInstallments: loan.installments,
+                paidInstallments: loan.paid_installments,
+                remainingInstallments: loan.installments - loan.paid_installments,
+                totalValue: loan.total_amount,
+                customer: {
+                  name: loan.customer?.name || 'Cliente',
+                  document: loan.customer?.document || '',
+                  email: loan.customer?.email || '',
+                  phone: loan.customer?.phone || '',
+                },
+                installments: (installmentsData || []).map((inst) => ({
+                  number: inst.installment_number,
+                  dueDate: formatDate(inst.due_date),
+                  value: inst.amount,
+                  status: inst.status as 'paid' | 'pending' | 'overdue',
+                  paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
+                })),
+              }} />
+              const blob = await pdf(doc).toBlob()
+              const url = URL.createObjectURL(blob)
+              const link = document.createElement('a')
+              link.href = url
+              link.download = `contrato-${loan.id.slice(0, 8)}.pdf`
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              URL.revokeObjectURL(url)
+            } catch (err) {
+              console.error('PDF error:', err)
+              alert('Erro ao gerar PDF')
+            }
+          }}
         >
-          {({ loading }) => (
-            <Button variant="outline" disabled={loading}>
-              <Download className="h-4 w-4 mr-2" />
-              {loading ? 'Gerando...' : 'Baixar PDF'}
-            </Button>
-          )}
-        </PDFDownloadLink>
+          <Download className="h-4 w-4 mr-2" />
+          Baixar PDF
+        </Button>
         {getStatusBadge(loan.status)}
       </div>
 
