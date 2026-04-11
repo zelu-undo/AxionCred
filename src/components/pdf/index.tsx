@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import * as rpdf from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { showErrorToast, showSuccessToast } from '@/lib/toast';
 
 // Helper to download PDF
@@ -63,7 +64,7 @@ export function usePDF() {
 
 // Export helpers for each document type
 export * from './LoanContract';
-export { rpdf as pdf } from '@react-pdf/renderer';
+export { pdf as default } from '@react-pdf/renderer';
 export * from './CustomerHistory';
 export * from './Refinancing';
 export * from './CashFlow';
