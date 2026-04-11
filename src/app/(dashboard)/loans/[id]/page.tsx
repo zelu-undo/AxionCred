@@ -73,7 +73,7 @@ export default function LoanDetailPage() {
     )
   }
 
-  const paidPercent = loan.installments > 0 
+  const paidPercent = loan.installments > 0 && typeof loan.installments === "number" 
     ? (loan.paid_installments / loan.installments) * 100 
     : 0
 
@@ -92,9 +92,9 @@ export default function LoanDetailPage() {
             contractNumber: loan.id.slice(0, 8).toUpperCase(),
             createdAt: formatDate(loan.created_at),
             status: loan.status,
-            amount: loan.principal_amount,
+            amount: loan.amount,
             interestRate: loan.interest_rate || 0,
-            installmentValue: loan.installment_value,
+            installmentValue: loan.installment_amount,
             totalInstallments: loan.installments,
             paidInstallments: loan.paid_installments,
             remainingInstallments: loan.installments - loan.paid_installments,
@@ -135,7 +135,7 @@ export default function LoanDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Valor Principal</p>
-                <p className="text-xl font-bold">{formatCurrency(loan.principal_amount)}</p>
+                <p className="text-xl font-bold">{formatCurrency(loan.amount)}</p>
               </div>
             </div>
           </CardContent>

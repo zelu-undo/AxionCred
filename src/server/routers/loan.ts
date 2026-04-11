@@ -281,25 +281,44 @@ export const loanRouter = router({
   byId: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
+      // Get loan basic data
+      const { data: loan, error: loanError } = await ctx.supabase
         .from("loans")
         .select(`
           *,
-          customer:customers(name, phone, email),
-          installments:loan_installments(*)
+          customer:customers(name, phone, email, document)
         `)
         .eq("tenant_id", ctx.tenantId!)
         .eq("id", input.id)
         .single()
 
-      if (error) {
+      if (loanError || !loan) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Empréstimo não encontrado",
         })
       }
 
-      return data
+      // Get installments to calculate paid amounts
+      const { data: installments } = await ctx.supabase
+        .from("loan_installments")
+        .select("id, amount, paid_amount, status")
+        .eq("loan_id", input.id)
+        .eq("tenant_id", ctx.tenantId!)
+        .order("installment_number", { ascending: true })
+
+      // Calculate aggregate fields
+      const paidInstallments = installments?.filter(i => i.status === "paid").length || 0
+      const paidAmount = installments?.reduce((sum, i) => sum + Number(i.paid_amount || 0), 0) || 0
+
+      // Return loan with calculated fields
+      return {
+        ...loan,
+        paid_installments: paidInstallments,
+        paid_amount: paidAmount,
+        remaining_amount: Number(loan.total_amount || 0) - paidAmount,
+        installments: installments || []
+      }
     }),
 
   create: protectedProcedure
