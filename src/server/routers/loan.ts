@@ -235,44 +235,8 @@ export const loanRouter = router({
         .limit(1)
         .single()
       
-      const fixedFee = lateFeeConfig?.fixed_fee || 0
-      const dailyInterest = lateFeeConfig?.daily_interest || 0.002
-      
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      // Calculate late fees on-the-fly
-      const data = (allData || [])
-        .filter(i => i.status !== "paid")
-        .map(inst => {
-          const dueDate = new Date(inst.due_date)
-          dueDate.setHours(0, 0, 0, 0)
-          
-          // Check if overdue
-          if (dueDate < today && inst.status === "pending") {
-            const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
-            
-            if (daysOverdue > 0) {
-              // Calculate late interest (compound)
-              const lateInterest = inst.amount * (Math.pow(1 + dailyInterest, daysOverdue) - 1)
-              const totalLate = fixedFee + lateInterest
-              
-              return {
-                ...inst,
-                status: "late",
-                late_fee_applied: fixedFee,
-                late_interest_applied: lateInterest,
-                days_in_delay: daysOverdue,
-                amount: inst.amount + totalLate
-              }
-            }
-          }
-          
-          return inst
-        })
-      
-      console.log(" [installmentsForPayment] data with late fees:", data)
-      
+      const data = (allData || []).map(inst => inst)
+      console.log(" [installmentsForPayment] data:", data)
       return data
     }),
 
