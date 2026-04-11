@@ -120,8 +120,8 @@ export default function LoanDetailPage() {
                   paidAt: inst.paid_date ? formatDate(inst.paid_date) : undefined,
                 })),
               };
-              const doc = React.createElement(LoanContractDocument, { data: docData });
-              generatePDF(doc, `contrato-${loan.id.slice(0, 8)}.pdf`)
+              // Create PDF document directly without React.createElement
+              generatePDF(LoanContractDocument, docData, `contrato-${loan.id.slice(0, 8)}.pdf`)
             } catch (err) {
               console.error('PDF error:', err)
               const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
