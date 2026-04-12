@@ -152,7 +152,7 @@ export default function StaffManagementPage() {
     if (!newInvite.email || !newInvite.name) return;
     
     // Map custom role to valid role enum
-    const roleMap: Record<string, string> = {
+    const roleMap: Record<string, "owner" | "admin" | "manager" | "operator" | "viewer"> = {
       owner: 'admin',
       admin: 'admin',
       manager: 'manager',
@@ -174,7 +174,7 @@ export default function StaffManagementPage() {
   // Handle update role
   const handleUpdateRole = (staffId: string, roleId: string) => {
     // Map custom role to valid role enum
-    const roleMap: Record<string, string> = {
+    const roleMap: Record<string, "owner" | "admin" | "manager" | "operator" | "viewer"> = {
       owner: 'admin',
       admin: 'admin',
       manager: 'manager',
@@ -206,7 +206,7 @@ export default function StaffManagementPage() {
     if (!staffMember) return
     
     // Map custom role to valid role enum
-    const roleMap: Record<string, string> = {
+    const roleMap: Record<string, "admin" | "manager" | "operator" | "viewer"> = {
       owner: 'admin',
       admin: 'admin',
       manager: 'manager',
