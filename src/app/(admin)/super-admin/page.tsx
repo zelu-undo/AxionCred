@@ -330,25 +330,28 @@ export default function SuperAdminPage() {
     const targetUser = users.find(u => u.id === userId)
     
     // Prevent changing role of other super admins
-    if (targetUser?.is_super_admin && newRole !== 'super_admin') {
+    if (targetUser?.role === 'super_admin' && newRole !== 'super_admin') {
       setMessage('Não é possível alterar a função de um Super Admin!')
       setTimeout(() => setMessage(''), 3000)
       return
     }
 
-    // If changing to super_admin, also set the flag
-    const updateData: { role: string; is_super_admin?: boolean } = { role: newRole }
-    if (newRole === 'super_admin') {
-      updateData.is_super_admin = true
-    }
-    
-    await supabase
+    // Update role in database
+    const { error } = await supabase
       .from("users")
-      .update(updateData)
+      .update({ role: newRole })
       .eq("id", userId)
 
+    if (error) {
+      console.error('Error updating role:', error)
+      setMessage('Erro ao atualizar função!')
+      setTimeout(() => setMessage(''), 3000)
+      return
+    }
+
+    // Update local state
     setUsers(users.map(u => 
-      u.id === userId ? { ...u, role: newRole, is_super_admin: newRole === 'super_admin' } : u
+      u.id === userId ? { ...u, role: newRole } : u
     ))
     setMessage('Função do usuário atualizada!')
     setTimeout(() => setMessage(''), 3000)
