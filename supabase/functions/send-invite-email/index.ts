@@ -53,7 +53,7 @@ serve(async (req) => {
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: "AXION Cred <noreply@axioncred.com>",
+          from: "AXION Cred <axion@resend.dev>",
           to: email,
           subject: `Você foi convidado para participar da ${tenantName} no AXION Cred`,
           html: `
