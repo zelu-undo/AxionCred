@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS invites (
   invited_by UUID REFERENCES users(id),
   status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, expired
   expires_at TIMESTAMP NOT NULL,
+  token VARCHAR(255), -- Token para aceite do convite
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

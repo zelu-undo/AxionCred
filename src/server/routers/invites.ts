@@ -1,6 +1,39 @@
 import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import { createClient } from "@supabase/supabase-js"
+
+// Function to send invite email
+async function sendInviteEmail(email: string, inviteToken: string, tenantName: string, role: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Missing Supabase credentials")
+    return false
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-invite-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({
+        email,
+        inviteToken,
+        tenantName,
+        role,
+      }),
+    })
+    
+    return response.ok
+  } catch (error) {
+    console.error("Error sending invite email:", error)
+    return false
+  }
+}
 
 // Router para gerenciamento de convites
 export const invitesRouter = router({
@@ -114,6 +147,9 @@ export const invitesRouter = router({
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 7)
 
+      // Generate invite token
+      const inviteToken = crypto.randomUUID()
+
       const { data, error } = await ctx.supabase
         .from("invites")
         .insert({
@@ -123,6 +159,7 @@ export const invitesRouter = router({
           invited_by: ctx.userId,
           status: "pending",
           expires_at: expiresAt.toISOString(),
+          token: inviteToken,
         })
         .select()
         .single()
@@ -133,6 +170,10 @@ export const invitesRouter = router({
           message: error.message,
         })
       }
+
+      // Send invite email (async, don't wait)
+      const tenantName = (await ctx.supabase.from("tenants").select("name").eq("id", tenantId).single()).data?.name || 'Empresa'
+      sendInviteEmail(input.email, inviteToken, tenantName, input.role)
 
       return data
     }),

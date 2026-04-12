@@ -172,21 +172,39 @@ export default function StaffManagementPage() {
     })
   };
 
-  // Handle resend invite - create new invite and send notification
+  // Handle resend invite - create new invite and send email
   const handleResendInvite = async (staffId: string) => {
     const staffMember = staff.find((s: any) => s.id === staffId)
     if (!staffMember) return
     
     setIsLoading(true)
     try {
-      // Try to create a new invite via API if available
-      // For now, just simulate success
-      setSuccessMessage(`Novo convite enviado para ${staffMember.email}!`)
+      // Create a new invite via the invites API
+      const response = await fetch('/api/trpc/invites.create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          json: {
+            email: staffMember.email,
+            role: staffMember.role_id || 'operator'
+          }
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Erro ao criar convite')
+      }
+      
+      setSuccessMessage(`Convite reenviado com sucesso para ${staffMember.email}!`)
       setTimeout(() => setSuccessMessage(''), 5000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error resending invite:', error)
-      setSuccessMessage('Erro ao reenviar convite. Tente novamente.')
-      setTimeout(() => setSuccessMessage(''), 3000)
+      setSuccessMessage('Erro ao reenviar convite: ' + (error.message || 'Tente novamente'))
+      setTimeout(() => setSuccessMessage(''), 5000)
     } finally {
       setIsLoading(false)
     }
