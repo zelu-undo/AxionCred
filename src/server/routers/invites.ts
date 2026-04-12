@@ -34,8 +34,8 @@ async function sendInviteEmail(email: string, inviteToken: string, tenantName: s
   }
 }
 
-// Function to send tenant change notification email
-async function sendTenantChangeEmail(email: string, userName: string, oldTenantName: string, newTenantName: string) {
+// Function to send tenant change notification email (exported for use in other routers)
+export async function sendTenantChangeEmail(email: string, userName: string, oldTenantName: string, newTenantName: string) {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://axioncred.vercel.app'}/api/send-tenant-change-email`, {
       method: 'POST',

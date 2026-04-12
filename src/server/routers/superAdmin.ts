@@ -506,9 +506,17 @@ export const superAdminRouter = router({
 
       // Send email notification about tenant change
       if (userEmail && oldTenantName && newTenantName) {
-        // Import and call the email function from invites router
-        const { sendTenantChangeEmail } = await import("./invites")
-        sendTenantChangeEmail(userEmail, userName, oldTenantName, newTenantName)
+        // Call the API directly to send the email
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://axioncred.vercel.app'}/api/send-tenant-change-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            userName,
+            oldTenantName,
+            newTenantName,
+          })
+        }).catch(err => console.error('Error sending tenant change email:', err))
       }
 
       return data
