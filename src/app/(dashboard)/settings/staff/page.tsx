@@ -114,6 +114,7 @@ export default function StaffManagementPage() {
     role_id: u.role,
     role_name: u.role,
     status: u.is_active ? 'active' : 'inactive',
+    // User has accepted if they have last_login, otherwise pending
     invitation_status: u.last_login ? 'accepted' : 'pending',
     invitation_sent_at: u.created_at,
     invitation_accepted_at: u.last_login,
