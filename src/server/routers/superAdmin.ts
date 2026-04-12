@@ -451,8 +451,8 @@ export const superAdminRouter = router({
           .single()
         
         if (currentUser && currentUser.tenant_id !== updates.tenant_id) {
-          // Set last_tenant_id to current tenant before changing
-          updates.last_tenant_id = currentUser.tenant_id
+          // Set last_tenant_id to current tenant before changing (use type assertion)
+          ;(updates as any).last_tenant_id = currentUser.tenant_id
         }
       }
 
