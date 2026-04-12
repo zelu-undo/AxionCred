@@ -141,7 +141,7 @@ export default function SuperAdminPage() {
         try {
           const { data: usersData, error } = await supabase
             .from("users")
-            .select("id, name, email, role, status, tenant_id, is_super_admin")
+            .select("id, name, email, role, tenant_id, is_active")
             .order("created_at", { ascending: false })
           
           if (error) {
@@ -155,9 +155,9 @@ export default function SuperAdminPage() {
               name: u.name,
               email: u.email,
               role: u.role || 'operator',
-              status: u.status || 'active',
+              status: u.is_active ? 'active' : 'inactive',
               tenant_id: u.tenant_id,
-              is_super_admin: u.is_super_admin || false
+              is_super_admin: u.role === 'super_admin'
             })))
           }
         } catch (err) {
