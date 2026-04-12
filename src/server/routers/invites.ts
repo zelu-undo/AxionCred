@@ -241,11 +241,11 @@ export const invitesRouter = router({
         })
       }
 
-      // Only owner can resend
-      if (userRole !== "owner") {
+      // Only owner and admin can resend
+      if (!userRole || !["owner", "admin"].includes(userRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Apenas proprietários podem reenviar convites",
+          message: "Apenas proprietários e administradores podem reenviar convites",
         })
       }
 
@@ -282,6 +282,11 @@ export const invitesRouter = router({
           message: error.message,
         })
       }
+
+      // Send invite email
+      const tenantName = (await ctx.supabase.from("tenants").select("name").eq("id", tenantId).single()).data?.name || 'Empresa'
+      const inviteToken = invite.token || crypto.randomUUID()
+      sendInviteEmail(invite.email, inviteToken, tenantName, invite.role)
 
       return { success: true }
     }),

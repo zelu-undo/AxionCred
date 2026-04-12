@@ -62,6 +62,12 @@ export default function StaffManagementPage() {
   // Fetch roles
   const { data: rolesData } = trpc.users.listRoles.useQuery()
 
+  // Fetch invites for resend functionality
+  const { data: invitesData } = trpc.invites.list.useQuery({
+    status: 'pending',
+    limit: 100,
+  })
+
   // Create user mutation
   const createMutation = trpc.users.create.useMutation({
     onSuccess: () => {
@@ -189,36 +195,26 @@ export default function StaffManagementPage() {
     })
   };
 
-  // Create invite mutation
-  const createInviteMutation = trpc.invites.create.useMutation({
+  // Resend invite mutation
+  const resendInviteMutation = trpc.invites.resend.useMutation({
     onSuccess: (data) => {
       showSuccessToast('Convite reenviado com sucesso!', 'Convite Enviado')
     },
     onError: (error: any) => {
-      console.error('Error creating invite:', error)
+      console.error('Error resending invite:', error)
       showErrorToast(error.message || 'Erro ao reenviar convite')
     }
   })
 
-  // Handle resend invite - create new invite and send email
-  const handleResendInvite = async (staffId: string) => {
-    const staffMember = staff.find((s: any) => s.id === staffId)
-    if (!staffMember) return
-    
-    // Map custom role to valid role enum
-    const roleMap: Record<string, "owner" | "admin" | "manager" | "operator" | "viewer"> = {
-      owner: 'owner',
-      admin: 'admin',
-      manager: 'manager',
-      operator: 'operator',
-      viewer: 'viewer',
+  // Handle resend invite - use resend mutation with invite ID
+  const handleResendInvite = async (userEmail: string) => {
+    // Find invite by email from pending invites
+    const invite = invitesData?.find((i: any) => i.email === userEmail)
+    if (!invite) {
+      showErrorToast('Convite não encontrado')
+      return
     }
-    const validRole = roleMap[staffMember.role_id || ''] || 'operator'
-    
-    createInviteMutation.mutate({
-      email: staffMember.email,
-      role: validRole
-    })
+    resendInviteMutation.mutate({ invite_id: invite.id })
   }
 
   // Handle cancel invitation
@@ -444,7 +440,7 @@ export default function StaffManagementPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleResendInvite(staffMember.id)}
+                                onClick={() => handleResendInvite(staffMember.email)}
                                 className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
                                 title="Reenviar convite"
                               >
