@@ -50,6 +50,7 @@ CREATE TABLE users (
     invite_expires_at TIMESTAMPTZ,
     invited_by UUID,
     last_login TIMESTAMPTZ,
+    last_tenant_id UUID, -- Track previous tenant for onboarding when changed
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

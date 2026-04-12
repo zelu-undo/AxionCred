@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { PageTransition } from "@/components/ui/page-transition"
 import { Toaster } from "@/components/ui/toaster"
 import { UpgradeBanner, BannerProvider, useBanner } from "@/components/dashboard/upgrade-banner"
+import { OnboardingToast } from "@/components/onboarding-toast"
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -62,6 +63,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+      <OnboardingToast />
       <Toaster />
     </div>
   )

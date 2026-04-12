@@ -223,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Fetch user with tenant info - ALWAYS from database, ignore cache
           const { data: u } = await supabase
             .from("users")
-            .select("tenant_id, role, is_active")
+            .select("tenant_id, role, is_active, last_login, last_tenant_id")
             .eq("id", data.user.id)
             .maybeSingle()
           
@@ -234,6 +234,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Sign out and show error
               await supabase.auth.signOut()
               throw new Error("Usuário desativado. Entre em contato com o administrador.")
+            }
+            
+            // Track first login and company change for onboarding
+            const isFirstLogin = !u.last_login
+            const companyChanged = u.last_tenant_id && u.last_tenant_id !== u.tenant_id
+            
+            // Update last_tenant_id and last_login after getting current info
+            await supabase
+              .from("users")
+              .update({ 
+                last_tenant_id: u.tenant_id,
+                last_login: new Date().toISOString()
+              })
+              .eq("id", data.user.id)
+            
+            // Store onboarding flags in session storage for dashboard to read
+            if (isFirstLogin || companyChanged) {
+              sessionStorage.setItem("onboarding", JSON.stringify({
+                isFirstLogin,
+                companyChanged,
+                previousCompanyId: companyChanged ? u.last_tenant_id : null
+              }))
             }
             
             tenantId = u.tenant_id || ""

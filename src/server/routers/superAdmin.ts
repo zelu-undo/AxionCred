@@ -442,6 +442,20 @@ export const superAdminRouter = router({
 
       const { user_id, ...updates } = input
 
+      // If tenant_id is being changed, preserve old tenant in last_tenant_id
+      if (updates.tenant_id !== undefined) {
+        const { data: currentUser } = await ctx.supabase
+          .from("users")
+          .select("tenant_id")
+          .eq("id", user_id)
+          .single()
+        
+        if (currentUser && currentUser.tenant_id !== updates.tenant_id) {
+          // Set last_tenant_id to current tenant before changing
+          updates.last_tenant_id = currentUser.tenant_id
+        }
+      }
+
       // Remove undefined values
       const cleanUpdates = Object.fromEntries(
         Object.entries(updates).filter(([_, v]) => v !== undefined)
