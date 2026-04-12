@@ -400,11 +400,37 @@ export default function SuperAdminPage() {
           <h1 className="text-2xl font-bold text-gray-900">Painel Super Admin</h1>
           <p className="text-gray-500">Gerencie todas as empresas e usuários do sistema</p>
         </div>
-        {message && (
-          <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg">
-            {message}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={async () => {
+              const testEmail = prompt("Digite seu email para testar o envio:")
+              if (!testEmail) return
+              
+              setMessage('Enviando email de teste...')
+              try {
+                const res = await fetch('/api/test-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: testEmail })
+                })
+                const data = await res.json()
+                setMessage(data.message || data.error)
+              } catch (err) {
+                setMessage('Erro ao testar email')
+              }
+              setTimeout(() => setMessage(''), 5000)
+            }}
+          >
+            🧪 Testar Email
+          </Button>
+          {message && (
+            <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg">
+              {message}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
