@@ -136,22 +136,32 @@ export default function SuperAdminPage() {
 
   // Load users when tab changes to users
   useEffect(() => {
-    if (activeTab === 'users' && users.length === 0) {
+    if (activeTab === 'users') {
       const loadAllUsers = async () => {
-        const { data: usersData } = await supabase
-          .from("users")
-          .select("id, name, email, role, status, tenant_id, is_super_admin")
+        try {
+          const { data: usersData, error } = await supabase
+            .from("users")
+            .select("id, name, email, role, status, tenant_id, is_super_admin")
+            .order("created_at", { ascending: false })
+          
+          if (error) {
+            console.error('Error loading users:', error)
+            return
+          }
         
-        if (usersData) {
-          setUsers(usersData.map(u => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role || 'operator',
-            status: u.status || 'active',
-            tenant_id: u.tenant_id,
-            is_super_admin: u.is_super_admin || false
-          })))
+          if (usersData) {
+            setUsers(usersData.map(u => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              role: u.role || 'operator',
+              status: u.status || 'active',
+              tenant_id: u.tenant_id,
+              is_super_admin: u.is_super_admin || false
+            })))
+          }
+        } catch (err) {
+          console.error('Error:', err)
         }
       }
       loadAllUsers()
