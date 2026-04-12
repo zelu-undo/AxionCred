@@ -3,22 +3,13 @@ import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { createClient } from "@supabase/supabase-js"
 
-// Function to send invite email
+// Function to send invite email via Vercel API route
 async function sendInviteEmail(email: string, inviteToken: string, tenantName: string, role: string) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("Missing Supabase credentials")
-    return false
-  }
-
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-invite-email`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://axioncred.vercel.app'}/api/send-invite-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
       },
       body: JSON.stringify({
         email,
@@ -28,7 +19,15 @@ async function sendInviteEmail(email: string, inviteToken: string, tenantName: s
       }),
     })
     
-    return response.ok
+    const result = await response.json()
+    
+    if (!response.ok) {
+      console.error("Error sending invite email:", result.error)
+      return false
+    }
+    
+    console.log("Invite email sent successfully to:", email)
+    return true
   } catch (error) {
     console.error("Error sending invite email:", error)
     return false
