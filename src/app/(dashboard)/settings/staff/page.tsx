@@ -208,13 +208,21 @@ export default function StaffManagementPage() {
 
   // Handle resend invite - use resend mutation with invite ID
   const handleResendInvite = async (userEmail: string) => {
-    // Find invite by email from pending invites
+    // First check if there's an invite for this email
     const invite = invitesData?.find((i: any) => i.email === userEmail)
-    if (!invite) {
-      showErrorToast('Convite não encontrado')
-      return
+    
+    if (invite) {
+      // Invite exists - use resend
+      resendInviteMutation.mutate({ invite_id: invite.id })
+    } else {
+      // No invite found - check if user already exists in company
+      const existingUser = usersData?.users?.find((u: any) => u.email === userEmail)
+      if (existingUser) {
+        showErrorToast('Usuário já possui acesso à empresa. Solicite redefinição de senha.')
+      } else {
+        showErrorToast('Convite não encontrado')
+      }
     }
-    resendInviteMutation.mutate({ invite_id: invite.id })
   }
 
   // Handle cancel invitation
