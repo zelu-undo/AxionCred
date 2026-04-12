@@ -3,12 +3,12 @@ import nodemailer from "nodemailer"
 
 // Configure transporter - using Gmail or any SMTP
 const getTransporter = () => {
-  // You can use Gmail, Outlook, or any SMTP
-  const gmailUser = process.env.EMAIL_USER
-  const gmailPass = process.env.EMAIL_PASS
+  // Use existing Vercel environment variables
+  const gmailUser = process.env.GMAIL_USER
+  const gmailPass = process.env.GOOGLE_APP_PASSWORD
   
   if (!gmailUser || !gmailPass) {
-    console.error("EMAIL_USER or EMAIL_PASS not configured")
+    console.error("GMAIL_USER or GOOGLE_APP_PASSWORD not configured")
     return null
   }
   
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     
     if (!transporter) {
       return NextResponse.json(
-        { error: "Serviço de email não configurado. Configure EMAIL_USER e EMAIL_PASS no Vercel." },
+        { error: "Serviço de email não configurado. Configure GMAIL_USER e GOOGLE_APP_PASSWORD no Vercel." },
         { status: 500 }
       )
     }
