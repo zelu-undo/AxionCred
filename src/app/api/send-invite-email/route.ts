@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
-import { Resend } from "resend"
+import nodemailer from "nodemailer"
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+// Configure transporter - using Gmail or any SMTP
+const getTransporter = () => {
+  // You can use Gmail, Outlook, or any SMTP
+  const gmailUser = process.env.EMAIL_USER
+  const gmailPass = process.env.EMAIL_PASS
+  
+  if (!gmailUser || !gmailPass) {
+    console.error("EMAIL_USER or EMAIL_PASS not configured")
+    return null
+  }
+  
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: gmailUser,
+      pass: gmailPass,
+    },
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +32,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!resend) {
-      console.error("RESEND_API_KEY não configurada")
+    const transporter = getTransporter()
+    
+    if (!transporter) {
       return NextResponse.json(
-        { error: "Serviço de email não configurado" },
+        { error: "Serviço de email não configurado. Configure EMAIL_USER e EMAIL_PASS no Vercel." },
         { status: 500 }
       )
     }
@@ -33,12 +52,7 @@ export async function POST(request: NextRequest) {
     // Build invite URL
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://axioncred.vercel.app"}/invite?token=${inviteToken}`
 
-    // Send email
-    const { data, error } = await resend.emails.send({
-      from: "AXION Cred <axion@resend.dev>",
-      to: email,
-      subject: `Você foi convidado para participar da ${tenantName} no AXION Cred`,
-      html: `
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -75,22 +89,23 @@ export async function POST(request: NextRequest) {
   </div>
 </body>
 </html>
-      `,
+    `
+
+    // Send email
+    const info = await transporter.sendMail({
+      from: '"AXION Cred" <noreply@axioncred.com>',
+      to: email,
+      subject: `Você foi convidado para participar da ${tenantName} no AXION Cred`,
+      html: htmlContent,
     })
 
-    if (error) {
-      console.error("Resend error:", error)
-      return NextResponse.json(
-        { error: "Erro ao enviar email: " + error.message },
-        { status: 500 }
-      )
-    }
+    console.log("Email sent:", info.messageId)
 
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json({ success: true, messageId: info.messageId })
   } catch (error: any) {
     console.error("Send invite email error:", error)
     return NextResponse.json(
-      { error: "Erro interno: " + error.message },
+      { error: "Erro ao enviar email: " + error.message },
       { status: 500 }
     )
   }

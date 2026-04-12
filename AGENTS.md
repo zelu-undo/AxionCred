@@ -161,6 +161,15 @@ Add the following environment variables in Vercel Dashboard → Settings → Env
 |----------|-------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://ogtbegrzbuzophdcdpjm.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ndGJlZ3J6YnV6b3BoZGNkcGptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzEzNDcsImV4cCI6MjA4OTQ0NzM0N30.MuVFIrF2Dw6a6ZqbqNGW95n1_1w1mLoo2BmoHPawoDw` |
+| `EMAIL_USER` | Seu email Gmail (ex: seuemail@gmail.com) |
+| `EMAIL_PASS` | Senha de app do Gmail (não sua senha normal) |
+
+### Configuração de Email (Nodemailer)
+Para enviar convites por email, configure no Vercel:
+1. Use uma conta Gmail ou outro SMTP
+2. Para Gmail: vá em **Gerenciar sua Conta Google → Segurança** e ative **Verificação em 2 etapas**
+3. Depois vá em **Senhas de App** e crie uma senha para o app
+4. Use essa senha como `EMAIL_PASS`
 
 ### Supabase Setup Steps
 1. Create a project at [supabase.com](https://supabase.com)
