@@ -153,7 +153,7 @@ export default function StaffManagementPage() {
     
     // Map custom role to valid role enum
     const roleMap: Record<string, "owner" | "admin" | "manager" | "operator" | "viewer"> = {
-      owner: 'admin',
+      owner: 'owner',
       admin: 'admin',
       manager: 'manager',
       operator: 'operator',
@@ -175,7 +175,7 @@ export default function StaffManagementPage() {
   const handleUpdateRole = (staffId: string, roleId: string) => {
     // Map custom role to valid role enum
     const roleMap: Record<string, "owner" | "admin" | "manager" | "operator" | "viewer"> = {
-      owner: 'admin',
+      owner: 'owner',
       admin: 'admin',
       manager: 'manager',
       operator: 'operator',
@@ -206,8 +206,8 @@ export default function StaffManagementPage() {
     if (!staffMember) return
     
     // Map custom role to valid role enum
-    const roleMap: Record<string, "admin" | "manager" | "operator" | "viewer"> = {
-      owner: 'admin',
+    const roleMap: Record<string, "owner" | "admin" | "manager" | "operator" | "viewer"> = {
+      owner: 'owner',
       admin: 'admin',
       manager: 'manager',
       operator: 'operator',
