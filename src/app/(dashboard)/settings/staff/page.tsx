@@ -106,21 +106,25 @@ export default function StaffManagementPage() {
   })
 
   // Use data from API
-  const staff = usersData?.users?.map((u: any) => ({
-    id: u.id,
-    owner_id: u.tenant_id,
-    name: u.name,
-    email: u.email,
-    role_id: u.role,
-    role_name: u.role,
-    status: u.is_active ? 'active' : 'inactive',
-    // User has accepted if they have last_login, otherwise pending
-    invitation_status: u.last_login ? 'accepted' : 'pending',
-    invitation_sent_at: u.created_at,
-    invitation_accepted_at: u.last_login,
-    created_at: u.created_at,
-    updated_at: u.updated_at,
-  })) || []
+  const staff = usersData?.users?.map((u: any) => {
+    // Debug: log to see what's coming from API
+    // User is "pending" only if never logged in AND is inactive (not yet activated)
+    const isPending = !u.last_login && !u.is_active
+    return {
+      id: u.id,
+      owner_id: u.tenant_id,
+      name: u.name,
+      email: u.email,
+      role_id: u.role,
+      role_name: u.role,
+      status: u.is_active ? 'active' : 'inactive',
+      invitation_status: isPending ? 'pending' : 'accepted',
+      invitation_sent_at: u.created_at,
+      invitation_accepted_at: u.last_login,
+      created_at: u.created_at,
+      updated_at: u.updated_at,
+    }
+  }) || []
 
   // Define StaffMember type locally to avoid import issues
   type LocalStaffMember = {
