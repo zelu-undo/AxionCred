@@ -443,16 +443,44 @@ export const superAdminRouter = router({
       const { user_id, ...updates } = input
 
       // If tenant_id is being changed, preserve old tenant in last_tenant_id
+      let oldTenantName = null
+      let newTenantName = null
+      let userEmail = null
+      let userName = null
+      
       if (updates.tenant_id !== undefined) {
         const { data: currentUser } = await ctx.supabase
           .from("users")
-          .select("tenant_id")
+          .select("tenant_id, email, name")
           .eq("id", user_id)
           .single()
         
         if (currentUser && currentUser.tenant_id !== updates.tenant_id) {
           // Set last_tenant_id to current tenant before changing (use type assertion)
           ;(updates as any).last_tenant_id = currentUser.tenant_id
+          
+          // Get old tenant name
+          if (currentUser.tenant_id) {
+            const { data: oldTenant } = await ctx.supabase
+              .from("tenants")
+              .select("name")
+              .eq("id", currentUser.tenant_id)
+              .single()
+            oldTenantName = oldTenant?.name || 'Empresa anterior'
+          }
+          
+          // Get new tenant name
+          if (updates.tenant_id) {
+            const { data: newTenant } = await ctx.supabase
+              .from("tenants")
+              .select("name")
+              .eq("id", updates.tenant_id)
+              .single()
+            newTenantName = newTenant?.name || 'Nova empresa'
+          }
+          
+          userEmail = currentUser.email
+          userName = currentUser.name
         }
       }
 
@@ -474,6 +502,13 @@ export const superAdminRouter = router({
 
       if (error) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      // Send email notification about tenant change
+      if (userEmail && oldTenantName && newTenantName) {
+        // Import and call the email function from invites router
+        const { sendTenantChangeEmail } = await import("./invites")
+        sendTenantChangeEmail(userEmail, userName, oldTenantName, newTenantName)
       }
 
       return data

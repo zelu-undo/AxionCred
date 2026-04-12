@@ -34,6 +34,37 @@ async function sendInviteEmail(email: string, inviteToken: string, tenantName: s
   }
 }
 
+// Function to send tenant change notification email
+async function sendTenantChangeEmail(email: string, userName: string, oldTenantName: string, newTenantName: string) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://axioncred.vercel.app'}/api/send-tenant-change-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        userName,
+        oldTenantName,
+        newTenantName,
+      }),
+    })
+    
+    const result = await response.json()
+    
+    if (!response.ok) {
+      console.error("Error sending tenant change email:", result.error)
+      return false
+    }
+    
+    console.log("Tenant change email sent successfully to:", email)
+    return true
+  } catch (error) {
+    console.error("Error sending tenant change email:", error)
+    return false
+  }
+}
+
 // Router para gerenciamento de convites
 export const invitesRouter = router({
   // Listar convites do tenant
