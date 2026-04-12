@@ -151,21 +151,41 @@ export default function StaffManagementPage() {
   const handleInvite = async () => {
     if (!newInvite.email || !newInvite.name) return;
     
-    console.log("Enviando convite:", { email: newInvite.email, name: newInvite.name, role: newInvite.role_id })
+    // Map custom role to valid role enum
+    const roleMap: Record<string, string> = {
+      owner: 'admin',
+      admin: 'admin',
+      manager: 'manager',
+      operator: 'operator',
+      viewer: 'viewer',
+    }
+    const validRole = roleMap[newInvite.role_id || ''] || 'operator'
+    
+    console.log("Enviando convite:", { email: newInvite.email, name: newInvite.name, role: validRole })
     
     createMutation.mutate({
       email: newInvite.email,
       name: newInvite.name,
       password: 'temp123', // In production, send invite email with reset link
-      role: (newInvite.role_id as any) || 'operator',
+      role: validRole,
     })
   };
 
   // Handle update role
   const handleUpdateRole = (staffId: string, roleId: string) => {
+    // Map custom role to valid role enum
+    const roleMap: Record<string, string> = {
+      owner: 'admin',
+      admin: 'admin',
+      manager: 'manager',
+      operator: 'operator',
+      viewer: 'viewer',
+    }
+    const validRole = roleMap[roleId || ''] || 'operator'
+    
     updateMutation.mutate({
       id: staffId,
-      role: roleId as any,
+      role: validRole,
     })
   };
 
@@ -185,9 +205,19 @@ export default function StaffManagementPage() {
     const staffMember = staff.find((s: any) => s.id === staffId)
     if (!staffMember) return
     
+    // Map custom role to valid role enum
+    const roleMap: Record<string, string> = {
+      owner: 'admin',
+      admin: 'admin',
+      manager: 'manager',
+      operator: 'operator',
+      viewer: 'viewer',
+    }
+    const validRole = roleMap[staffMember.role_id || ''] || 'operator'
+    
     createInviteMutation.mutate({
       email: staffMember.email,
-      role: staffMember.role_id || 'operator'
+      role: validRole
     })
   }
 
