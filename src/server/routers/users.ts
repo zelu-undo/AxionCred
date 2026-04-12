@@ -151,6 +151,40 @@ export const usersRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...updates } = input
 
+      // Prevent changing role TO owner if there's already an owner
+      if (updates.role === "owner") {
+        const { data: existingOwner } = await ctx.supabase
+          .from("users")
+          .select("id")
+          .eq("tenant_id", ctx.tenantId!)
+          .eq("role", "owner")
+          .neq("id", id)
+          .maybeSingle()
+        
+        if (existingOwner) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Esta empresa já possui um proprietário. Transfira a propriedade primeiro antes de atribuir outro proprietário."
+          })
+        }
+      }
+
+      // Prevent changing role FROM owner
+      if (updates.role && updates.role !== "owner") {
+        const { data: user } = await ctx.supabase
+          .from("users")
+          .select("role")
+          .eq("id", id)
+          .single()
+
+        if (user?.role === "owner") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Não é possível alterar a função do proprietário. Transfira a propriedade primeiro."
+          })
+        }
+      }
+
       // Prevent deactivating owner
       if (updates.is_active === false) {
         const { data: user } = await ctx.supabase
@@ -455,5 +489,57 @@ export const usersRouter = router({
       }
 
       return false
+    }),
+
+  // Transfer ownership to another user
+  transferOwnership: protectedProcedure
+    .input(z.object({ newOwnerId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { tenantId, userId } = ctx
+
+      // Check if current user is owner
+      const { data: currentOwner } = await ctx.supabase
+        .from("users")
+        .select("role")
+        .eq("id", userId)
+        .eq("tenant_id", tenantId)
+        .single()
+
+      if (currentOwner?.role !== "owner") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas o proprietário pode transferir a propriedade"
+        })
+      }
+
+      // Check if new owner exists in same tenant
+      const { data: newOwner } = await ctx.supabase
+        .from("users")
+        .select("id, role")
+        .eq("id", input.newOwnerId)
+        .eq("tenant_id", tenantId)
+        .single()
+
+      if (!newOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado nesta empresa"
+        })
+      }
+
+      // Transfer ownership: change current owner to admin, new user to owner
+      await ctx.supabase
+        .from("users")
+        .update({ role: "admin" })
+        .eq("id", userId)
+        .eq("tenant_id", tenantId)
+
+      await ctx.supabase
+        .from("users")
+        .update({ role: "owner" })
+        .eq("id", input.newOwnerId)
+        .eq("tenant_id", tenantId)
+
+      return { success: true, message: "Propriedade transferida com sucesso!" }
     }),
 })

@@ -32,6 +32,7 @@ interface User {
   role: string;
   status: string;
   tenant_id: string;
+  is_super_admin?: boolean;
 }
 
 export default function SuperAdminPage() {
@@ -139,7 +140,7 @@ export default function SuperAdminPage() {
       const loadAllUsers = async () => {
         const { data: usersData } = await supabase
           .from("users")
-          .select("id, name, email, role, status, tenant_id")
+          .select("id, name, email, role, status, tenant_id, is_super_admin")
         
         if (usersData) {
           setUsers(usersData.map(u => ({
@@ -148,7 +149,8 @@ export default function SuperAdminPage() {
             email: u.email,
             role: u.role || 'operator',
             status: u.status || 'active',
-            tenant_id: u.tenant_id
+            tenant_id: u.tenant_id,
+            is_super_admin: u.is_super_admin || false
           })))
         }
       }
@@ -307,13 +309,36 @@ export default function SuperAdminPage() {
   }
 
   const handleChangeUserRole = async (userId: string, newRole: string) => {
+    // Prevent user from changing their own role
+    if (userId === user?.id) {
+      setMessage('Você não pode alterar sua própria função!')
+      setTimeout(() => setMessage(''), 3000)
+      return
+    }
+    
+    // Find the user being changed
+    const targetUser = users.find(u => u.id === userId)
+    
+    // Prevent changing role of other super admins
+    if (targetUser?.is_super_admin && newRole !== 'super_admin') {
+      setMessage('Não é possível alterar a função de um Super Admin!')
+      setTimeout(() => setMessage(''), 3000)
+      return
+    }
+
+    // If changing to super_admin, also set the flag
+    const updateData: { role: string; is_super_admin?: boolean } = { role: newRole }
+    if (newRole === 'super_admin') {
+      updateData.is_super_admin = true
+    }
+    
     await supabase
       .from("users")
-      .update({ role: newRole })
+      .update(updateData)
       .eq("id", userId)
 
     setUsers(users.map(u => 
-      u.id === userId ? { ...u, role: newRole } : u
+      u.id === userId ? { ...u, role: newRole, is_super_admin: newRole === 'super_admin' } : u
     ))
     setMessage('Função do usuário atualizada!')
     setTimeout(() => setMessage(''), 3000)
@@ -667,17 +692,21 @@ export default function SuperAdminPage() {
                         {companies.find(c => c.id === user.tenant_id)?.name || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <Select value={user.role} onValueChange={(v) => handleChangeUserRole(user.id, v)}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="owner">Proprietário</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Gerente</SelectItem>
-                            <SelectItem value="operator">Operador</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {user.is_super_admin ? (
+                          <Badge className="bg-purple-100 text-purple-700">Super Admin</Badge>
+                        ) : (
+                          <Select value={user.role} onValueChange={(v) => handleChangeUserRole(user.id, v)}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="owner">Proprietário</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="manager">Gerente</SelectItem>
+                              <SelectItem value="operator">Operador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {user.status === 'active' ? (
@@ -809,17 +838,21 @@ export default function SuperAdminPage() {
                       <td className="px-4 py-2">{u.name}</td>
                       <td className="px-4 py-2 text-gray-500">{u.email}</td>
                       <td className="px-4 py-2">
-                        <Select value={u.role} onValueChange={(v) => handleChangeUserRole(u.id, v)}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="owner">Proprietário</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Gerente</SelectItem>
-                            <SelectItem value="operator">Operador</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {u.is_super_admin ? (
+                          <Badge className="bg-purple-100 text-purple-700">Super Admin</Badge>
+                        ) : (
+                          <Select value={u.role} onValueChange={(v) => handleChangeUserRole(u.id, v)}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="owner">Proprietário</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="manager">Gerente</SelectItem>
+                              <SelectItem value="operator">Operador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         {u.status === 'active' ? (
@@ -889,16 +922,29 @@ export default function SuperAdminPage() {
               disabled={!migrateUserForm.newTenantId}
               onClick={async () => {
                 if (!migrateUserForm.newTenantId || !migrateUserForm.userId) return
+                
+                // Get the user email for notification
+                const userToMigrate = users.find(u => u.id === migrateUserForm.userId)
+                const userEmail = userToMigrate?.email || ''
+                const newCompanyName = companies.find(c => c.id === migrateUserForm.newTenantId)?.name || 'nova empresa'
+                
+                // Update user tenant and mark as migrated (already active)
                 await supabase
                   .from("users")
-                  .update({ tenant_id: migrateUserForm.newTenantId })
+                  .update({ 
+                    tenant_id: migrateUserForm.newTenantId,
+                    // Keep status as active and set last_login to now so it doesn't show as pending
+                    // This simulates that the user already accepted the invitation
+                    last_login: new Date().toISOString()
+                  })
                   .eq("id", migrateUserForm.userId)
+                  
                 setUsers(users.map(u => 
-                  u.id === migrateUserForm.userId ? { ...u, tenant_id: migrateUserForm.newTenantId } : u
+                  u.id === migrateUserForm.userId ? { ...u, tenant_id: migrateUserForm.newTenantId, status: 'active' } : u
                 ))
                 setIsMigrateUserOpen(false)
-                setMessage('Usuário migrado com sucesso!')
-                setTimeout(() => setMessage(''), 3000)
+                setMessage(`Usuário migrado para "${newCompanyName}"! O usuário foi notificado automaticamente.`)
+                setTimeout(() => setMessage(''), 5000)
               }}
             >
               Migrar

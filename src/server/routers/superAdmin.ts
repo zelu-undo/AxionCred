@@ -519,4 +519,57 @@ export const superAdminRouter = router({
 
       return data || []
     }),
+
+  // Promote user to super admin
+  promoteToSuperAdmin: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Check if super admin
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      const { error } = await ctx.supabase
+        .from("users")
+        .update({ 
+          role: "super_admin",
+          is_super_admin: true
+        })
+        .eq("id", input.userId)
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      return { success: true, message: "Usuário promovido a Super Admin!" }
+    }),
+
+  // Demote super admin to regular user
+  demoteFromSuperAdmin: protectedProcedure
+    .input(z.object({ userId: z.string(), newRole: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Check if super admin
+      if (ctx.userRole !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a super administradores" })
+      }
+
+      // Prevent self-demotion
+      if (input.userId === ctx.userId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode reduzir sua própria função" })
+      }
+
+      const { error } = await ctx.supabase
+        .from("users")
+        .update({ 
+          role: input.newRole,
+          is_super_admin: false
+        })
+        .eq("id", input.userId)
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message })
+      }
+
+      return { success: true, message: "Super Admin reduzido!" }
+    }),
 })

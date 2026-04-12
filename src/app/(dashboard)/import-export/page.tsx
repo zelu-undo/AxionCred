@@ -20,12 +20,13 @@ import {
 
 // Templates for download
 const CUSTOMER_TEMPLATE = [
-  ['name', 'document', 'email', 'phone', 'cep', 'notes'],
-  ['João Silva', '12345678900', 'joao@email.com', '11999999999', '01001000', 'ClienteVIP'],
-  ['Maria Santos', '98765432100', 'maria@email.com', '11888888888', '20010001', '']
+  ['name', 'document', 'email', 'phone', 'cep', 'number', 'notes'],
+  ['João Silva', '12345678900', 'joao@email.com', '11999999999', '01001000', '100', 'Cliente VIP'],
+  ['Maria Santos', '98765432100', 'maria@email.com', '11888888888', '20010001', '50', '']
 ]
 
 // CEP lookup will be done during import to get address, city, state
+// Number (house number) must be provided in the import file
 
 const LOAN_TEMPLATE = [
   ['customer_document', 'amount', 'installments', 'interest_rate', 'status'],
@@ -124,7 +125,7 @@ export default function ImportExportPage() {
   }
 
   // Fetch address data from CEP (Brazilian API)
-  const fetchCEPData = async (cep: string): Promise<{ address: string, city: string, state: string } | null> => {
+  const fetchCEPData = async (cep: string): Promise<{ address: string, city: string, state: string, neighborhood: string } | null> => {
     try {
       const cleanCEP = cep.replace(/\D/g, '')
       if (cleanCEP.length !== 8) return null
@@ -138,6 +139,7 @@ export default function ImportExportPage() {
         address: data.logradouro || '',
         city: data.localidade || '',
         state: data.uf || '',
+        neighborhood: data.bairro || '',
       }
     } catch (err) {
       console.error('CEP lookup error:', err)
@@ -175,7 +177,7 @@ export default function ImportExportPage() {
 
       // If importing customers, fetch CEP data for each row
       if (entityType === 'customers') {
-        const cepDataCache: Record<string, { address: string, city: string, state: string }> = {}
+        const cepDataCache: Record<string, { address: string, city: string, state: string, neighborhood: string }> = {}
         
         for (let i = 0; i < data.length; i++) {
           const row = data[i]
@@ -189,13 +191,17 @@ export default function ImportExportPage() {
           }
           
           if (cep && cepDataCache[cep]) {
-            row.address = cepDataCache[cep].address
+            // Combine street address with number
+            const street = cepDataCache[cep].address
+            const number = row.number || ''
+            row.address = number ? `${street}, ${number}` : street
             row.city = cepDataCache[cep].city
             row.state = cepDataCache[cep].state
+            row.neighborhood = cepDataCache[cep].neighborhood
           }
         }
         
-        setMessage({ type: 'success', text: `${data.length} registros carregados! CEP consultado automaticamente.` })
+        setMessage({ type: 'success', text: `${data.length} registros carregados! Endereço consultado automaticamente pelo CEP.` })
       } else {
         setMessage({ type: 'success', text: `${data.length} registros carregados!` })
       }
