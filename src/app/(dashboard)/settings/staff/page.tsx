@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { trpc } from "@/trpc/client"
+import { showToast, showSuccessToast, showErrorToast } from "@/lib/toast"
 import type { StaffMember, CustomRole, InvitationStatus } from '@/types';
 
 // Permission modules
@@ -51,7 +52,6 @@ export default function StaffManagementPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [newInvite, setNewInvite] = useState({ email: '', name: '', role_id: '' });
   const [editingStaff, setEditingStaff] = useState<any | null>(null);
-  const [successMessage, setSuccessMessage] = useState('');
 
   // Fetch users from API
   const { data: usersData, refetch: refetchUsers } = trpc.users.list.useQuery({
@@ -68,12 +68,11 @@ export default function StaffManagementPage() {
       refetchUsers()
       setIsInviteOpen(false)
       setNewInvite({ email: '', name: '', role_id: '' })
-      setSuccessMessage('Usuário criado com sucesso! Informe-o sobre as credenciais de acesso.')
-      setTimeout(() => setSuccessMessage(''), 5000)
+      showSuccessToast('Usuário criado com sucesso!', 'Novo Usuário')
     },
     onError: (error: any) => {
       console.error("Erro ao criar usuário:", error)
-      alert('Erro ao criar usuário: ' + error.message)
+      showErrorToast(error.message || 'Erro ao criar usuário')
     }
   })
 
@@ -82,11 +81,10 @@ export default function StaffManagementPage() {
     onSuccess: () => {
       refetchUsers()
       setEditingStaff(null)
-      setSuccessMessage('Usuário atualizado com sucesso!')
-      setTimeout(() => setSuccessMessage(''), 3000)
+      showSuccessToast('Usuário atualizado com sucesso!', 'Atualizado')
     },
     onError: (error) => {
-      alert('Erro ao atualizar usuário: ' + error.message)
+      showErrorToast(error.message || 'Erro ao atualizar usuário')
     }
   })
 
@@ -94,11 +92,10 @@ export default function StaffManagementPage() {
   const deleteMutation = trpc.users.delete.useMutation({
     onSuccess: () => {
       refetchUsers()
-      setSuccessMessage('Usuário removido com sucesso!')
-      setTimeout(() => setSuccessMessage(''), 3000)
+      showSuccessToast('Usuário removido com sucesso!', 'Removido')
     },
     onError: (error) => {
-      alert('Erro ao remover usuário: ' + error.message)
+      showErrorToast(error.message || 'Erro ao remover usuário')
     }
   })
 
@@ -172,42 +169,26 @@ export default function StaffManagementPage() {
     })
   };
 
+  // Create invite mutation
+  const createInviteMutation = trpc.invites.create.useMutation({
+    onSuccess: (data) => {
+      showSuccessToast('Convite reenviado com sucesso!', 'Convite Enviado')
+    },
+    onError: (error: any) => {
+      console.error('Error creating invite:', error)
+      showErrorToast(error.message || 'Erro ao reenviar convite')
+    }
+  })
+
   // Handle resend invite - create new invite and send email
   const handleResendInvite = async (staffId: string) => {
     const staffMember = staff.find((s: any) => s.id === staffId)
     if (!staffMember) return
     
-    setIsLoading(true)
-    try {
-      // Create a new invite via the invites API
-      const response = await fetch('/api/trpc/invites.create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          json: {
-            email: staffMember.email,
-            role: staffMember.role_id || 'operator'
-          }
-        }),
-      })
-      
-      const result = await response.json()
-      
-      if (result.error) {
-        throw new Error(result.error.message || 'Erro ao criar convite')
-      }
-      
-      setSuccessMessage(`Convite reenviado com sucesso para ${staffMember.email}!`)
-      setTimeout(() => setSuccessMessage(''), 5000)
-    } catch (error: any) {
-      console.error('Error resending invite:', error)
-      setSuccessMessage('Erro ao reenviar convite: ' + (error.message || 'Tente novamente'))
-      setTimeout(() => setSuccessMessage(''), 5000)
-    } finally {
-      setIsLoading(false)
-    }
+    createInviteMutation.mutate({
+      email: staffMember.email,
+      role: staffMember.role_id || 'operator'
+    })
   }
 
   // Handle cancel invitation
@@ -273,21 +254,6 @@ export default function StaffManagementPage() {
           Convidar Funcionário
         </Button>
       </div>
-
-      {/* Success Message */}
-      <AnimatePresence>
-        {successMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg flex items-center gap-2"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            {successMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
