@@ -194,9 +194,22 @@ export default function CashPage() {
     }).format(new Date(date))
   }
 
+  // Helper to parse Brazilian currency input to cents
+  const parseCurrencyValue = (value: string): number => {
+    if (!value) return 0
+    // Remove currency symbols and spaces
+    let cleaned = value.replace(/[R$\s.]/g, '')
+    // Replace comma with dot for decimal
+    cleaned = cleaned.replace(',', '.')
+    const parsed = parseFloat(cleaned)
+    if (isNaN(parsed)) return 0
+    // Convert to cents (multiply by 100)
+    return Math.round(parsed * 100)
+  }
+
   const handleAporte = () => {
-    // CurrencyInput returns cents directly
-    const valor = parseInt(aporteForm.valor, 10)
+    // CurrencyInput returns formatted string, need to parse correctly
+    const valor = parseCurrencyValue(aporteForm.valor)
     if (!valor || valor <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
@@ -209,8 +222,8 @@ export default function CashPage() {
   }
 
   const handleRetirada = () => {
-    // CurrencyInput returns cents directly
-    const valor = parseInt(retiradaForm.valor, 10)
+    // CurrencyInput returns formatted string, need to parse correctly
+    const valor = parseCurrencyValue(retiradaForm.valor)
     if (!valor || valor <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
@@ -227,8 +240,8 @@ export default function CashPage() {
   }
 
   const handleAjuste = () => {
-    // CurrencyInput returns cents directly
-    const valor = parseInt(ajusteForm.valor, 10)
+    // CurrencyInput returns formatted string, need to parse correctly
+    const valor = parseCurrencyValue(ajusteForm.valor)
     if (!valor || valor <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" })
       return
