@@ -924,6 +924,7 @@ export const loanRouter = router({
         customerName = customer?.name || "Cliente"
       }
 
+      // Cancelar o empréstimo
       const { error } = await ctx.supabase
         .from("loans")
         .update({ status: "cancelled" })
@@ -936,6 +937,12 @@ export const loanRouter = router({
           message: error.message,
         })
       }
+
+      // Cancelar todas as parcelas do empréstimo
+      await ctx.supabase
+        .from("loan_installments")
+        .update({ status: "cancelled" })
+        .eq("loan_id", input.id)
 
       // Criar notificação de cancelamento
       if (loan) {
